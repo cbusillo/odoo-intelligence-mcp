@@ -1,0 +1,115 @@
+import json
+import re
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from ...type_defs.odoo_types import CompatibleEnvironment
+from ...utils.security_utils import validate_and_sanitize_code
+
+
+async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
+    try:
+        # Validate and sanitize the code first
+        is_valid, validation_message, sanitized_code = validate_and_sanitize_code(code)
+
+        if not is_valid:
+            return {
+                "success": False,
+                "error": f"Code validation failed: {validation_message}",
+                "error_type": "SecurityValidationError",
+                "hint": "Please ensure your code follows security guidelines. Avoid using dangerous imports or functions.",
+            }
+
+        # Check if the environment has a Docker-based execute_code method
+        if hasattr(env, "execute_code"):
+            # Use the environment's execute_code method which properly handles Docker execution
+            result = await env.execute_code(sanitized_code)
+
+            # The Docker execution returns raw results, format them appropriately
+            if isinstance(result, dict):
+                if "error" in result:
+                    return {
+                        "success": False,
+                        "error": result["error"],
+                        "error_type": result.get("error_type", "ExecutionError"),
+                        "hint": "Make sure to use 'env' to access Odoo models, e.g., env['product.template'].search([])",
+                    }
+                elif "output" in result and result.get("raw"):
+                    # Raw output from Docker
+                    return {"success": True, "output": result["output"]}
+                else:
+                    return {"success": True, "result": result}
+            else:
+                return {"success": True, "result": result}
+        else:
+            # Fallback to local execution for testing with mock environments
+            namespace = {
+                "env": env,
+                "fields": env["ir.model.fields"],
+                "datetime": __import__("datetime"),
+                "date": __import__("datetime").date,
+                "timedelta": __import__("datetime").timedelta,
+                "json": json,
+                "re": re,
+                "Path": Path,
+            }
+
+            compiled_code = compile(code, "<mcp_execute>", "exec")
+            exec(compiled_code, namespace)  # noqa: S102
+
+            if "result" in namespace:
+                result_value = namespace["result"]
+                if hasattr(result_value, "_name"):
+                    return {
+                        "success": True,
+                        "result_type": "recordset",
+                        "model": result_value._name,
+                        "count": len(result_value),
+                        "ids": result_value.ids[:100],
+                        "display_names": [rec.display_name for rec in result_value[:10]],
+                    }
+                if isinstance(result_value, (dict, list, str, int, float, bool, type(None))):
+                    return {"success": True, "result": result_value}
+                return {"success": True, "result": str(result_value), "result_type": type(result_value).__name__}
+            return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "hint": "Make sure to use 'env' to access Odoo models, e.g., env['product.template'].search([])",
+        }
+
+
+def odoo_shell(code: str, timeout: int = 30) -> dict[str, Any]:
+    try:
+        # Validate and sanitize the code first
+        is_valid, validation_message, sanitized_code = validate_and_sanitize_code(code)
+
+        if not is_valid:
+            return {
+                "success": False,
+                "error": f"Code validation failed: {validation_message}",
+                "error_type": "SecurityValidationError",
+                "code": code,
+            }
+
+        cmd = ["docker", "exec", "-i", "odoo-opw-shell-1", "/odoo/odoo-bin", "shell", "--database=opw"]
+
+        result = subprocess.run(cmd, input=sanitized_code, capture_output=True, text=True, timeout=timeout)
+
+        return {
+            "success": result.returncode == 0,
+            "code": code,
+            "exit_code": result.returncode,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "timeout": timeout,
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": f"Shell command timed out after {timeout} seconds", "code": code}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__, "code": code}

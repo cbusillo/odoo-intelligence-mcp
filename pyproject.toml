@@ -1,0 +1,191 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "odoo-intelligence-mcp"
+version = "0.1.0"
+description = "MCP server for Odoo model intelligence and analysis"
+authors = [
+    { name = "Chris Busillo", email = "chris@shinycomputers.com" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp",
+    "pydantic",
+    "python-dotenv>=1.1.1",
+    "docker",
+    "hatchling",
+]
+
+[project.scripts]
+odoo-intelligence-mcp = "odoo_intelligence_mcp.server:main"
+mcp-test = "odoo_intelligence_mcp.cli:test"
+mcp-test-unit = "odoo_intelligence_mcp.cli:test_unit"
+mcp-test-integration = "odoo_intelligence_mcp.cli:test_integration"
+mcp-test-cov = "odoo_intelligence_mcp.cli:test_cov"
+mcp-format = "odoo_intelligence_mcp.cli:format_code"
+mcp-lint = "odoo_intelligence_mcp.cli:lint"
+mcp-check = "odoo_intelligence_mcp.cli:check"
+mcp-clean = "odoo_intelligence_mcp.cli:clean"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/odoo_intelligence_mcp"]
+
+[tool.hatch.build]
+exclude = ["tests", "*.md", ".*", "__pycache__", "*.pyc"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+    "pytest-cov",
+    "coverage[toml]",
+    "ruff",
+]
+
+
+[tool.ruff]
+line-length = 133
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D", # pydocstyle - no comments/docstrings per project style
+    "COM812", # trailing-comma-missing (conflicts with formatter)
+    "ISC001", # single-line-implicit-string-concatenation (conflicts with formatter)
+    "PLW1510", # subprocess-run-without-check - needed for Docker operations
+    "S603", # subprocess-call - needed for Docker operations
+    "TID252", # Prefer absolute imports over relative imports from parent modules
+    "FBT001", # Boolean default positional argument - PyCharm shows inlay hints
+    "FBT002", # Boolean positional argument - PyCharm shows inlay hints
+    "FBT003", # Boolean positional value in function call - we prefer explicit True/False for clarity
+    "RET505", # Unnecessary else after return - prefer early returns
+    "TRY300", # Unnecessary else after return - prefer early returns
+    "S101", # Use of assert - remove from here, it's in per-file-ignores for tests
+    "F821", # Undefined name - needed for JetBrains Odoo magic strings like type["odoo.model.res_users"]
+    "G004", # Logging statement uses f-string - we prefer f-strings for readability
+    "EM101", # Exception must not use a string literal - we prefer inline strings
+    "EM102", # Exception must not use an f-string literal - we prefer f-strings
+    "TRY003", # Avoid specifying long messages outside the exception class - we prefer inline messages
+    "BLE001", # Do not catch blind exception - PyCharm already catches this with better context awareness
+    "SLF001", # Private member access - PyCharm handles this better with context awareness, Odoo uses _fields etc as public API
+    "ARG001", # Unused function argument - PyCharm handles this better with context awareness
+    "ARG002", # Unused method argument - PyCharm handles this better with context awareness
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101", # assert is expected in tests
+    "PLR2004", # Magic values are fine in tests
+    "ANN401", # No Any type
+]
+# Additional specific ignores
+"tools/field/resolve_dynamic_fields.py" = ["ANN401", "PLR0913"]
+"tools/model/view_model_usage.py" = ["C901"]
+"tools/security/permission_checker.py" = ["C901", "PLR0912", "PLR0915"]
+"type_defs/odoo_types.py" = ["F821"]  # Forward references in TYPE_CHECKING block
+"utils/*.py" = ["ANN401"]  # Utils need flexible Any types for general purpose
+"tools/field/search_field_properties.py" = ["ANN401"]  # Field needs Any type
+"tools/field/search_field_type.py" = ["ANN401"]  # Field needs Any type
+"tools/operations/*.py" = ["ANN401"]  # Container operations need Any type
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-branch",
+]
+markers = [
+    "unit: Unit tests that test individual components in isolation",
+    "integration: Integration tests that test component interactions",
+    "slow: Tests that take a long time to run",
+    "asyncio: Asynchronous tests",
+    "mock: Tests that use mocking",
+    "docker: Tests that require Docker containers",
+]
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+log_cli = true
+log_cli_level = "INFO"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/.venv/*",
+    "*/.env/*",
+    "*/virtualenv/*",
+    "*/site-packages/*",
+    "*/dist-packages/*",
+    "*/migrations/*",
+    "*/conftest.py",
+    "*/setup.py",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self\\.debug:",
+    "if settings\\.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+    "class .*\\(Protocol\\):",
+    "^\\s*pass\\s*$",
+    "^\\s*\\.\\.\\.\\s*$",
+]
+fail_under = 80
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "Odoo Intelligence MCP Coverage Report"
+show_contexts = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.coverage.paths]
+source = [
+    ".",
+    "*/site-packages/odoo_intelligence_mcp",
+]
+
+[dependency-groups]
+dev = [
+    "coverage",
+    "pytest>=8.4.1",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+    "ruff",
+]
+
+
