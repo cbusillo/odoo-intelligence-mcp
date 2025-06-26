@@ -1,5 +1,5 @@
 import json
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -45,7 +45,7 @@ def get_optional_list(arguments: dict[str, Any], key: str, default: list | None 
     return [value]
 
 
-class PaginatedResponse(Generic[T]):
+class PaginatedResponse[T]:
     def __init__(
         self, items: list[T], total_count: int, page: int = 1, page_size: int = 100, filter_applied: str | None = None
     ) -> None:
@@ -121,7 +121,7 @@ class PaginationParams:
         )
 
 
-def paginate_list(items: list[T], pagination: PaginationParams) -> PaginatedResponse[T]:
+def paginate_list[T](items: list[T], pagination: PaginationParams) -> PaginatedResponse[T]:
     filtered_items = items
 
     if pagination.filter_text:

@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -39,6 +40,4 @@ def clean() -> None:
             if path.is_file():
                 path.unlink()
             elif path.is_dir():
-                import shutil
-
                 shutil.rmtree(path)

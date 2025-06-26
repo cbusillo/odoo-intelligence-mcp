@@ -1,30 +1,19 @@
 import json
+import pprint
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from ...type_defs.odoo_types import CompatibleEnvironment
-from ...utils.security_utils import validate_and_sanitize_code
 
 
 async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
     try:
-        # Validate and sanitize the code first
-        is_valid, validation_message, sanitized_code = validate_and_sanitize_code(code)
-
-        if not is_valid:
-            return {
-                "success": False,
-                "error": f"Code validation failed: {validation_message}",
-                "error_type": "SecurityValidationError",
-                "hint": "Please ensure your code follows security guidelines. Avoid using dangerous imports or functions.",
-            }
-
         # Check if the environment has a Docker-based execute_code method
         if hasattr(env, "execute_code"):
             # Use the environment's execute_code method which properly handles Docker execution
-            result = await env.execute_code(sanitized_code)
+            result = await env.execute_code(code)
 
             # The Docker execution returns raw results, format them appropriately
             if isinstance(result, dict):
@@ -53,6 +42,7 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
                 "json": json,
                 "re": re,
                 "Path": Path,
+                "pprint": pprint,
             }
 
             compiled_code = compile(code, "<mcp_execute>", "exec")
@@ -85,20 +75,9 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
 
 def odoo_shell(code: str, timeout: int = 30) -> dict[str, Any]:
     try:
-        # Validate and sanitize the code first
-        is_valid, validation_message, sanitized_code = validate_and_sanitize_code(code)
-
-        if not is_valid:
-            return {
-                "success": False,
-                "error": f"Code validation failed: {validation_message}",
-                "error_type": "SecurityValidationError",
-                "code": code,
-            }
-
         cmd = ["docker", "exec", "-i", "odoo-opw-shell-1", "/odoo/odoo-bin", "shell", "--database=opw"]
 
-        result = subprocess.run(cmd, input=sanitized_code, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=timeout)
 
         return {
             "success": result.returncode == 0,

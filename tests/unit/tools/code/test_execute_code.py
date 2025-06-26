@@ -9,7 +9,7 @@ from odoo_intelligence_mcp.tools.code.execute_code import execute_code
 async def test_execute_python_code_success(mock_odoo_env: MagicMock) -> None:
     code = "result = 2 + 2"
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert result["result"] == 4
@@ -19,7 +19,7 @@ async def test_execute_python_code_success(mock_odoo_env: MagicMock) -> None:
 async def test_execute_python_code_syntax_error(mock_odoo_env: MagicMock) -> None:
     code = "print('hello world'"
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is False
     assert "SyntaxError" in result["error"]
@@ -30,7 +30,7 @@ async def test_execute_python_code_syntax_error(mock_odoo_env: MagicMock) -> Non
 async def test_execute_python_code_runtime_error(mock_odoo_env: MagicMock) -> None:
     code = "result = 1 / 0"  # Division by zero
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is False
     assert "ZeroDivisionError" in result["error"]
@@ -58,7 +58,7 @@ result = [{'name': p.name, 'email': p.email} for p in partners]
     mock_partner_model.search.return_value = mock_partners
     mock_odoo_env.__getitem__.return_value = mock_partner_model
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     result_data = result["result"]
@@ -81,7 +81,7 @@ result = {
 }
 """
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert isinstance(result["result"], dict)
@@ -94,7 +94,7 @@ result = {
 async def test_execute_python_code_import_error(mock_odoo_env: MagicMock) -> None:
     code = "import some_nonexistent_module; result = 1"
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is False
     assert "ModuleNotFoundError" in result["error"] or "ImportError" in result["error"]
@@ -105,7 +105,7 @@ async def test_execute_python_code_import_error(mock_odoo_env: MagicMock) -> Non
 async def test_execute_python_code_no_result(mock_odoo_env: MagicMock) -> None:
     code = "x = 10; y = 20"  # No result assignment
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert result["message"] == "Code executed successfully. Assign to 'result' variable to see output."
@@ -145,7 +145,7 @@ result = {
 
     mock_odoo_env.__getitem__.return_value = mock_partner_model
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert result["result"]["calculation"] == 30
@@ -177,7 +177,7 @@ async def test_execute_python_code_with_recordset_result(mock_odoo_env: MagicMoc
     mock_partner_model.search.return_value = mock_recordset
     mock_odoo_env.__getitem__.return_value = mock_partner_model
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert result["result_type"] == "recordset"
@@ -190,7 +190,7 @@ async def test_execute_python_code_with_recordset_result(mock_odoo_env: MagicMoc
 async def test_execute_python_code_empty_code(mock_odoo_env: MagicMock) -> None:
     code = ""
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert result["message"] == "Code executed successfully. Assign to 'result' variable to see output."
@@ -200,7 +200,7 @@ async def test_execute_python_code_empty_code(mock_odoo_env: MagicMock) -> None:
 async def test_execute_python_code_with_print_and_result(mock_odoo_env: MagicMock) -> None:
     code = "result = sum(range(1, 11))"
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert result["result"] == 55
@@ -210,7 +210,7 @@ async def test_execute_python_code_with_print_and_result(mock_odoo_env: MagicMoc
 async def test_execute_python_code_with_non_serializable_result(mock_odoo_env: MagicMock) -> None:
     code = "result = lambda x: x + 1"  # Lambda is not JSON serializable
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     assert "<lambda>" in result["result"]
@@ -245,7 +245,7 @@ result = env.cr.dictfetchall()
     ]
     mock_odoo_env.cr = mock_cursor
 
-    result = execute_code(mock_odoo_env, code)
+    result = await execute_code(mock_odoo_env, code)
 
     assert result["success"] is True
     result_data = result["result"]

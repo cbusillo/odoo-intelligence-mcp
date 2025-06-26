@@ -1,6 +1,5 @@
 import ast
 import re
-from typing import Any
 
 
 class CodeSecurityValidator:

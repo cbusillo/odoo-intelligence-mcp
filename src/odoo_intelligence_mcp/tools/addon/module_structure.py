@@ -46,7 +46,7 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
     manifest_path = module_path / "__manifest__.py"
     if manifest_path.exists():
         try:
-            with open(manifest_path) as manifest_file:
+            with manifest_path.open() as manifest_file:
                 content = manifest_file.read()
                 structure["manifest"] = ast.literal_eval(content)
         except (FileNotFoundError, SyntaxError, ValueError):

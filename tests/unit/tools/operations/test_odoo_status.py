@@ -55,7 +55,7 @@ async def test_odoo_status_with_verbose() -> None:
 
         assert result["success"] is True
         # Check verbose fields are present
-        container_info = list(result["containers"].values())[0]
+        container_info = next(iter(result["containers"].values()))
         assert "state" in container_info
         assert "id" in container_info
         assert "image" in container_info
@@ -149,5 +149,5 @@ async def test_odoo_status_verbose_image_error_handling() -> None:
 
         assert result["success"] is True
         # Should fall back to Config.Image
-        container_info = list(result["containers"].values())[0]
+        container_info = next(iter(result["containers"].values()))
         assert container_info["image"] == "odoo-fallback-image"

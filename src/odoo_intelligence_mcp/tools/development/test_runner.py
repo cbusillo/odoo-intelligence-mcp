@@ -20,6 +20,9 @@ async def run_tests(
         # Get container
         container_result = docker_manager.get_container(container_name)
         if isinstance(container_result, dict):
+            # Add helpful hint to the error response
+            if "not found" in str(container_result.get("error", "")).lower():
+                container_result["hint"] = "Use the 'odoo_restart' tool to restart services, or run 'docker compose up -d script-runner' to start the script-runner service"
             return container_result
 
         container = container_result

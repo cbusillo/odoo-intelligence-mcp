@@ -250,11 +250,11 @@ class HostOdooEnvironment:
                 return {"output": process.stdout, "raw": True}
 
         except subprocess.TimeoutExpired:
-            raise DockerConnectionError(self.container_name, "Command execution timed out after 30 seconds")
+            raise DockerConnectionError(self.container_name, "Command execution timed out after 30 seconds") from None
         except (DockerConnectionError, CodeExecutionError):
             raise
         except Exception as e:
-            raise DockerConnectionError(self.container_name, f"Unexpected error: {e!s}")
+            raise DockerConnectionError(self.container_name, f"Unexpected error: {e!s}") from e
 
 
 # noinspection PyUnusedLocal,PyMethodMayBeStatic

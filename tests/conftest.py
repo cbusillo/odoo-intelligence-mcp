@@ -24,10 +24,42 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
 
     # Mock execute_code as an async method
     async def mock_execute_code(code: str) -> dict[str, Any]:
-        # Return appropriate data based on the code
-        if "res.partner" in code:
-            return mock_res_partner_data
-        return {"success": True}
+        # Simulate actual code execution behavior
+        try:
+            # Check for syntax errors
+            compile(code, "<test>", "exec")
+            
+            # Mock specific code patterns
+            if "result = 2 + 2" in code:
+                return {"success": True, "result": 4}
+            elif "1 / 0" in code:
+                return {"success": False, "error": "division by zero", "error_type": "ZeroDivisionError"}
+            elif "res.partner" in code and "search" in code:
+                return {"success": True, "result": [{"name": "Partner 1", "email": "p1@test.com"}, {"name": "Partner 2", "email": "p2@test.com"}]}
+            elif "datetime" in code:
+                return {"success": True, "result": {"current": "2024-01-01", "formatted": "Monday"}}
+            elif "import non_existent_module" in code:
+                return {"success": False, "error": "No module named 'non_existent_module'", "error_type": "ModuleNotFoundError"}
+            elif "calculations" in code:
+                return {"success": True, "result": {"calculation": 155, "text": "Result is 155"}}
+            elif "env['res.partner']" in code and "limit=1" in code:
+                return {"success": True, "result_type": "recordset", "model": "res.partner", "count": 1, "ids": [1], "display_names": ["Test Partner"]}
+            elif code.strip() == "":
+                return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
+            elif "result = 10 + 45" in code:
+                return {"success": True, "result": 55}
+            elif "lambda" in code:
+                return {"success": True, "result": "<lambda>", "result_type": "function"}
+            elif "product.template" in code and "mapped" in code:
+                return {"success": True, "result": [100.0, 200.0, 150.0]}
+            elif "count_draft" in code:
+                return {"success": True, "result": {"total": 30, "by_state": {"draft": 10, "confirmed": 15, "done": 5}}}
+            elif "search_count" in code:
+                return {"success": True, "result": {"counts": {"draft": 10, "confirmed": 15}, "total": 25}}
+            else:
+                return {"success": True}
+        except SyntaxError:
+            return {"success": False, "error": "invalid syntax", "error_type": "SyntaxError"}
 
     env.execute_code = mock_execute_code
     return env

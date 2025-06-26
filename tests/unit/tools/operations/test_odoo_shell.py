@@ -1,3 +1,4 @@
+import subprocess
 from unittest.mock import MagicMock, patch
 
 from odoo_intelligence_mcp.tools.code.execute_code import odoo_shell
@@ -49,8 +50,6 @@ class TestOdooShell:
             assert result["stderr"] == "Error: syntax error"
 
     def test_odoo_shell_timeout_expired(self) -> None:
-        import subprocess
-
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
 

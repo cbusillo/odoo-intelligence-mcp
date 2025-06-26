@@ -789,7 +789,7 @@ async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> li
                 env.cr.close()
 
     except OdooMCPError as e:
-        logger.error(f"Error in tool {name}: {e}")
+        logger.exception(f"Error in tool {name}")
         error_response = create_error_response(e)
         return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
     except Exception as e:
