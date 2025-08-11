@@ -22,7 +22,9 @@ async def run_tests(
         if isinstance(container_result, dict):
             # Add helpful hint to the error response
             if "not found" in str(container_result.get("error", "")).lower():
-                container_result["hint"] = "Use the 'odoo_restart' tool to restart services, or run 'docker compose up -d script-runner' to start the script-runner service"
+                container_result["hint"] = (
+                    "Use the 'odoo_restart' tool to restart services, or run 'docker compose up -d script-runner' to start the script-runner service"
+                )
             return container_result
 
         container = container_result
@@ -119,39 +121,21 @@ async def run_tests(
         module_installed = "Module" not in output or "not found" not in output
 
         # Handle pagination for output
-        if pagination:
-            # Split output into lines for pagination
-            output_lines = output.splitlines()
-            # Create items for pagination - group lines into chunks
-            chunk_size = 50  # Lines per item
-            output_items = []
-            for i in range(0, len(output_lines), chunk_size):
-                chunk_lines = output_lines[i : i + chunk_size]
-                output_items.append(
-                    {"line_start": i + 1, "line_end": min(i + chunk_size, len(output_lines)), "content": "\n".join(chunk_lines)}
-                )
+        if pagination is None:
+            pagination = PaginationParams()
+        # Split output into lines for pagination
+        output_lines = output.splitlines()
+        # Create items for pagination - group lines into chunks
+        chunk_size = 50  # Lines per item
+        output_items = []
+        for i in range(0, len(output_lines), chunk_size):
+            chunk_lines = output_lines[i : i + chunk_size]
+            output_items.append(
+                {"line_start": i + 1, "line_end": min(i + chunk_size, len(output_lines)), "content": "\n".join(chunk_lines)}
+            )
 
-            paginated_output = paginate_dict_list(output_items, pagination, ["content"])
+        paginated_output = paginate_dict_list(output_items, pagination, ["content"])
 
-            return {
-                "success": exit_code == 0,
-                "module": module,
-                "test_class": test_class,
-                "test_method": test_method,
-                "test_tags": test_tags,
-                "test_target": test_target,
-                "command": " ".join(cmd),
-                "status": test_status,
-                "module_installed": module_installed,
-                "test_results": test_results,
-                "failures": failures,
-                "output_lines": len(output_lines),
-                "output_chunks": paginated_output.to_dict(),
-                "return_code": exit_code,
-                "container": container_name,
-            }
-
-        # Non-paginated response (backward compatibility)
         return {
             "success": exit_code == 0,
             "module": module,
@@ -164,7 +148,8 @@ async def run_tests(
             "module_installed": module_installed,
             "test_results": test_results,
             "failures": failures,
-            "output": output if exit_code != 0 else output[-2000:],  # Last 2000 chars if successful
+            "output_lines": len(output_lines),
+            "output_chunks": paginated_output.to_dict(),
             "return_code": exit_code,
             "container": container_name,
         }
