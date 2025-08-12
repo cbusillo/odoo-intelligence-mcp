@@ -1,43 +1,41 @@
 import ast
-from pathlib import Path
 from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from .get_addon_paths import get_addon_paths_from_container, map_container_path_to_host
+from ...utils.docker_utils import DockerClientManager
+from .get_addon_paths import get_addon_paths_from_container
 
 
-async def _get_addon_paths() -> list[Path]:
-    container_paths = await get_addon_paths_from_container()
-    addon_paths = []
-    for container_path in container_paths:
-        host_base = map_container_path_to_host(container_path)
-        if host_base:
-            addon_paths.append(host_base)
-        else:
-            addon_paths.append(Path(container_path))
-    return addon_paths
+async def _get_addon_paths() -> list[str]:
+    return await get_addon_paths_from_container()
 
 
-def _read_manifest(manifest_path: Path) -> dict[str, Any] | None:
+def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
     try:
-        with manifest_path.open() as manifest_file:
-            manifest_content = manifest_file.read()
+        docker_manager = DockerClientManager()
+        container = docker_manager.get_container("odoo-opw-web-1")
+        if isinstance(container, dict):
+            return None
+
+        exec_result = container.exec_run(["cat", manifest_path], stdout=True, stderr=False)
+        if exec_result.exit_code == 0:
+            manifest_content = exec_result.output.decode("utf-8")
             return ast.literal_eval(manifest_content)
-    except (OSError, SyntaxError, ValueError):
+    except (SyntaxError, ValueError):
         return None
+    return None
 
 
-def _find_addon_manifest(addon_name: str, addon_paths: list[Path]) -> tuple[dict[str, Any] | None, Path | None]:
+def _find_addon_manifest(addon_name: str, addon_paths: list[str]) -> tuple[dict[str, Any] | None, str | None]:
     for base_path in addon_paths:
-        potential_manifest = base_path / addon_name / "__manifest__.py"
-        if potential_manifest.exists():
-            manifest_data = _read_manifest(potential_manifest)
-            if manifest_data:
-                return manifest_data, base_path / addon_name
+        potential_manifest = f"{base_path}/{addon_name}/__manifest__.py"
+        manifest_data = _read_manifest_from_container(potential_manifest)
+        if manifest_data:
+            return manifest_data, f"{base_path}/{addon_name}"
     return None, None
 
 
-def _extract_manifest_info(addon_name: str, addon_path: Path, manifest_data: dict[str, Any]) -> dict[str, Any]:
+def _extract_manifest_info(addon_name: str, addon_path: str, manifest_data: dict[str, Any]) -> dict[str, Any]:
     return {
         "addon": addon_name,
         "path": str(addon_path),
@@ -60,27 +58,40 @@ def _extract_manifest_info(addon_name: str, addon_path: Path, manifest_data: dic
     }
 
 
-def _find_dependent_addons(addon_name: str, addon_paths: list[Path]) -> list[dict[str, Any]]:
+def _find_dependent_addons(addon_name: str, addon_paths: list[str]) -> list[dict[str, Any]]:
     addons_depending_on_this = []
 
+    docker_manager = DockerClientManager()
+    container = docker_manager.get_container("odoo-opw-web-1")
+    if isinstance(container, dict):
+        return addons_depending_on_this
+
     for base_path in addon_paths:
-        if not base_path.exists():
+        # List directories in base_path
+        list_result = container.exec_run(["ls", "-d", f"{base_path}/*/"], stdout=True, stderr=False)
+        if list_result.exit_code != 0:
             continue
 
-        for potential_addon in base_path.iterdir():
-            if not potential_addon.is_dir() or potential_addon.name == addon_name:
+        addon_dirs = list_result.output.decode("utf-8").strip().split("\n")
+
+        for addon_dir_raw in addon_dirs:
+            addon_dir = addon_dir_raw.rstrip("/")
+            potential_addon_name = addon_dir.split("/")[-1]
+
+            if potential_addon_name == addon_name:
                 continue
 
-            other_manifest = potential_addon / "__manifest__.py"
-            if other_manifest.exists():
-                other_data = _read_manifest(other_manifest)
-                if other_data and addon_name in other_data.get("depends", []):
-                    addons_depending_on_this.append({
-                        "name": potential_addon.name,
-                        "path": str(potential_addon),
+            other_manifest = f"{addon_dir}/__manifest__.py"
+            other_data = _read_manifest_from_container(other_manifest)
+            if other_data and addon_name in other_data.get("depends", []):
+                addons_depending_on_this.append(
+                    {
+                        "name": potential_addon_name,
+                        "path": addon_dir,
                         "auto_install": other_data.get("auto_install", False),
                         "application": other_data.get("application", False),
-                    })
+                    }
+                )
 
     return addons_depending_on_this
 

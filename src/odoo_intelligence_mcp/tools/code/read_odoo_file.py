@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from ...utils.docker_utils import DockerClientManager
-from ..addon.get_addon_paths import map_container_path_to_host
 
 
 async def read_odoo_file(
@@ -30,7 +29,7 @@ async def read_odoo_file(
     """
     path = Path(file_path)
 
-    def process_content(content: str, source_path: str, via: str = "host") -> dict[str, Any]:
+    def process_content(content: str, source_path: str) -> dict[str, Any]:
         """Process file content based on parameters."""
         lines = content.split("\n")
         total_lines = len(lines)
@@ -56,7 +55,6 @@ async def read_odoo_file(
                     "pattern": pattern,
                     "matches": matches[:10],  # Limit to 10 matches
                     "total_matches": len(matches),
-                    "via": via,
                 }
             else:
                 return {
@@ -65,7 +63,6 @@ async def read_odoo_file(
                     "pattern": pattern,
                     "matches": [],
                     "message": "No matches found",
-                    "via": via,
                 }
 
         # Line range extraction
@@ -87,7 +84,6 @@ async def read_odoo_file(
                 "content": content_with_numbers,
                 "lines": f"{start + 1}-{end}",
                 "total_lines": total_lines,
-                "via": via,
             }
 
         # Full file (with line numbers if not too large)
@@ -97,35 +93,24 @@ async def read_odoo_file(
             # For large files, just return raw content
             content_with_numbers = content
 
-        return {"success": True, "path": source_path, "content": content_with_numbers, "total_lines": total_lines, "via": via}
+        return {"success": True, "path": source_path, "content": content_with_numbers, "total_lines": total_lines}
 
-    # If path is absolute and starts with known container paths
+    docker_manager = DockerClientManager()
+    container_name = "odoo-opw-web-1"
+
+    container_result = docker_manager.get_container(container_name)
+    if isinstance(container_result, dict):  # Error
+        return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
+
+    # Try as absolute path first
     if path.is_absolute():
-        # Try to map to host
-        host_path = map_container_path_to_host(str(path))
-        if host_path and host_path.exists():
-            try:
-                content = host_path.read_text(encoding="utf-8")
-                return process_content(content, str(path), "host")
-            except Exception as e:
-                return {"success": False, "error": f"Failed to read file: {e}"}
-
-        # Fallback to docker exec for container-only paths
-        docker_manager = DockerClientManager()
-        container_name = "odoo-opw-web-1"
-
-        container_result = docker_manager.get_container(container_name)
-        if isinstance(container_result, dict):  # Error
-            return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
-
         try:
             exec_result = container_result.exec_run(["cat", str(path)], stdout=True, stderr=True, demux=True)
-
             stdout = exec_result.output[0].decode("utf-8") if exec_result.output[0] else ""
             stderr = exec_result.output[1].decode("utf-8") if exec_result.output[1] else ""
 
             if exec_result.exit_code == 0:
-                return process_content(stdout, str(path), "docker")
+                return process_content(stdout, str(path))
             else:
                 return {"success": False, "error": f"File not found or not readable: {stderr or path}"}
         except Exception as e:
@@ -136,45 +121,42 @@ async def read_odoo_file(
 
     addon_paths = await get_addon_paths_from_container()
 
+    # Build list of paths to try
+    paths_to_try = []
+    path_str = str(path)
+
+    # If path starts with "addons/" or "enterprise/", try mapping to actual addon paths
+    if path_str.startswith(("addons/", "enterprise/")):
+        # Extract the first part (e.g., "addons" from "addons/product_connect/...")
+        parts = path_str.split("/", 1)
+        if len(parts) == 2:
+            addon_dir, rest = parts
+            # Find matching addon paths
+            for addon_base in addon_paths:
+                if addon_base.endswith(f"/{addon_dir}") or Path(addon_base).name == addon_dir:
+                    paths_to_try.append(f"{addon_base}/{rest}")
+
+    # Also try appending to all addon paths (for module-relative paths)
     for addon_base in addon_paths:
-        # Check if file exists in this addon path
-        potential_path = Path(addon_base) / path
+        paths_to_try.append(f"{addon_base}/{path_str}")
 
-        # Try host mapping first
-        host_path = map_container_path_to_host(str(potential_path))
-        if host_path and host_path.exists():
-            try:
-                content = host_path.read_text(encoding="utf-8")
-                return process_content(content, str(potential_path), "host")
-            except Exception:
-                continue
-
-    # If not found on host, try docker as last resort
-    docker_manager = DockerClientManager()
-    container_name = "odoo-opw-web-1"
-
-    container_result = docker_manager.get_container(container_name)
-    if isinstance(container_result, dict):  # Error
-        return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
-
-    for addon_base in addon_paths:
-        potential_path = Path(addon_base) / path
+    # Try each potential path
+    for potential_path in paths_to_try:
         try:
             # First check if file exists
-            test_result = container_result.exec_run(["test", "-f", str(potential_path)], stdout=False, stderr=False)
+            test_result = container_result.exec_run(["test", "-f", potential_path], stdout=False, stderr=False)
             if test_result.exit_code == 0:
                 # File exists, read it
-                exec_result = container_result.exec_run(["cat", str(potential_path)], stdout=True, stderr=True, demux=True)
-
+                exec_result = container_result.exec_run(["cat", potential_path], stdout=True, stderr=True, demux=True)
                 stdout = exec_result.output[0].decode("utf-8") if exec_result.output[0] else ""
 
                 if exec_result.exit_code == 0:
-                    return process_content(stdout, str(potential_path), "docker")
+                    return process_content(stdout, potential_path)
         except:
             continue
 
     return {
         "success": False,
         "error": f"File not found: {file_path}",
-        "searched_paths": [str(Path(base) / path) for base in addon_paths[:3]] + ["..."],
+        "searched_paths": paths_to_try[:5] + (["..."] if len(paths_to_try) > 5 else []),
     }

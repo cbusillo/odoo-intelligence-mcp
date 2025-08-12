@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ..addon.get_addon_paths import get_addon_paths_from_container, map_container_path_to_host
+from ..addon.get_addon_paths import get_addon_paths_from_container
 
 
 async def search_code(pattern: str, file_type: str = "py", pagination: PaginationParams | None = None) -> dict[str, Any]:
@@ -14,15 +14,9 @@ async def search_code(pattern: str, file_type: str = "py", pagination: Paginatio
     # Get addon paths from the container
     container_paths = await get_addon_paths_from_container()
 
-    search_paths = []
-    for container_path in container_paths:
-        # Try host mapping first
-        host_base = map_container_path_to_host(container_path)
-        if host_base and host_base.exists():
-            search_paths.append(str(host_base))
-        else:
-            # Fallback to container path
-            search_paths.append(container_path)
+    # Use container paths directly - this tool searches on the host filesystem
+    # which may not have the Odoo source code available
+    search_paths = container_paths
 
     try:
         regex = re.compile(pattern, re.IGNORECASE | re.MULTILINE)

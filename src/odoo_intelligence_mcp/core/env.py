@@ -93,7 +93,7 @@ def load_env_config() -> dict[str, str]:
         current_path = current_path.parent
 
     return {
-        "container_name": os.getenv("ODOO_CONTAINER_NAME", "odoo-opw-shell-1"),
+        "container_name": os.getenv("ODOO_SCRIPT_CONTAINER_NAME", "odoo-opw-shell-1"),
         "database": os.getenv("ODOO_DB_NAME", "opw"),
         "addons_path": os.getenv("ODOO_ADDONS_PATH", "/opt/project/addons,/odoo/addons,/volumes/enterprise"),
     }

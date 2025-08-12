@@ -17,7 +17,7 @@ async def test_host_odoo_environment_manager_init() -> None:
 
     assert env_manager.container_name == "odoo-opw-shell-1"
     assert env_manager.database == "opw"
-    assert "/volumes/addons" in env_manager.addons_path
+    assert "/opt/project/addons" in env_manager.addons_path
 
 
 @pytest.mark.asyncio

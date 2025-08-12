@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
-from .get_addon_paths import get_addon_paths_from_container, map_container_path_to_host
+from .get_addon_paths import get_addon_paths_from_container
 
 
 async def get_module_structure(module_name: str, pagination: PaginationParams | None = None) -> dict[str, Any]:
@@ -14,17 +14,11 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
         # Get addon paths from the container
         container_paths = await get_addon_paths_from_container()
 
-        # Try to find the module in container paths mapped to host
+        # Try to find the module in container paths
+        # Note: This tool currently requires the module to exist on the host filesystem
+        # TODO(team): Update to read module structure from container
         for container_path in container_paths:
-            # Try host mapping first
-            host_base = map_container_path_to_host(container_path)
-            if host_base:
-                test_path = host_base / module_name
-                if test_path.exists():
-                    module_path = test_path
-                    break
-
-            # Fallback to container path (in case we're running in container)
+            # For now, just try the container path directly on host
             test_path = Path(container_path) / module_name
             if test_path.exists():
                 module_path = test_path
@@ -83,34 +77,41 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
     all_files = []
 
     # Add models
-    for file_path in structure.get("models", []):
-        all_files.append({"path": file_path, "category": "models", "type": "python"})
+    all_files.extend([{"path": file_path, "category": "models", "type": "python"} for file_path in structure.get("models", [])])
 
     # Add views
-    for file_path in structure.get("views", []):
-        all_files.append({"path": file_path, "category": "views", "type": "xml"})
+    all_files.extend([{"path": file_path, "category": "views", "type": "xml"} for file_path in structure.get("views", [])])
 
     # Add controllers
-    for file_path in structure.get("controllers", []):
-        all_files.append({"path": file_path, "category": "controllers", "type": "python"})
+    all_files.extend(
+        [{"path": file_path, "category": "controllers", "type": "python"} for file_path in structure.get("controllers", [])]
+    )
 
     # Add wizards
-    for file_path in structure.get("wizards", []):
-        all_files.append({"path": file_path, "category": "wizards", "type": "python"})
+    all_files.extend([{"path": file_path, "category": "wizards", "type": "python"} for file_path in structure.get("wizards", [])])
 
     # Add reports
-    for file_path in structure.get("reports", []):
-        all_files.append({"path": file_path, "category": "reports", "type": "python"})
+    all_files.extend([{"path": file_path, "category": "reports", "type": "python"} for file_path in structure.get("reports", [])])
 
     # Add static files
-    for file_path in structure.get("static", {}).get("js", []):
-        all_files.append({"path": f"static/src/{file_path}", "category": "static", "type": "javascript"})
-
-    for file_path in structure.get("static", {}).get("css", []):
-        all_files.append({"path": f"static/src/{file_path}", "category": "static", "type": "css"})
-
-    for file_path in structure.get("static", {}).get("xml", []):
-        all_files.append({"path": f"static/src/{file_path}", "category": "static", "type": "xml"})
+    all_files.extend(
+        [
+            {"path": f"static/src/{file_path}", "category": "static", "type": "javascript"}
+            for file_path in structure.get("static", {}).get("js", [])
+        ]
+    )
+    all_files.extend(
+        [
+            {"path": f"static/src/{file_path}", "category": "static", "type": "css"}
+            for file_path in structure.get("static", {}).get("css", [])
+        ]
+    )
+    all_files.extend(
+        [
+            {"path": f"static/src/{file_path}", "category": "static", "type": "xml"}
+            for file_path in structure.get("static", {}).get("xml", [])
+        ]
+    )
 
     # Apply pagination
     paginated_files = paginate_dict_list(all_files, pagination, ["path", "category", "type"])
