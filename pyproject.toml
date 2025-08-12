@@ -93,6 +93,7 @@ ignore = [
 "tools/field/search_field_properties.py" = ["ANN401"]  # Field needs Any type
 "tools/field/search_field_type.py" = ["ANN401"]  # Field needs Any type
 "tools/operations/*.py" = ["ANN401"]  # Container operations need Any type
+"src/odoo_intelligence_mcp/tools/code/read_odoo_file.py" = ["C901", "PLR0911", "PLR0912", "PLR0915", "PLC0415", "S112", "E722", "PLR2004", "SIM108"]  # Complex file reading logic
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

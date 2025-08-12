@@ -22,6 +22,7 @@ from .tools.analysis import analyze_patterns, analyze_performance, analyze_workf
 from .tools.code.execute_code import execute_code as execute_code_tool
 from .tools.code.execute_code import odoo_shell
 from .tools.code.search_code import search_code
+from .tools.code.read_odoo_file import read_odoo_file
 from .tools.development import run_tests
 from .tools.field import (
     analyze_field_values,
@@ -97,6 +98,15 @@ async def _handle_search_code(_env: CompatibleEnvironment, arguments: dict[str, 
     file_type = get_optional_str(arguments, "file_type", "py")
     pagination = PaginationParams.from_arguments(arguments)
     return await search_code(pattern, file_type, pagination)
+
+
+async def _handle_read_odoo_file(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
+    file_path = get_required(arguments, "file_path")
+    start_line = get_optional_int(arguments, "start_line", None)
+    end_line = get_optional_int(arguments, "end_line", None)
+    pattern = get_optional_str(arguments, "pattern", None)
+    context_lines = get_optional_int(arguments, "context_lines", 5)
+    return await read_odoo_file(file_path, start_line, end_line, pattern, context_lines)
 
 
 async def _handle_find_method(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -224,6 +234,7 @@ TOOL_HANDLERS = {
     "inheritance_chain": _handle_inheritance_chain,
     "addon_dependencies": _handle_addon_dependencies,
     "search_code": _handle_search_code,
+    "read_odoo_file": _handle_read_odoo_file,
     "find_method": _handle_find_method,
     "module_structure": _handle_module_structure,
     "view_model_usage": _handle_view_model_usage,
@@ -411,6 +422,37 @@ async def handle_list_tools() -> list[Tool]:
                     "required": ["pattern"],
                 }
             ),
+        ),
+        Tool(
+            name="read_odoo_file",
+            description="Read a file from Odoo source (core, enterprise, or custom addons) with flexible options",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to file. Examples: 'sale/views/sale_views.xml', '/odoo/addons/sale/views/sale_views.xml', 'addons/product_connect/models/motor.py'",
+                    },
+                    "start_line": {
+                        "type": "integer",
+                        "description": "Line number to start reading from (1-based)",
+                    },
+                    "end_line": {
+                        "type": "integer",
+                        "description": "Line number to stop reading at (inclusive)",
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "description": "Regex pattern to search for and show context around",
+                    },
+                    "context_lines": {
+                        "type": "integer",
+                        "description": "Number of lines to show before/after pattern matches (default 5)",
+                        "default": 5,
+                    },
+                },
+                "required": ["file_path"],
+            },
         ),
         Tool(
             name="module_structure",
