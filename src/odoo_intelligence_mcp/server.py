@@ -21,8 +21,8 @@ from .tools.addon import get_addon_dependencies, get_module_structure
 from .tools.analysis import analyze_patterns, analyze_performance, analyze_workflow_states
 from .tools.code.execute_code import execute_code as execute_code_tool
 from .tools.code.execute_code import odoo_shell
-from .tools.code.search_code import search_code
 from .tools.code.read_odoo_file import read_odoo_file
+from .tools.code.search_code import search_code
 from .tools.development import run_tests
 from .tools.field import (
     analyze_field_values,
@@ -32,6 +32,7 @@ from .tools.field import (
     search_field_properties,
     search_field_type,
 )
+from .tools.filesystem.find_files import find_files
 from .tools.model import (
     analyze_inheritance_chain,
     find_method_implementations,
@@ -98,6 +99,13 @@ async def _handle_search_code(_env: CompatibleEnvironment, arguments: dict[str, 
     file_type = get_optional_str(arguments, "file_type", "py")
     pagination = PaginationParams.from_arguments(arguments)
     return await search_code(pattern, file_type, pagination)
+
+
+async def _handle_find_files(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
+    pattern = get_required(arguments, "pattern")
+    file_type = get_optional_str(arguments, "file_type", None)
+    pagination = PaginationParams.from_arguments(arguments)
+    return await find_files(pattern, file_type, pagination)
 
 
 async def _handle_read_odoo_file(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -234,6 +242,7 @@ TOOL_HANDLERS = {
     "inheritance_chain": _handle_inheritance_chain,
     "addon_dependencies": _handle_addon_dependencies,
     "search_code": _handle_search_code,
+    "find_files": _handle_find_files,
     "read_odoo_file": _handle_read_odoo_file,
     "find_method": _handle_find_method,
     "module_structure": _handle_module_structure,
@@ -424,6 +433,26 @@ async def handle_list_tools() -> list[Tool]:
             ),
         ),
         Tool(
+            name="find_files",
+            description="Find files by name pattern in Odoo addon directories",
+            inputSchema=add_pagination_to_schema(
+                {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "File name pattern (supports wildcards like *.py, test_*.xml, *invoice*)",
+                        },
+                        "file_type": {
+                            "type": "string",
+                            "description": "Optional file extension filter (e.g., 'py', 'xml', 'js')",
+                        },
+                    },
+                    "required": ["pattern"],
+                }
+            ),
+        ),
+        Tool(
             name="read_odoo_file",
             description="Read a file from Odoo source (core, enterprise, or custom addons) with flexible options",
             inputSchema={
@@ -431,7 +460,10 @@ async def handle_list_tools() -> list[Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to file. Examples: 'sale/views/sale_views.xml', '/odoo/addons/sale/views/sale_views.xml', 'addons/product_connect/models/motor.py'",
+                        "description": (
+                            "Path to file. Examples: 'sale/views/sale_views.xml', "
+                            "'/odoo/addons/sale/views/sale_views.xml', 'addons/product_connect/models/motor.py'"
+                        ),
                     },
                     "start_line": {
                         "type": "integer",
