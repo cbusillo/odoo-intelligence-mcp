@@ -61,7 +61,7 @@ for model_name in model_names:
 
         if matching_methods:
             results.append({{
-                "model": model_name, 
+                "model": model_name,
                 "description": getattr(model, "_description", ""),
                 "methods": matching_methods
             }})

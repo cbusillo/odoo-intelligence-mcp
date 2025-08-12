@@ -17,14 +17,14 @@ if model_name not in env:
     result = {{"error": f"Model {{model_name}} not found"}}
 else:
     model = env[model_name]
-    
+
     # Get field info using fields_get() which includes inherited fields
     fields_info = model.fields_get()
     if field_name not in fields_info:
         result = {{"error": f"Field {{field_name}} not found in {{model_name}}"}}
     else:
         field_info = fields_info[field_name]
-        
+
         dependencies = {{
             "field": field_name,
             "model": model_name,
@@ -34,7 +34,7 @@ else:
             "dependent_fields": [],
             "dependency_chain": [],
         }}
-        
+
         # Direct dependencies (what this field depends on)
         # Try to get from _fields for compute dependencies
         try:
@@ -49,32 +49,32 @@ else:
                     dependencies["direct_dependencies"] = [".".join(field_obj.related)]
         except Exception:
             pass
-        
+
         # Try to extract dependency info from fields_get() if available
         if not dependencies["direct_dependencies"]:
             if field_info.get("related"):
                 dependencies["direct_dependencies"] = [field_info["related"]]
             elif field_info.get("depends"):
                 dependencies["direct_dependencies"] = field_info["depends"] if isinstance(field_info["depends"], list) else [field_info["depends"]]
-        
+
         # Find fields that depend on this field (reverse lookup)
         try:
             for fname, other_field_info in fields_info.items():
                 if fname != field_name:
                     field_deps = []
-                    
+
                     # Check if this field is in depends
                     if other_field_info.get("depends"):
                         depends_list = other_field_info["depends"] if isinstance(other_field_info["depends"], list) else [other_field_info["depends"]]
                         if field_name in depends_list or any(field_name in dep for dep in depends_list):
                             field_deps.extend(depends_list)
-                    
+
                     # Check if this field is in related path
                     if other_field_info.get("related"):
                         related_path = other_field_info["related"]
                         if field_name in related_path:
                             field_deps.append(related_path)
-                    
+
                     # Try to get compute dependencies from _fields
                     try:
                         other_field_obj = model._fields.get(fname)
@@ -86,7 +86,7 @@ else:
                                     field_deps.extend(compute_deps)
                     except Exception:
                         pass
-                    
+
                     if field_deps:
                         dependencies["dependent_fields"].append({{
                             "field": fname,
@@ -97,7 +97,7 @@ else:
                         }})
         except Exception:
             pass
-        
+
         # Build dependency chain for related fields
         if dependencies["direct_dependencies"]:
             for dep in dependencies["direct_dependencies"]:
@@ -107,7 +107,7 @@ else:
                         "path": dep,
                         "steps": [],
                     }}
-                    
+
                     current_model = model_name
                     for i, part in enumerate(chain_parts):
                         try:
@@ -121,7 +121,7 @@ else:
                                     "relation": field_data.get("relation"),
                                 }}
                                 chain_info["steps"].append(step)
-                                
+
                                 # Update current model for next iteration
                                 if field_data.get("relation") and i < len(chain_parts) - 1:
                                     current_model = field_data["relation"]
@@ -131,10 +131,10 @@ else:
                                 break
                         except Exception:
                             break
-                    
+
                     if chain_info["steps"]:
                         dependencies["dependency_chain"].append(chain_info)
-        
+
         result = dependencies
 """
 

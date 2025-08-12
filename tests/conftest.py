@@ -28,14 +28,17 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
         try:
             # Check for syntax errors
             compile(code, "<test>", "exec")
-            
+
             # Mock specific code patterns
             if "result = 2 + 2" in code:
                 return {"success": True, "result": 4}
             elif "1 / 0" in code:
                 return {"success": False, "error": "division by zero", "error_type": "ZeroDivisionError"}
             elif "res.partner" in code and "search" in code:
-                return {"success": True, "result": [{"name": "Partner 1", "email": "p1@test.com"}, {"name": "Partner 2", "email": "p2@test.com"}]}
+                return {
+                    "success": True,
+                    "result": [{"name": "Partner 1", "email": "p1@test.com"}, {"name": "Partner 2", "email": "p2@test.com"}],
+                }
             elif "datetime" in code:
                 return {"success": True, "result": {"current": "2024-01-01", "formatted": "Monday"}}
             elif "import non_existent_module" in code:
@@ -43,7 +46,14 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             elif "calculations" in code:
                 return {"success": True, "result": {"calculation": 155, "text": "Result is 155"}}
             elif "env['res.partner']" in code and "limit=1" in code:
-                return {"success": True, "result_type": "recordset", "model": "res.partner", "count": 1, "ids": [1], "display_names": ["Test Partner"]}
+                return {
+                    "success": True,
+                    "result_type": "recordset",
+                    "model": "res.partner",
+                    "count": 1,
+                    "ids": [1],
+                    "display_names": ["Test Partner"],
+                }
             elif code.strip() == "":
                 return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
             elif "result = 10 + 45" in code:

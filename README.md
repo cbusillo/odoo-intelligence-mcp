@@ -4,7 +4,7 @@ Comprehensive Model Context Protocol (MCP) server providing deep code analysis a
 
 ## Features
 
-**25 Tools Available:**
+**30 Tools Available:**
 - **Code Intelligence**: Analyze models, fields, relationships, inheritance chains, and patterns
 - **Development Tools**: Execute code, run tests, analyze field values, debug permissions  
 - **Shell Integration**: Direct access to Odoo shell environment
@@ -37,9 +37,11 @@ Restart Claude Code after configuration changes.
 
 ### Environment
 
-- **Database**: `opw`
-- **Addons Path**: `/volumes/addons,/odoo/addons,/volumes/enterprise` 
-- **Container**: `odoo-opw-web-1` (main), `odoo-opw-shell-1` (shell), `odoo-opw-script-runner-1` (updates)
+Default configuration (can be customized via environment variables):
+- **Database**: `opw` (env: `ODOO_DB_NAME`)
+- **Addons Path**: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (env: `ODOO_ADDONS_PATH`)
+- **Script Container**: `odoo-opw-shell-1` (env: `ODOO_SCRIPT_CONTAINER_NAME`)
+- **Other Containers**: `odoo-opw-web-1` (main), `odoo-opw-script-runner-1` (updates)
 
 ### Manual Testing
 
@@ -53,7 +55,7 @@ from odoo_intelligence_mcp.server import model_info
 '"
 ```
 
-## Available Tools (28 total)
+## Available Tools (30 total)
 
 **Code Intelligence:**
 - `model_info` - Comprehensive model analysis (fields, methods, inheritance)
@@ -65,6 +67,8 @@ from odoo_intelligence_mcp.server import model_info
 - `inheritance_chain` - Complete inheritance chain with MRO analysis
 - `addon_dependencies` - Manifest analysis and dependency tracking
 - `search_code` - Regex-based code search across addons (paginated)
+- `find_files` - Find files by name pattern in Odoo addon directories (paginated)
+- `read_odoo_file` - Read any Odoo source file with line range and pattern matching support
 - `module_structure` - Module directory structure analysis
 - `find_method` - Find all models implementing a specific method (paginated)
 - `search_decorators` - Find methods by decorator type

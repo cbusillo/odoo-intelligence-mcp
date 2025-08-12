@@ -22,7 +22,7 @@ for model_name in model_names:
     try:
         model = env[model_name]
         model_class = type(model)
-        
+
         if hasattr(model_class, method_name):
             method = getattr(model_class, method_name)
             if callable(method):
@@ -31,12 +31,12 @@ for model_name in model_names:
                     signature = str(inspect.signature(method))
                 except Exception:
                     signature = "Unable to inspect signature"
-                
+
                 try:
                     source = inspect.getsource(method)
                     source_lines = source.split("\\n")
                     max_lines = 10
-                    
+
                     if len(source_lines) <= max_lines:
                         source_preview = "\\n".join(f"{{i + 1:3}}: {{line}}" for i, line in enumerate(source_lines))
                     else:
@@ -45,12 +45,12 @@ for model_name in model_names:
                         source_preview += f"\\n{{max_lines + 1:3}}: ..."
                 except Exception:
                     source_preview = "Source not available"
-                
+
                 try:
                     module = model_class.__module__
                 except Exception:
                     module = "Unknown module"
-                
+
                 implementations.append({{
                     "model": model_name,
                     "module": module,

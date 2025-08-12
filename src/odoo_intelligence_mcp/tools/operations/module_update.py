@@ -43,10 +43,10 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
 
         except NotFound:
             return {
-                "success": False, 
-                "error": f"Container '{container_name}' not found", 
+                "success": False,
+                "error": f"Container '{container_name}' not found",
                 "modules": modules,
-                "hint": "Use the 'odoo_restart' tool to restart services, or run 'docker compose up -d script-runner' to start the script-runner service"
+                "hint": "Use the 'odoo_restart' tool to restart services, or run 'docker compose up -d script-runner' to start the script-runner service",
             }
         except APIError as e:
             return {"success": False, "error": f"Docker API error: {e}", "modules": modules}

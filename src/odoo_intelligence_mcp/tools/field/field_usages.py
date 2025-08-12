@@ -75,10 +75,10 @@ if model_name not in env:
     result = {{"error": f"Model {{model_name}} not found"}}
 else:
     model = env[model_name]
-    
+
     # Get field info using fields_get() which includes inherited fields
     fields_info = model.fields_get()
-    
+
     if field_name not in fields_info:
         result = {{"error": f"Field {{field_name}} not found in {{model_name}}"}}
     else:
@@ -91,7 +91,7 @@ else:
             "readonly": field_data.get("readonly", False),
             "store": field_data.get("store", True),
         }}
-        
+
         # Add optional field attributes
         if field_data.get("compute"):
             field_info["compute"] = field_data["compute"]
@@ -105,7 +105,7 @@ else:
                 field_info["inverse_name"] = field_data.get("inverse_name")
             elif field_data.get("type") == "many2many":
                 field_info["relation_table"] = field_data.get("relation_table")
-        
+
         # Find views using this field
         views_using_field = []
         View = env["ir.ui.view"]
@@ -118,7 +118,7 @@ else:
                     "type": view.type,
                     "inherit_id": view.inherit_id.name if view.inherit_id else None,
                 }})
-        
+
         # Find domains using this field
         domains_using_field = []
         Action = env["ir.actions.act_window"]
@@ -130,7 +130,7 @@ else:
                     "name": action.name,
                     "domain": action.domain,
                 }})
-        
+
         Filter = env["ir.filters"]
         filters = Filter.search([("model_id", "=", model_name)])
         for filter_rec in filters:
@@ -141,11 +141,11 @@ else:
                     "domain": filter_rec.domain,
                     "user": filter_rec.user_id.name if filter_rec.user_id else "Public",
                 }})
-        
+
         # Find methods using this field
         methods_using_field = []
         model_class = type(model)
-        
+
         # Check computed fields that depend on this field
         for fname, fdata in fields_info.items():
             if fdata.get("compute"):
@@ -173,7 +173,7 @@ else:
                                     else [str(method._depends)]
                                 ),
                             }})
-        
+
         # Check constraint and onchange methods
         for attr_name in dir(model_class):
             attr = getattr(model_class, attr_name, None)
@@ -191,7 +191,7 @@ else:
                         "method": attr_name,
                         "onchange": list(attr._onchange),
                     }})
-        
+
         # Check method source code for field references
         for method_name in dir(model_class):
             if (
@@ -206,7 +206,7 @@ else:
                         escaped_field = re.escape(field_name)
                         patterns = [
                             r'self\\\\.' + escaped_field + r'\\\\b',
-                            r'record\\\\.' + escaped_field + r'\\\\b',  
+                            r'record\\\\.' + escaped_field + r'\\\\b',
                             r'rec\\\\.' + escaped_field + r'\\\\b',
                             r'["\\\']' + escaped_field + r'["\\\']',
                         ]
@@ -225,7 +225,7 @@ else:
                                 break
                     except Exception:
                         pass
-        
+
         result = {{
             "model": model_name,
             "field": field_name,

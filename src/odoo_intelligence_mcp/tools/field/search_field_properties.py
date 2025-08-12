@@ -27,14 +27,14 @@ results = []
 for model_name in model_names:
     try:
         model = env[model_name]
-        
+
         # Get all fields using fields_get() which includes inherited fields
         fields_info = model.fields_get()
         matching_fields = []
-        
+
         for field_name, field_data in fields_info.items():
             field_matches = False
-            
+
             # Check property type
             if property_type == "computed":
                 field_matches = bool(field_data.get("compute"))
@@ -46,22 +46,22 @@ for model_name in model_names:
                 field_matches = field_data.get("required", False)
             elif property_type == "readonly":
                 field_matches = field_data.get("readonly", False)
-            
+
             if field_matches:
                 field_info = {{
                     "field": field_name,
                     "type": field_data.get("type", ""),
                     "string": field_data.get("string", "")
                 }}
-                
+
                 if property_type == "computed":
                     field_info["compute_method"] = field_data.get("compute", "")
                     field_info["stored"] = str(field_data.get("store", False))
                 elif property_type == "related":
                     field_info["related_path"] = field_data.get("related", "")
-                
+
                 matching_fields.append(field_info)
-        
+
         if matching_fields:
             results.append({{
                 "model": model_name,

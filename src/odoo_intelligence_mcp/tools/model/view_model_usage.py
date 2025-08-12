@@ -20,10 +20,10 @@ if model_name not in env:
     result = {{"error": f"Model {{model_name}} not found"}}
 else:
     view_usage = {{
-        "model": model_name, 
-        "views": [], 
-        "exposed_fields": set(), 
-        "view_types": {{}}, 
+        "model": model_name,
+        "views": [],
+        "exposed_fields": set(),
+        "view_types": {{}},
         "field_usage_count": {{}}
     }}
 

@@ -22,7 +22,7 @@ if model_name not in env:
 else:
     model = env[model_name]
     model_class = type(model)
-    
+
     workflow_analysis = {{
         "model": model_name,
         "state_fields": {{}},
@@ -31,19 +31,19 @@ else:
         "automated_transitions": [],
         "state_dependencies": {{}},
     }}
-    
+
     # Get all fields using fields_get() which includes inherited fields
     fields_info = model.fields_get()
-    
+
     # Find state fields
     for field_name, field_data in fields_info.items():
-        if ((field_name in ["state", "status"] or 
-             "state" in field_name or 
-             "status" in field_name) and 
+        if ((field_name in ["state", "status"] or
+             "state" in field_name or
+             "status" in field_name) and
             field_data.get("type") == "selection"):
-            
+
             selection_values = field_data.get("selection", [])
-            
+
             # Handle dynamic selections
             if not isinstance(selection_values, list):
                 try:
@@ -55,9 +55,9 @@ else:
                         selection_values = "dynamic"
                 except Exception:
                     selection_values = "dynamic"
-            
+
             default_value = field_data.get("default")
-            
+
             workflow_analysis["state_fields"][field_name] = {{
                 "type": field_data.get("type"),
                 "string": field_data.get("string"),
@@ -66,23 +66,23 @@ else:
                 "readonly": field_data.get("readonly", False),
                 "required": field_data.get("required", False),
             }}
-    
+
     # Find methods that modify state fields
     state_field_names = list(workflow_analysis["state_fields"].keys())
-    
+
     if state_field_names:  # Only analyze if we found state fields
         for method_name, method in inspect.getmembers(model_class, inspect.isfunction):
             if method_name.startswith("_"):
                 continue
-            
+
             try:
                 source = inspect.getsource(method)
-                
+
                 # Check if method modifies any state field
                 for state_field in state_field_names:
                     if "'" + state_field + "'" in source or '"' + state_field + '"' in source:
                         decorators = []
-                        
+
                         # Check for common Odoo decorators
                         if hasattr(method, "_depends"):
                             decorators.append("@api.depends(" + ', '.join(repr(d) for d in method._depends) + ")")
@@ -90,14 +90,14 @@ else:
                             decorators.append("@api.constrains(" + ', '.join(repr(c) for c in method._constrains) + ")")
                         if hasattr(method, "_onchange"):
                             decorators.append("@api.onchange(" + ', '.join(repr(o) for o in method._onchange) + ")")
-                        
+
                         transition_info = {{
                             "method": method_name,
                             "affects_field": state_field,
                             "signature": str(inspect.signature(method)),
                             "decorators": decorators,
                         }}
-                        
+
                         # Check if it's a button action
                         if "button_" in method_name or any("@api.onchange" in d for d in decorators):
                             workflow_analysis["button_actions"].append(transition_info)
@@ -106,7 +106,7 @@ else:
                             workflow_analysis["automated_transitions"].append(transition_info)
                         else:
                             workflow_analysis["state_transitions"].append(transition_info)
-                        
+
                         # Extract state transitions from source
                         # Build pattern to match state assignments like: state = 'draft' or self.state = "done"
                         # Use simpler pattern to avoid escaping issues - escape field name for regex
@@ -121,7 +121,7 @@ else:
                             transition_info["transitions_to"] = list(set(transitions))
             except Exception:
                 continue
-        
+
         # Find computed fields that depend on state
         for field_name, field_data in fields_info.items():
             if field_data.get("compute"):
@@ -130,7 +130,7 @@ else:
                     if field_obj and hasattr(field_obj, "compute"):
                         compute_method_name = field_obj.compute
                         compute_method = getattr(model, compute_method_name, None) if isinstance(compute_method_name, str) else None
-                        
+
                         if compute_method and hasattr(compute_method, "_depends"):
                             dependencies = list(compute_method._depends)
                             for state_field in state_field_names:
@@ -144,7 +144,7 @@ else:
                                     }})
                 except Exception:
                     continue
-    
+
     # Add summary
     workflow_analysis["summary"] = {{
         "has_workflow": bool(workflow_analysis["state_fields"]),
@@ -154,7 +154,7 @@ else:
         "automated_transition_count": len(workflow_analysis["automated_transitions"]),
         "fields_depending_on_state": sum(len(deps) for deps in workflow_analysis["state_dependencies"].values()),
     }}
-    
+
     result = workflow_analysis
 """
 

@@ -44,7 +44,7 @@ def get_decorators(func):
         }})
     if hasattr(func, "_depends"):
         decorators.append({{
-            "type": "depends", 
+            "type": "depends",
             "fields": list(func._depends) if func._depends else []
         }})
     if hasattr(func, "_onchange"):
@@ -104,7 +104,7 @@ for model_name in model_names:
         for method_name, method in inspect.getmembers(model_class, inspect.isfunction):
             if not method_name.startswith("_"):
                 decorators = get_decorators(method)
-                
+
                 # Add to api_decorators
                 for decorator in decorators:
                     patterns["api_decorators"].append({{
@@ -120,7 +120,7 @@ for model_name in model_names:
                         signature = str(inspect.signature(method))
                     except Exception:
                         signature = "unable_to_inspect"
-                    
+
                     patterns["custom_methods"].append({{
                         "model": model_name,
                         "method": method_name,

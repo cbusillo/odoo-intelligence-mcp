@@ -40,11 +40,11 @@ results = []
 for model_name in model_names:
     try:
         model = env[model_name]
-        
+
         # Get all fields using fields_get() which includes inherited fields
         fields_info = model.fields_get()
         matching_fields = []
-        
+
         for field_name, field_data in fields_info.items():
             if field_data.get("type") == field_type:
                 field_info = {{
@@ -52,15 +52,15 @@ for model_name in model_names:
                     "string": field_data.get("string", ""),
                     "required": field_data.get("required", False),
                 }}
-                
+
                 # Add relational field information
                 if field_type in ["many2one", "one2many", "many2many"]:
                     field_info["comodel_name"] = field_data.get("relation")
                     if field_type == "one2many":
                         field_info["inverse_name"] = field_data.get("inverse_name")
-                
+
                 matching_fields.append(field_info)
-        
+
         if matching_fields:
             results.append({{
                 "model": model_name,

@@ -42,9 +42,9 @@ else:
             else:
                 analysis = {{
                     "user": {{
-                        "id": user_obj.id, 
-                        "login": user_obj.login, 
-                        "name": user_obj.name, 
+                        "id": user_obj.id,
+                        "login": user_obj.login,
+                        "name": user_obj.name,
                         "active": user_obj.active
                     }},
                     "model": model,
@@ -60,8 +60,8 @@ else:
                 # Get user groups
                 for group in user_obj.groups_id:
                     analysis["groups"].append({{
-                        "id": group.id, 
-                        "name": group.name, 
+                        "id": group.id,
+                        "name": group.name,
                         "category": group.category_id.name if group.category_id else None
                     }})
 
