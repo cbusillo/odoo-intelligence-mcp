@@ -1,5 +1,6 @@
 from typing import Any
 
+from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
 from ...utils.response_utils import ResponseBuilder
 
@@ -7,7 +8,9 @@ from ...utils.response_utils import ResponseBuilder
 async def odoo_restart(services: str = "web-1,shell-1,script-runner-1") -> dict[str, Any]:
     try:
         docker_manager = DockerClientManager()
-        service_list = [f"odoo-opw-{s.strip()}" for s in services.split(",")]
+        config = load_env_config()
+        container_prefix = config["container_prefix"]
+        service_list = [f"{container_prefix}-{s.strip()}" for s in services.split(",")]
         results = {}
 
         for service_name in service_list:

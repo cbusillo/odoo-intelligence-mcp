@@ -3,10 +3,16 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ..core.env import load_env_config
+
 
 class OdooStaticAnalyzer:
     def __init__(self, addon_paths: list[str] | None = None) -> None:
-        self.addon_paths = addon_paths or ["/volumes/addons", "/odoo/addons", "/volumes/enterprise"]
+        if addon_paths is None:
+            config = load_env_config()
+            self.addon_paths = config["addons_path"].split(",")
+        else:
+            self.addon_paths = addon_paths
         self._model_cache: dict[str, dict[str, Any]] = {}
 
     def find_model_file(self, model_name: str) -> Path | None:

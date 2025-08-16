@@ -1,6 +1,7 @@
 import ast
 from typing import Any
 
+from ...core.env import load_env_config
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
 from ...utils.docker_utils import DockerClientManager
 from .get_addon_paths import get_addon_paths_from_container
@@ -13,7 +14,8 @@ async def _get_addon_paths() -> list[str]:
 def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
     try:
         docker_manager = DockerClientManager()
-        container = docker_manager.get_container("odoo-opw-web-1")
+        config = load_env_config()
+        container = docker_manager.get_container(config["web_container"])
         if isinstance(container, dict):
             return None
 
@@ -62,7 +64,8 @@ def _find_dependent_addons(addon_name: str, addon_paths: list[str]) -> list[dict
     addons_depending_on_this = []
 
     docker_manager = DockerClientManager()
-    container = docker_manager.get_container("odoo-opw-web-1")
+    config = load_env_config()
+    container = docker_manager.get_container(config["web_container"])
     if isinstance(container, dict):
         return addons_depending_on_this
 

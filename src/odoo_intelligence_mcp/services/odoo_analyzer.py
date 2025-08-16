@@ -141,7 +141,7 @@ class OdooAnalyzer(BaseService):
         except Exception as e:
             raise ServiceExecutionError(f"Failed to restart containers: {e!s}") from e
 
-    async def get_container_logs(self, container: str = "odoo-opw-web-1", lines: int = 100) -> dict[str, Any]:
+    async def get_container_logs(self, container: str | None = None, lines: int = 100) -> dict[str, Any]:
         try:
             result = await self._safe_execute("get container logs", container_logs.odoo_logs, container, lines)
 

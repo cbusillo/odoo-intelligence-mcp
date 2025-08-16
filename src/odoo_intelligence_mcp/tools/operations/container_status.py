@@ -11,7 +11,7 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
         config = load_env_config()
         containers = [
             config["web_container"],
-            config["container_name"],  # shell container
+            config["shell_container"],
             config["script_runner_container"],
         ]
         status = {}

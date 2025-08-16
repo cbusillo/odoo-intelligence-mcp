@@ -833,8 +833,7 @@ async def handle_list_tools() -> list[Tool]:
                 "properties": {
                     "container": {
                         "type": "string",
-                        "description": "Container name (default: odoo-opw-web-1)",
-                        "default": "odoo-opw-web-1",
+                        "description": "Container name (defaults to web container from env)",
                     },
                     "lines": {"type": "integer", "description": "Number of lines to retrieve (default: 100)", "default": 100},
                 },

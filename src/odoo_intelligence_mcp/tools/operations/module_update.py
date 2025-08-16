@@ -15,10 +15,11 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
         module_list = [m.strip() for m in modules.split(",")]
 
         # Build command
+        addons_path = config["addons_path"]
         cmd = [
             "/odoo/odoo-bin",
             f"--database={database}",
-            "--addons-path=/volumes/addons,/odoo/addons,/volumes/enterprise",
+            f"--addons-path={addons_path}",
             "--stop-after-init",
         ]
 

@@ -40,9 +40,26 @@ Restart Claude Code after configuration changes.
 Default configuration (can be customized via environment variables):
 - **Database**: `opw` (env: `ODOO_DB_NAME`)
 - **Addons Path**: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (env: `ODOO_ADDONS_PATH`)
-- **Shell Container**: `odoo-opw-shell-1` (env: `ODOO_SCRIPT_CONTAINER_NAME`)
-- **Script Runner Container**: `odoo-opw-script-runner-1` (env: `ODOO_SCRIPT_RUNNER_CONTAINER`)
-- **Web Container**: `odoo-opw-web-1` (env: `ODOO_WEB_CONTAINER`)
+- **Container Prefix**: `odoo-opw` (env: `ODOO_CONTAINER_PREFIX`)
+
+Containers are automatically derived from the prefix:
+- Primary: `{prefix}-script-runner-1` (used for most operations)
+- Web: `{prefix}-web-1` (file operations, logs)
+- Shell: `{prefix}-shell-1` (available for shell access)
+
+### Using with Different Projects
+
+To use with a different Odoo project, set environment variables before running:
+
+```bash
+# Example for a project with containers named "odoo-dev-*" and database "mydb"
+export ODOO_CONTAINER_PREFIX="odoo-dev"
+export ODOO_DB_NAME="mydb"
+export ODOO_ADDONS_PATH="/custom/addons,/odoo/addons"
+
+# Then add to Claude Code
+claude mcp add-json odoo-intelligence '...'
+```
 
 ### Manual Testing
 

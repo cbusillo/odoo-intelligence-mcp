@@ -44,10 +44,11 @@ async def run_tests(
 
         # Build command to run tests
         database = config["database"]
+        addons_path = config["addons_path"]
         cmd = [
             "/odoo/odoo-bin",
             f"--database={database}",
-            "--addons-path=/volumes/addons,/odoo/addons,/volumes/enterprise",
+            f"--addons-path={addons_path}",
             f"--http-port={http_port}",  # Use random port to avoid conflicts
             "--stop-after-init",
             "--test-enable",

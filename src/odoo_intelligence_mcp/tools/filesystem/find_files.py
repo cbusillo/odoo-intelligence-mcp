@@ -1,5 +1,6 @@
 from typing import Any
 
+from ...core.env import load_env_config
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
 from ...utils.docker_utils import DockerClientManager
 from ..addon.get_addon_paths import get_addon_paths_from_container
@@ -21,7 +22,8 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
         pagination = PaginationParams()
 
     docker_manager = DockerClientManager()
-    container = docker_manager.get_container("odoo-opw-web-1")
+    config = load_env_config()
+    container = docker_manager.get_container(config["web_container"])
     if isinstance(container, dict):
         return {"success": False, "error": f"Container error: {container.get('error', 'Unknown error')}"}
 

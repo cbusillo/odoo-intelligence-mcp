@@ -267,7 +267,7 @@ class TestRegistryEdgeCases:
 
         # Initially, registry is None
         assert env._registry is None
-        
+
         # After first access, registry is created
         registry = env.registry
         assert env._registry is not None
