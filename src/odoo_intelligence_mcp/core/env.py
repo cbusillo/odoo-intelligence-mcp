@@ -122,6 +122,7 @@ class HostOdooEnvironment:
         self.container_name = container_name
         self.database = database
         self.addons_path = addons_path
+        self._registry: Registry | None = None
 
     def __getitem__(self, model_name: str) -> "ModelProxy":
         return ModelProxy(self, model_name)
@@ -140,7 +141,9 @@ class HostOdooEnvironment:
 
     @property
     def registry(self) -> Registry:
-        return DockerRegistry(self)
+        if self._registry is None:
+            self._registry = DockerRegistry(self)
+        return self._registry
 
     @property
     def cr(self) -> object:
