@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from ...core.env import load_env_config
 from ...type_defs.odoo_types import CompatibleEnvironment
 
 
@@ -75,7 +76,10 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
 
 def odoo_shell(code: str, timeout: int = 30) -> dict[str, Any]:
     try:
-        cmd = ["docker", "exec", "-i", "odoo-opw-shell-1", "/odoo/odoo-bin", "shell", "--database=opw"]
+        config = load_env_config()
+        container_name = config["container_name"]
+        database = config["database"]
+        cmd = ["docker", "exec", "-i", container_name, "/odoo/odoo-bin", "shell", f"--database={database}"]
 
         result = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=timeout)
 

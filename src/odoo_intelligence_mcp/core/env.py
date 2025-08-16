@@ -94,6 +94,8 @@ def load_env_config() -> dict[str, str]:
 
     return {
         "container_name": os.getenv("ODOO_SCRIPT_CONTAINER_NAME", "odoo-opw-shell-1"),
+        "script_runner_container": os.getenv("ODOO_SCRIPT_RUNNER_CONTAINER", "odoo-opw-script-runner-1"),
+        "web_container": os.getenv("ODOO_WEB_CONTAINER", "odoo-opw-web-1"),
         "database": os.getenv("ODOO_DB_NAME", "opw"),
         "addons_path": os.getenv("ODOO_ADDONS_PATH", "/opt/project/addons,/odoo/addons,/volumes/enterprise"),
     }

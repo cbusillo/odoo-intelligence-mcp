@@ -3,17 +3,21 @@ from typing import Any
 import docker
 from docker.errors import APIError, NotFound
 
+from ...core.env import load_env_config
+
 
 async def odoo_update_module(modules: str, force_install: bool = False) -> dict[str, Any]:
     try:
         client = docker.from_env()
-        container_name = "odoo-opw-script-runner-1"
+        config = load_env_config()
+        container_name = config["script_runner_container"]
+        database = config["database"]
         module_list = [m.strip() for m in modules.split(",")]
 
         # Build command
         cmd = [
             "/odoo/odoo-bin",
-            "--database=opw",
+            f"--database={database}",
             "--addons-path=/volumes/addons,/odoo/addons,/volumes/enterprise",
             "--stop-after-init",
         ]

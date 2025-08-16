@@ -1,9 +1,13 @@
 from typing import Any
 
+from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
 
 
-async def odoo_logs(container: str = "odoo-opw-web-1", lines: int = 100) -> dict[str, Any]:
+async def odoo_logs(container: str | None = None, lines: int = 100) -> dict[str, Any]:
+    if container is None:
+        config = load_env_config()
+        container = config["web_container"]
     docker_manager = DockerClientManager()
 
     def get_logs(container_obj: Any) -> dict[str, Any]:

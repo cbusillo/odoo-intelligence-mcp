@@ -2,6 +2,7 @@ import random
 import re
 from typing import Any
 
+from ...core.env import load_env_config
 from ...core.utils import PaginationParams, paginate_dict_list
 from ...utils.docker_utils import DockerClientManager
 
@@ -15,7 +16,8 @@ async def run_tests(
 ) -> dict[str, Any]:
     try:
         docker_manager = DockerClientManager()
-        container_name = "odoo-opw-script-runner-1"
+        config = load_env_config()
+        container_name = config["script_runner_container"]
 
         # Get container
         container_result = docker_manager.get_container(container_name)
@@ -41,9 +43,10 @@ async def run_tests(
         http_port = random.randint(9000, 9999)
 
         # Build command to run tests
+        database = config["database"]
         cmd = [
             "/odoo/odoo-bin",
-            "--database=opw",
+            f"--database={database}",
             "--addons-path=/volumes/addons,/odoo/addons,/volumes/enterprise",
             f"--http-port={http_port}",  # Use random port to avoid conflicts
             "--stop-after-init",

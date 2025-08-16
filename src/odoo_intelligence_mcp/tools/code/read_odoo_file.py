@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
 
 
@@ -96,7 +97,8 @@ async def read_odoo_file(
         return {"success": True, "path": source_path, "content": content_with_numbers, "total_lines": total_lines}
 
     docker_manager = DockerClientManager()
-    container_name = "odoo-opw-web-1"
+    config = load_env_config()
+    container_name = config["script_runner_container"]
 
     container_result = docker_manager.get_container(container_name)
     if isinstance(container_result, dict):  # Error

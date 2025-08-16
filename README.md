@@ -40,8 +40,9 @@ Restart Claude Code after configuration changes.
 Default configuration (can be customized via environment variables):
 - **Database**: `opw` (env: `ODOO_DB_NAME`)
 - **Addons Path**: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (env: `ODOO_ADDONS_PATH`)
-- **Script Container**: `odoo-opw-shell-1` (env: `ODOO_SCRIPT_CONTAINER_NAME`)
-- **Other Containers**: `odoo-opw-web-1` (main), `odoo-opw-script-runner-1` (updates)
+- **Shell Container**: `odoo-opw-shell-1` (env: `ODOO_SCRIPT_CONTAINER_NAME`)
+- **Script Runner Container**: `odoo-opw-script-runner-1` (env: `ODOO_SCRIPT_RUNNER_CONTAINER`)
+- **Web Container**: `odoo-opw-web-1` (env: `ODOO_WEB_CONTAINER`)
 
 ### Manual Testing
 

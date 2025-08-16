@@ -1,5 +1,6 @@
 from typing import Any
 
+from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
 from ...utils.response_utils import ResponseBuilder
 
@@ -7,7 +8,12 @@ from ...utils.response_utils import ResponseBuilder
 async def odoo_status(verbose: bool = False) -> dict[str, Any]:
     try:
         docker_manager = DockerClientManager()
-        containers = ["odoo-opw-web-1", "odoo-opw-shell-1", "odoo-opw-script-runner-1"]
+        config = load_env_config()
+        containers = [
+            config["web_container"],
+            config["container_name"],  # shell container
+            config["script_runner_container"],
+        ]
         status = {}
 
         # Test Docker connection first
