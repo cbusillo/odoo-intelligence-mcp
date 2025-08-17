@@ -82,11 +82,18 @@ async def new_tool(env: Any, param: str) -> dict[str, Any]:
 - Use `paginate_dict_list(items, pagination)`
 - Add pagination schema with `add_pagination_to_schema()`
 
+## Configuration
+
+**Environment Variables** (for portability to any Odoo project):
+- `ODOO_CONTAINER_PREFIX`: Container name prefix (default: "odoo-opw")
+- `ODOO_DB_NAME`: Database name (default: "opw")
+- `ODOO_ADDONS_PATH`: Addon paths (default: "/opt/project/addons,/odoo/addons,/volumes/enterprise")
+
 ## Architecture
 
 **Host-based MCP Server** (runs on host machine, not in Docker):
 
-- Connects to Odoo via Docker exec to `odoo-opw-shell-1` container
+- Connects to Odoo via Docker exec to containers (configurable via ODOO_CONTAINER_PREFIX)
 - Uses subprocess to execute Python code in Odoo environment
 - Returns JSON-serializable results
 
@@ -107,7 +114,7 @@ async def new_tool(env: Any, param: str) -> dict[str, Any]:
 
 ## Docker Connection
 
-**Default container**: `odoo-opw-shell-1` (dedicated shell container)
+**Primary container**: `{ODOO_CONTAINER_PREFIX}-script-runner-1` (default prefix: odoo-opw)
 **Database**: `opw`
 **Execution**: Uses `/odoo/odoo-bin shell` with `--no-http`
 
