@@ -539,6 +539,133 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 },
             }
 
+        # Handle field dependencies queries
+        if "# Get field info using fields_get()" in code and "dependent_fields" in code:
+            # Check for invalid model
+            if "invalid.model" in code:
+                return {"error": "Model invalid.model not found"}
+            
+            # Check for invalid field
+            if "nonexistent_field" in code:
+                return {"error": "Field nonexistent_field not found in res.partner"}
+            
+            model_name = (
+                "sale.order" if "sale.order" in code
+                else "sale.order.line" if "sale.order.line" in code
+                else "account.move" if "account.move" in code
+                else "res.partner" if "res.partner" in code
+                else "product.template"
+            )
+            
+            field_name = (
+                "partner_id" if "partner_id" in code
+                else "product_id" if "product_id" in code
+                else "state" if "state" in code
+                else "name"
+            )
+            
+            return {
+                "field": field_name,
+                "model": model_name,
+                "type": "many2one" if field_name in ["partner_id", "product_id"] else "char",
+                "dependent_fields": [],
+                "dependency_chain": [],
+                "depends_on": [],
+                "summary": {
+                    "total_dependents": 0,
+                    "total_dependencies": 0,
+                    "is_computed": False,
+                    "is_related": False,
+                }
+            }
+        
+        # Handle field value analyzer queries
+        if "# Analyze field values" in code and '"analysis":' in code:
+            # Check for invalid model
+            if "invalid.model" in code:
+                return {"error": "Model invalid.model not found"}
+            
+            # Check for invalid field
+            if "nonexistent_field" in code:
+                return {"error": "Field nonexistent_field not found in res.partner"}
+            
+            model_name = (
+                "sale.order" if "sale.order" in code
+                else "product.product" if "product.product" in code
+                else "res.partner" if "res.partner" in code
+                else "product.template"
+            )
+            
+            field_name = (
+                "state" if "state" in code
+                else "email" if "email" in code
+                else "barcode" if "barcode" in code
+                else "name"
+            )
+            
+            return {
+                "model": model_name,
+                "field": field_name,
+                "field_type": "selection" if field_name == "state" else "char",
+                "analysis": {
+                    "total_records": 100,
+                    "analyzed_records": 100,
+                    "unique_values": 10,
+                    "null_count": 5,
+                    "empty_count": 3,
+                    "value_distribution": {},
+                    "most_common": [],
+                    "least_common": [],
+                }
+            }
+        
+        # Handle resolve dynamic fields queries
+        if "computed_fields = {}" in code and "related_fields = {}" in code and "dependency_graph = {}" in code:
+            # Check for invalid model
+            if "invalid.model" in code:
+                return {"error": "Model invalid.model not found"}
+            
+            model_name = (
+                "sale.order.line" if "sale.order.line" in code
+                else "account.move.line" if "account.move.line" in code
+                else "sale.order" if "sale.order" in code
+                else "account.move" if "account.move" in code
+                else "product.template"
+            )
+            
+            return {
+                "model": model_name,
+                "computed_fields": {},
+                "related_fields": {},
+                "dependency_graph": {},
+                "summary": {
+                    "total_computed": 0,
+                    "total_related": 0,
+                    "total_dependencies": 0,
+                }
+            }
+        
+        # Handle search field properties queries
+        if "fields_by_property = []" in code and "'property': property_type" in code:
+            # Check for invalid property
+            if "invalid_property" in code:
+                return {"error": "Unsupported property type: invalid_property"}
+            
+            property_type = (
+                "computed" if "'computed'" in code
+                else "related" if "'related'" in code
+                else "stored" if "'stored'" in code
+                else "required" if "'required'" in code
+                else "readonly"
+            )
+            
+            return {
+                "property": property_type,
+                "fields": [],
+                "total_fields": 0,
+                "models_scanned": 100,
+            }
+        
         # Handle inheritance chain queries
         if "mro_entries = []" in code and "inherits_list = getattr(model_class" in code:
             # Check for invalid model
