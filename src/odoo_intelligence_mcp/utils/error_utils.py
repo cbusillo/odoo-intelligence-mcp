@@ -95,7 +95,7 @@ def validate_model_name(model_name: str) -> None:
 
 def validate_field_name(field_name: str) -> None:
     if not isinstance(field_name, str):
-        raise InvalidArgumentError("field_name", "string", field_name)
+        raise InvalidArgumentError("field_name", "non-empty string", field_name)
 
     if not field_name:
         raise InvalidArgumentError("field_name", "non-empty string", field_name)
