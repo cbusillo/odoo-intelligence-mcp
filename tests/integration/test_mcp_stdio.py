@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -52,10 +53,8 @@ async def test_mcp_initialize_request() -> None:
 
     # Cancel the server task
     server_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await server_task
-    except asyncio.CancelledError:
-        pass
 
     # Check response
     assert len(write_stream.written) > 0
@@ -93,10 +92,8 @@ async def test_mcp_list_tools_request() -> None:
     await asyncio.sleep(0.2)
 
     server_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await server_task
-    except asyncio.CancelledError:
-        pass
 
     # Should have 2 responses
     assert len(write_stream.written) >= 2
@@ -146,10 +143,8 @@ async def test_mcp_call_tool_request() -> None:
         await asyncio.sleep(0.2)
 
         server_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await server_task
-        except asyncio.CancelledError:
-            pass
 
     # Should have 2 responses
     assert len(write_stream.written) >= 2
@@ -190,10 +185,8 @@ async def test_mcp_error_handling() -> None:
     await asyncio.sleep(0.2)
 
     server_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await server_task
-    except asyncio.CancelledError:
-        pass
 
     # Should have 2 responses
     assert len(write_stream.written) >= 2

@@ -54,7 +54,7 @@ async def test_handle_call_tool_field_not_found_error() -> None:
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_handle_call_tool_docker_connection_error() -> None:
-    mock_env = AsyncMock()
+    AsyncMock()
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment") as mock_get_env:
         mock_get_env.side_effect = DockerConnectionError("odoo-opw-shell-1", "Container not running")

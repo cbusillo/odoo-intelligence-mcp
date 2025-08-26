@@ -32,10 +32,7 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
 
     # Add file extension to pattern if file_type is specified
     if file_type and not pattern.endswith(f".{file_type}"):
-        if "*" in pattern:
-            pattern = pattern.replace("*", f"*.{file_type}")
-        else:
-            pattern = f"*{pattern}*.{file_type}"
+        pattern = pattern.replace("*", f"*.{file_type}") if "*" in pattern else f"*{pattern}*.{file_type}"
 
     for addon_path in addon_paths:
         # Use find command to search for files

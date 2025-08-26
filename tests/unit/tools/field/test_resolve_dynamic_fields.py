@@ -20,29 +20,29 @@ from odoo import models, fields, api
 class SaleOrderLine(models.Model):
     _name = 'sale.order.line'
     _inherit = 'sale.order.line'
-    
+
     order_id = fields.Many2one('sale.order', string='Order Reference', required=True, ondelete='cascade')
     product_id = fields.Many2one('product.product', string='Product', required=True)
     product_uom_qty = fields.Float(string='Quantity', digits='Product Unit of Measure', required=True, default=1.0)
     price_unit = fields.Float('Unit Price', required=True, digits='Product Price', default=0.0)
-    
+
     # Computed fields
     price_subtotal = fields.Monetary(compute='_compute_amount', string='Subtotal', store=True)
     price_tax = fields.Float(compute='_compute_amount', string='Total Tax', store=True)
     price_total = fields.Monetary(compute='_compute_amount', string='Total', store=True)
-    
+
     # Related fields
     order_partner_id = fields.Many2one(related='order_id.partner_id', store=True, string='Customer')
     currency_id = fields.Many2one(related='order_id.currency_id', depends=['order_id.currency_id'], store=True, string='Currency', readonly=True)
     company_id = fields.Many2one(related='order_id.company_id', string='Company', store=True, readonly=True)
-    
+
     # Computed field with complex dependencies
     margin = fields.Float(
         "Margin", compute='_compute_margin',
         digits='Product Price', store=True, groups="base.group_user", depends=['price_subtotal', 'product_id', 'purchase_price'])
     margin_percent = fields.Float(
         "Margin (%)", compute='_compute_margin', store=True, groups="base.group_user")
-    
+
     @api.depends('product_uom_qty', 'price_unit', 'tax_id')
     def _compute_amount(self):
         """Compute the amounts of the SO line."""
@@ -54,7 +54,7 @@ class SaleOrderLine(models.Model):
                 'price_total': taxes['total_included'],
                 'price_subtotal': taxes['total_excluded'],
             })
-            
+
     @api.depends('price_subtotal', 'product_id', 'purchase_price')
     def _compute_margin(self):
         for line in self:
@@ -68,19 +68,19 @@ from odoo import models, fields, api
 
 class ProductTemplate(models.Model):
     _name = 'product.template'
-    
+
     name = fields.Char('Name', index=True, required=True, translate=True)
     list_price = fields.Float('Sales Price', default=1.0, digits='Product Price')
     standard_price = fields.Float('Cost', company_dependent=True, digits='Product Price')
-    
+
     # Computed fields
     display_name = fields.Char(compute='_compute_display_name', store=True)
     price_extra = fields.Float(compute='_compute_price_extra', digits='Product Price')
-    
+
     # Related fields
     categ_id = fields.Many2one('product.category', 'Product Category', required=True)
     category_name = fields.Char(related='categ_id.name', string='Category Name')
-    
+
     # Complex computed field
     qty_available = fields.Float(
         'Quantity On Hand', compute='_compute_quantities',
@@ -88,19 +88,19 @@ class ProductTemplate(models.Model):
     virtual_available = fields.Float(
         'Forecasted Quantity', compute='_compute_quantities',
         digits='Product Unit of Measure', compute_sudo=False)
-    
+
     @api.depends('name', 'default_code')
     def _compute_display_name(self):
         for template in self:
             template.display_name = template.name
             if template.default_code:
                 template.display_name = f'[{template.default_code}] {template.name}'
-                
+
     @api.depends('product_variant_ids', 'product_variant_ids.price_extra')
     def _compute_price_extra(self):
         for template in self:
             template.price_extra = sum(template.product_variant_ids.mapped('price_extra'))
-            
+
     @api.depends('product_variant_ids.qty_available')
     def _compute_quantities(self):
         res = self._compute_quantities_dict()
@@ -115,27 +115,27 @@ from odoo import models, fields, api
 
 class ResPartner(models.Model):
     _name = 'res.partner'
-    
+
     name = fields.Char(string='Name', required=True)
     display_name = fields.Char(compute='_compute_display_name', store=True, index=True)
-    
+
     # Address fields
     street = fields.Char()
     street2 = fields.Char()
     city = fields.Char()
     country_id = fields.Many2one('res.country', string='Country')
-    
+
     # Computed address
     contact_address = fields.Char(compute='_compute_contact_address', string='Complete Address')
-    
+
     # Related fields
     country_code = fields.Char(related='country_id.code', string='Country Code')
-    
+
     # Computed field without explicit @api.depends
     partner_share = fields.Boolean(
         'Share Partner', compute='_compute_partner_share', store=True,
         help="Either customer (not a user), either shared user. Indicated the current partner is a customer without access or with a limited access.")
-    
+
     @api.depends('is_company', 'name', 'parent_id.display_name', 'type', 'company_name', 'commercial_company_name')
     def _compute_display_name(self):
         for partner in self:
@@ -146,7 +146,7 @@ class ResPartner(models.Model):
                 if name and partner.company_name:
                     name = f"{partner.company_name}, {name}"
             partner.display_name = name.strip()
-            
+
     @api.depends('street', 'street2', 'city', 'country_id')
     def _compute_contact_address(self):
         for partner in self:
@@ -154,7 +154,7 @@ class ResPartner(models.Model):
             if partner.country_id:
                 address_parts.append(partner.country_id.name)
             partner.contact_address = ', '.join(filter(None, address_parts))
-            
+
     @api.depends('user_ids.share', 'user_ids.active')
     def _compute_partner_share(self):
         for partner in self:
@@ -168,7 +168,7 @@ from odoo import models, fields
 
 class ResCountry(models.Model):
     _name = 'res.country'
-    
+
     name = fields.Char(string='Country Name', required=True, translate=True)
     code = fields.Char(string='Country Code', size=2, required=True)
     currency_id = fields.Many2one('res.currency', string='Currency')
@@ -183,10 +183,10 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_find_computed_fields_with_compute_parameter(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_find_computed_fields_with_compute_parameter(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = list(mock_model_files.values())
 
-        for model_name, file_path in mock_model_files.items():
+        for file_path in mock_model_files.values():
             mock_path.return_value.read_text.return_value = file_path.read_text()
 
         # Test sale.order.line
@@ -209,7 +209,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_find_related_fields(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_find_related_fields(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
@@ -229,7 +229,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_detect_api_depends_decorators(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_detect_api_depends_decorators(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
@@ -248,7 +248,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_handle_complex_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_handle_complex_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["res.partner"]]
         mock_path.return_value.read_text.return_value = mock_model_files["res.partner"].read_text()
 
@@ -266,7 +266,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_handle_models_without_dynamic_fields(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_handle_models_without_dynamic_fields(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["res.country"]]
         mock_path.return_value.read_text.return_value = mock_model_files["res.country"].read_text()
 
@@ -278,7 +278,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_identify_store_parameter(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_identify_store_parameter(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
@@ -295,7 +295,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_handle_cross_model_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_handle_cross_model_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["product.template"]]
         mock_path.return_value.read_text.return_value = mock_model_files["product.template"].read_text()
 
@@ -310,7 +310,7 @@ class ResCountry(models.Model):
             assert "dependencies" in field
             assert "product_variant_ids.qty_available" in field["dependencies"]
 
-    def test_should_validate_model_name(self, mock_env):
+    def test_should_validate_model_name(self, mock_env) -> None:
         with pytest.raises(ValueError):
             resolve_dynamic_fields(mock_env, "")
 
@@ -318,7 +318,7 @@ class ResCountry(models.Model):
             resolve_dynamic_fields(mock_env, None)
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
-    def test_should_handle_file_not_found(self, mock_glob, mock_env):
+    def test_should_handle_file_not_found(self, mock_glob, mock_env) -> None:
         mock_glob.glob.return_value = []
 
         result = resolve_dynamic_fields(mock_env, "non.existent.model")
@@ -329,7 +329,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_parse_field_types(self, mock_path, mock_glob, mock_model_files, mock_env):
+    def test_should_parse_field_types(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
@@ -346,7 +346,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_extract_related_field_attributes(self, mock_path, mock_glob, tmp_path, mock_env):
+    def test_should_extract_related_field_attributes(self, mock_path, mock_glob, tmp_path, mock_env) -> None:
         # Create model with various related field configurations
         test_model = tmp_path / "test_model.py"
         test_model.write_text("""
@@ -354,18 +354,18 @@ from odoo import models, fields
 
 class TestModel(models.Model):
     _name = 'test.model'
-    
+
     partner_id = fields.Many2one('res.partner')
-    
+
     # Simple related field
     partner_name = fields.Char(related='partner_id.name')
-    
+
     # Related field with store
     partner_city = fields.Char(related='partner_id.city', store=True)
-    
+
     # Related field with depends
     partner_country = fields.Many2one(related='partner_id.country_id', depends=['partner_id'], store=True, readonly=True)
-    
+
     # Multi-level related
     partner_country_code = fields.Char(related='partner_id.country_id.code', string='Country Code')
 """)

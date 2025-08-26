@@ -203,7 +203,7 @@ class OdooStaticAnalyzer:
 
         model_info = self.analyze_model_file(file_path)
 
-        computed_fields = {
+        return {
             field_name: {
                 "type": field_info["type"],
                 "compute_method": field_info["parameters"]["compute"],
@@ -214,7 +214,6 @@ class OdooStaticAnalyzer:
             if "compute" in field_info.get("parameters", {})
         }
 
-        return computed_fields
 
     def _find_compute_dependencies(self, model_info: dict[str, Any], compute_method: str) -> list[str]:
         for decorator_info in model_info.get("decorators", {}).get("depends", []):

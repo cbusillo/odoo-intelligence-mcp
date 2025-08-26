@@ -10,7 +10,7 @@ def field_test_env() -> object:
     """Custom env fixture that properly handles model access and containment checks."""
 
     class MockEnv:
-        def __init__(self):
+        def __init__(self) -> None:
             self.models = {}
 
         def __contains__(self, model_name: str) -> bool:

@@ -7,8 +7,7 @@ import pytest
 class TestFieldTypeSearcherFix:
     @pytest.fixture
     def mock_env(self) -> MagicMock:
-        env = MagicMock()
-        return env
+        return MagicMock()
 
     @pytest.fixture
     def mock_model_files(self, tmp_path: Path) -> dict[str, Path]:
@@ -19,37 +18,37 @@ from odoo import models, fields, api
 
 class SaleOrder(models.Model):
     _name = 'sale.order'
-    
+
     # Many2one fields
     partner_id = fields.Many2one('res.partner', string='Customer', required=True)
     user_id = fields.Many2one('res.users', string='Salesperson', index=True, tracking=2)
     company_id = fields.Many2one('res.company', 'Company', required=True, index=True)
     pricelist_id = fields.Many2one('product.pricelist', string='Pricelist', required=True)
-    
+
     # Char fields
     name = fields.Char(string='Order Reference', required=True, copy=False, readonly=True)
     client_order_ref = fields.Char(string='Customer Reference', copy=False)
     origin = fields.Char(string='Source Document')
-    
+
     # Text field
     note = fields.Text('Terms and conditions')
-    
+
     # Date/Datetime fields
     date_order = fields.Datetime(string='Order Date', required=True, index=True)
     validity_date = fields.Date(string='Expiration', readonly=True)
-    
+
     # Float/Monetary fields
     amount_untaxed = fields.Monetary(string='Untaxed Amount', store=True, compute='_compute_amounts')
     amount_tax = fields.Monetary(string='Taxes', store=True, compute='_compute_amounts')
     amount_total = fields.Monetary(string='Total', store=True, compute='_compute_amounts')
-    
+
     # Integer field
     invoice_count = fields.Integer(string='Invoice Count', compute='_compute_invoice_count')
-    
+
     # Boolean field
     require_signature = fields.Boolean('Online signature')
     require_payment = fields.Boolean('Online payment')
-    
+
     # Selection field
     state = fields.Selection([
         ('draft', 'Quotation'),
@@ -58,10 +57,10 @@ class SaleOrder(models.Model):
         ('done', 'Locked'),
         ('cancel', 'Cancelled'),
     ], string='Status', readonly=True, copy=False, index=True, tracking=3, default='draft')
-    
+
     # One2many field
     order_line = fields.One2many('sale.order.line', 'order_id', string='Order Lines', copy=True)
-    
+
     # Binary field
     signature = fields.Binary('Signature')
 """)
@@ -72,43 +71,43 @@ from odoo import models, fields, api
 
 class ProductTemplate(models.Model):
     _name = 'product.template'
-    
+
     # Basic fields
     name = fields.Char('Name', index=True, required=True, translate=True)
     sequence = fields.Integer('Sequence', default=1)
     description = fields.Text('Description', translate=True)
     description_purchase = fields.Text('Purchase Description', translate=True)
     description_sale = fields.Text('Sales Description', translate=True)
-    
+
     # Selection field
     type = fields.Selection([
         ('consu', 'Consumable'),
         ('service', 'Service'),
         ('product', 'Storable Product')
     ], string='Product Type', default='consu', required=True)
-    
+
     # Many2one fields
     categ_id = fields.Many2one('product.category', 'Product Category', required=True)
     uom_id = fields.Many2one('uom.uom', 'Unit of Measure', required=True)
     uom_po_id = fields.Many2one('uom.uom', 'Purchase Unit of Measure', required=True)
-    
+
     # Float fields
     list_price = fields.Float('Sales Price', default=1.0, digits='Product Price')
     standard_price = fields.Float('Cost', company_dependent=True, digits='Product Price')
     volume = fields.Float('Volume')
     weight = fields.Float('Weight', digits='Stock Weight')
-    
+
     # Boolean fields
     active = fields.Boolean('Active', default=True)
     sale_ok = fields.Boolean('Can be Sold', default=True)
     purchase_ok = fields.Boolean('Can be Purchased', default=True)
-    
+
     # Binary field
     image_1920 = fields.Binary("Image")
-    
+
     # One2many field
     product_variant_ids = fields.One2many('product.product', 'product_tmpl_id', 'Products', required=True)
-    
+
     # Many2many field
     route_ids = fields.Many2many('stock.route', 'stock_route_product', 'product_id', 'route_id', 'Routes')
 """)
@@ -119,46 +118,46 @@ from odoo import models, fields, api
 
 class ResPartner(models.Model):
     _name = 'res.partner'
-    
+
     # Char fields
     name = fields.Char(index=True, required=True)
     display_name = fields.Char(compute='_compute_display_name', store=True)
     ref = fields.Char(string='Reference', index=True)
     vat = fields.Char(string='Tax ID')
     website = fields.Char('Website Link')
-    
+
     # Text fields
     comment = fields.Text(string='Notes')
-    
+
     # Many2one fields
     parent_id = fields.Many2one('res.partner', string='Related Company', index=True)
     user_id = fields.Many2one('res.users', string='Salesperson')
     country_id = fields.Many2one('res.country', string='Country')
     state_id = fields.Many2one('res.country.state', string='State')
-    
+
     # Date fields
     date = fields.Date(index=True)
-    
+
     # Boolean fields
     is_company = fields.Boolean(string='Is a Company', default=False)
     active = fields.Boolean(default=True)
     customer_rank = fields.Integer(string='Customer Rank', default=0)
     supplier_rank = fields.Integer(string='Vendor Rank', default=0)
-    
+
     # Selection field
     company_type = fields.Selection([('person', 'Individual'), ('company', 'Company')])
-    
+
     # One2many fields
     child_ids = fields.One2many('res.partner', 'parent_id', string='Contact')
     bank_ids = fields.One2many('res.partner.bank', 'partner_id', string='Banks')
-    
+
     # Many2many field
-    category_id = fields.Many2many('res.partner.category', column1='partner_id', 
+    category_id = fields.Many2many('res.partner.category', column1='partner_id',
                                    column2='category_id', string='Tags')
-    
+
     # Binary field
     image_1920 = fields.Binary("Image", max_width=1920, max_height=1920)
-    
+
     # Json field
     partner_gid = fields.Json('Company database ID', readonly=True)
 """)
@@ -170,23 +169,23 @@ from odoo import models, fields
 
 class TestModel(models.Model):
     _name = 'test.model'
-    
+
     # Html field
     html_content = fields.Html('HTML Content', sanitize=True)
-    
+
     # Monetary field
     amount = fields.Monetary('Amount', currency_field='currency_id')
     currency_id = fields.Many2one('res.currency', string='Currency')
-    
+
     # Reference field
     reference = fields.Reference([
         ('res.partner', 'Partner'),
         ('res.users', 'User')
     ], string='Reference')
-    
+
     # Json field
     json_data = fields.Json('JSON Data')
-    
+
     # Properties field (new in recent versions)
     properties = fields.Properties('Properties')
 """)
@@ -529,20 +528,20 @@ from odoo import models, fields
 
 class SpecialModel(models.Model):
     _name = 'special.model'
-    
+
     # Html field (stored as text in DB but has special widget)
     html_field = fields.Html('Rich Text Content')
-    
+
     # Reference field
     reference_field = fields.Reference([
         ('res.partner', 'Partner'),
         ('res.users', 'User'),
     ], string='Document Reference')
-    
+
     # Monetary field (technically float but with currency handling)
     price = fields.Monetary('Price', currency_field='currency_id')
     currency_id = fields.Many2one('res.currency', 'Currency')
-    
+
     # Properties field (new JSON-based dynamic fields)
     properties = fields.Properties('Dynamic Properties')
 """)

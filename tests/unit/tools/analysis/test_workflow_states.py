@@ -18,7 +18,7 @@ from odoo import models, fields, api
 class SaleOrder(models.Model):
     _name = 'sale.order'
     _inherit = 'sale.order'
-    
+
     state = fields.Selection([
         ('draft', 'Quotation'),
         ('sent', 'Quotation Sent'),
@@ -26,21 +26,21 @@ class SaleOrder(models.Model):
         ('done', 'Locked'),
         ('cancel', 'Cancelled'),
     ], string='Status', readonly=True, copy=False, index=True, tracking=3, default='draft')
-    
+
     def action_confirm(self):
         """Confirm the sales order."""
         for order in self:
             order.state = 'sale'
         return True
-    
+
     def action_cancel(self):
         """Cancel the sales order."""
         self.write({'state': 'cancel'})
-        
+
     def action_draft(self):
         """Set back to draft."""
         self.state = 'draft'
-        
+
     @api.depends('state')
     def _compute_show_update_pricelist(self):
         for order in self:
@@ -53,7 +53,7 @@ from odoo import models, fields, api
 
 class PurchaseOrder(models.Model):
     _name = 'purchase.order'
-    
+
     state = fields.Selection([
         ('draft', 'RFQ'),
         ('sent', 'RFQ Sent'),
@@ -62,7 +62,7 @@ class PurchaseOrder(models.Model):
         ('done', 'Locked'),
         ('cancel', 'Cancelled')
     ], string='Status', readonly=True, index=True, copy=False, default='draft', tracking=True)
-    
+
     def button_confirm(self):
         """Confirm the purchase order."""
         for order in self:
@@ -75,12 +75,12 @@ class PurchaseOrder(models.Model):
             else:
                 order.write({'state': 'to approve'})
         return True
-        
+
     def button_approve(self, force=False):
         """Approve the purchase order."""
         self.write({'state': 'purchase'})
         return {}
-        
+
     def button_cancel(self):
         """Cancel the purchase order."""
         for order in self:
@@ -93,7 +93,7 @@ from odoo import models, fields, api
 
 class RepairOrder(models.Model):
     _name = 'repair.order'
-    
+
     state = fields.Selection([
         ('draft', 'Quotation'),
         ('confirmed', 'Confirmed'),
@@ -105,34 +105,34 @@ class RepairOrder(models.Model):
         ('cancel', 'Cancelled')
     ], string='Status', copy=False, default='draft', readonly=True, tracking=True,
         help="Status of the repair order")
-    
+
     def action_repair_confirm(self):
         """Confirm the repair order."""
         if self.filtered(lambda repair: repair.state != 'draft'):
             raise UserError(_("Only draft repairs can be confirmed."))
         self.write({'state': 'confirmed'})
         return True
-        
+
     def action_repair_start(self):
         """Start the repair."""
         if self.filtered(lambda repair: repair.state not in ['confirmed', 'ready']):
             raise UserError(_("Repair must be confirmed before starting."))
         self.write({'state': 'under_repair'})
         return True
-        
+
     def action_repair_end(self):
         """End the repair."""
         if self.filtered(lambda repair: repair.state != 'under_repair'):
             raise UserError(_("Repair must be under repair to end it."))
         self.write({'state': 'done'})
         return True
-        
+
     def action_repair_cancel(self):
         """Cancel the repair."""
         if self.filtered(lambda repair: repair.state == 'done'):
             raise UserError(_("Cannot cancel completed repairs."))
         self.write({'state': 'cancel'})
-        
+
     @api.depends('state')
     def _compute_show_invoice_button(self):
         for repair in self:
@@ -146,7 +146,7 @@ from odoo import models, fields
 
 class ProductTemplate(models.Model):
     _name = 'product.template'
-    
+
     name = fields.Char('Name', required=True)
     list_price = fields.Float('Sales Price', default=1.0)
     active = fields.Boolean('Active', default=True)
@@ -161,11 +161,11 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_find_state_fields_in_common_models(self, mock_path, mock_glob, mock_model_files):
+    async def test_should_find_state_fields_in_common_models(self, mock_path, mock_glob, mock_model_files) -> None:
         # Setup mocks
         mock_glob.glob.return_value = list(mock_model_files.values())
 
-        for model_name, file_path in mock_model_files.items():
+        for file_path in mock_model_files.values():
             mock_path.return_value.read_text.return_value = file_path.read_text()
 
         # Test sale.order
@@ -252,7 +252,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_identify_state_transition_methods(self, mock_path, mock_glob, mock_model_files):
+    async def test_should_identify_state_transition_methods(self, mock_path, mock_glob, mock_model_files) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order"].read_text()
 
@@ -286,7 +286,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_detect_button_actions(self, mock_path, mock_glob, mock_model_files):
+    async def test_should_detect_button_actions(self, mock_path, mock_glob, mock_model_files) -> None:
         mock_glob.glob.return_value = [mock_model_files["purchase.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["purchase.order"].read_text()
 
@@ -305,7 +305,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_find_fields_depending_on_state(self, mock_path, mock_glob, mock_model_files):
+    async def test_should_find_fields_depending_on_state(self, mock_path, mock_glob, mock_model_files) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order"].read_text()
 
@@ -328,7 +328,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_handle_models_without_state_fields(self, mock_path, mock_glob, mock_model_files):
+    async def test_should_handle_models_without_state_fields(self, mock_path, mock_glob, mock_model_files) -> None:
         mock_glob.glob.return_value = [mock_model_files["product.template"]]
         mock_path.return_value.read_text.return_value = mock_model_files["product.template"].read_text()
 
@@ -343,7 +343,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_parse_selection_field_correctly(self, mock_path, mock_glob, mock_model_files):
+    async def test_should_parse_selection_field_correctly(self, mock_path, mock_glob, mock_model_files) -> None:
         mock_glob.glob.return_value = [mock_model_files["repair.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["repair.order"].read_text()
 
@@ -389,7 +389,7 @@ class ProductTemplate(models.Model):
             assert states_dict[key] == label
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
-    async def test_should_handle_file_not_found(self, mock_glob):
+    async def test_should_handle_file_not_found(self, mock_glob) -> None:
         mock_glob.glob.return_value = []
 
         mock_env = AsyncMock()
@@ -400,7 +400,7 @@ class ProductTemplate(models.Model):
         assert result["state_fields"] == []
         assert result["state_transitions"] == []
 
-    async def test_should_validate_model_name(self):
+    async def test_should_validate_model_name(self) -> None:
         mock_env = AsyncMock()
         # The function doesn't validate model names, it just passes them to env.execute_code
         # So we'll test that it handles the response correctly
@@ -410,7 +410,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_detect_complex_state_transitions(self, mock_path, mock_glob, tmp_path):
+    async def test_should_detect_complex_state_transitions(self, mock_path, mock_glob, tmp_path) -> None:
         # Create a model with complex state transitions
         complex_model = tmp_path / "complex_workflow.py"
         complex_model.write_text('''
@@ -418,7 +418,7 @@ from odoo import models, fields, api
 
 class ComplexWorkflow(models.Model):
     _name = 'complex.workflow'
-    
+
     state = fields.Selection([
         ('draft', 'Draft'),
         ('submitted', 'Submitted'),
@@ -426,14 +426,14 @@ class ComplexWorkflow(models.Model):
         ('rejected', 'Rejected'),
         ('done', 'Done'),
     ])
-    
+
     def submit_for_approval(self):
         """Submit for approval with validation."""
         for record in self:
             if record.state != 'draft':
                 raise UserError("Can only submit draft records")
             record.write({'state': 'submitted'})
-            
+
     def approve(self):
         """Approve with conditions."""
         self.ensure_one()
@@ -441,7 +441,7 @@ class ComplexWorkflow(models.Model):
             self.state = 'approved'
             # Send notification
             self._send_approval_notification()
-            
+
     def multi_state_action(self):
         """Handle multiple state transitions."""
         for record in self:

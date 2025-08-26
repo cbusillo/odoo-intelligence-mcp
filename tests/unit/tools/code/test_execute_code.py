@@ -264,7 +264,7 @@ class TestExecuteCodeCoroutineHandling:
         """Test that execute_code properly handles search_count() in arithmetic operations."""
         code = """
 products = env['product.template'].search_count([])
-motors = env['motor'].search_count([])  
+motors = env['motor'].search_count([])
 result = {
     'total': products + motors,
     'ratio': motors / products if products else 0,

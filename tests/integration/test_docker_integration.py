@@ -169,7 +169,7 @@ async def test_environment_with_actual_docker_check() -> None:
     # Try to check our specific containers
     result = subprocess.run(["docker", "ps", "--filter", "name=odoo-opw", "--format", "{{.Names}}"], capture_output=True, text=True)
 
-    container_names = result.stdout.strip().split("\n") if result.stdout else []
+    result.stdout.strip().split("\n") if result.stdout else []
 
     # Just verify we can communicate with Docker
     assert result.returncode == 0

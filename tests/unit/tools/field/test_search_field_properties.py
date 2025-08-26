@@ -30,7 +30,7 @@ class TestSearchFieldPropertiesRegistryIssue:
         return env
 
     @pytest.mark.asyncio
-    async def test_search_computed_fields_with_iterable_registry(self, mock_env_with_registry):
+    async def test_search_computed_fields_with_iterable_registry(self, mock_env_with_registry) -> None:
         """Test that search_field_properties works for computed fields when registry is properly iterable."""
         env = mock_env_with_registry
         property_type = "computed"
@@ -107,7 +107,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             assert sale_total["field_info"]["compute"] == "_compute_amounts"
 
     @pytest.mark.asyncio
-    async def test_search_related_fields_with_iterable_registry(self, mock_env_with_registry):
+    async def test_search_related_fields_with_iterable_registry(self, mock_env_with_registry) -> None:
         """Test searching for related fields."""
         env = mock_env_with_registry
         property_type = "related"
@@ -159,7 +159,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             assert order_partner["field_info"]["related"] == "order_id.partner_id"
 
     @pytest.mark.asyncio
-    async def test_search_stored_fields_with_iterable_registry(self, mock_env_with_registry):
+    async def test_search_stored_fields_with_iterable_registry(self, mock_env_with_registry) -> None:
         """Test searching for stored fields."""
         env = mock_env_with_registry
         property_type = "stored"
@@ -202,7 +202,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             assert "display_name" not in field_names
 
     @pytest.mark.asyncio
-    async def test_search_required_fields_with_iterable_registry(self, mock_env_with_registry):
+    async def test_search_required_fields_with_iterable_registry(self, mock_env_with_registry) -> None:
         """Test searching for required fields."""
         env = mock_env_with_registry
         property_type = "required"
@@ -244,7 +244,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             assert len(result["fields"]) == 6  # All required fields
 
             # Verify field types diversity
-            field_types = set(f["field_info"]["type"] for f in result["fields"])
+            field_types = {f["field_info"]["type"] for f in result["fields"]}
             assert "char" in field_types
             assert "boolean" in field_types
             assert "selection" in field_types
@@ -252,7 +252,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             assert "datetime" in field_types
 
     @pytest.mark.asyncio
-    async def test_search_readonly_fields_with_iterable_registry(self, mock_env_with_registry):
+    async def test_search_readonly_fields_with_iterable_registry(self, mock_env_with_registry) -> None:
         """Test searching for readonly fields."""
         env = mock_env_with_registry
         property_type = "readonly"
@@ -294,7 +294,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             assert ("sale.order", "name") in readonly_fields
             assert ("sale.order", "create_date") in readonly_fields
 
-    def test_registry_dict_interface(self):
+    def test_registry_dict_interface(self) -> None:
         """Test that registry supports dict-like interface while being iterable."""
         registry = MockRegistry()
         registry._models = {
@@ -314,7 +314,7 @@ class TestSearchFieldPropertiesRegistryIssue:
         assert len(registry) == 3
 
     @pytest.mark.asyncio
-    async def test_search_properties_with_pagination_and_filter(self, mock_env_with_registry):
+    async def test_search_properties_with_pagination_and_filter(self, mock_env_with_registry) -> None:
         """Test search with both pagination and text filter."""
         env = mock_env_with_registry
         property_type = "computed"

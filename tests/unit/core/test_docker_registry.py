@@ -95,7 +95,7 @@ class TestDockerRegistryIteration:
     def test_issue_demonstration_for_tools(self, host_env: HostOdooEnvironment) -> None:
         """Demonstrate the issue that affects find_method, search_decorators, etc."""
         # Tools try to do this:
-        for model_name in host_env.registry:
+        for _model_name in host_env.registry:
             # This loop NEVER executes because registry.__iter__ returns empty
             pytest.fail("This should never execute with current DockerRegistry")
 

@@ -13,14 +13,13 @@ class TestSearchDecoratorsRegistryFix:
     @pytest.fixture
     def mock_env_with_registry(self):
         """Create a mock environment with a properly configured registry."""
-        env = HostOdooEnvironment("test-container", "test-db", "/test/path")
+        return HostOdooEnvironment("test-container", "test-db", "/test/path")
 
         # Since HostOdooEnvironment.registry returns DockerRegistry which always
         # returns empty iterator, we need to test with a different approach
-        return env
 
     @pytest.mark.asyncio
-    async def test_search_decorators_with_host_env_no_get_model_names(self, mock_env_with_registry):
+    async def test_search_decorators_with_host_env_no_get_model_names(self, mock_env_with_registry) -> None:
         """Test search_decorators when env doesn't have get_model_names (falls back to registry)."""
         env = mock_env_with_registry
 
@@ -35,7 +34,7 @@ class TestSearchDecoratorsRegistryFix:
         assert result == {"results": []}
 
     @pytest.mark.asyncio
-    async def test_search_decorators_with_mock_registry(self):
+    async def test_search_decorators_with_mock_registry(self) -> None:
         """Test search_decorators with MockRegistry that has models."""
         # Create a mock environment with MockRegistry
         env = MagicMock()
@@ -63,7 +62,7 @@ class TestSearchDecoratorsRegistryFix:
         env.__getitem__.side_effect = lambda name: {"sale.order": sale_order, "product.template": product_template}.get(name)
 
         # Now test - should iterate through registry
-        result = await search_decorators(env, "depends")
+        await search_decorators(env, "depends")
 
         # Should have attempted to search both models
         assert env.__getitem__.call_count == 2
@@ -71,7 +70,7 @@ class TestSearchDecoratorsRegistryFix:
         env.__getitem__.assert_any_call("product.template")
 
     @pytest.mark.asyncio
-    async def test_search_decorators_fallback_with_registry_models_attr(self):
+    async def test_search_decorators_fallback_with_registry_models_attr(self) -> None:
         """Test the specific fallback in search_decorators line 18."""
         env = MagicMock()
 
@@ -83,13 +82,13 @@ class TestSearchDecoratorsRegistryFix:
         # Mock models
         env.__getitem__.return_value = MagicMock(_description="Test Model")
 
-        result = await search_decorators(env, "onchange")
+        await search_decorators(env, "onchange")
 
         # Should have accessed all three models
         assert env.__getitem__.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_search_decorators_with_type_error(self):
+    async def test_search_decorators_with_type_error(self) -> None:
         """Test search_decorators when registry iteration raises TypeError."""
         env = MagicMock()
 
@@ -111,7 +110,7 @@ class TestSearchDecoratorsRegistryFix:
         env.__getitem__.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_search_decorators_with_get_model_names(self):
+    async def test_search_decorators_with_get_model_names(self) -> None:
         """Test search_decorators when env has get_model_names method."""
         env = MagicMock()
 
@@ -124,7 +123,7 @@ class TestSearchDecoratorsRegistryFix:
         # Mock models
         env.__getitem__.return_value = MagicMock(_description="Test Model")
 
-        result = await search_decorators(env, "model_create_multi")
+        await search_decorators(env, "model_create_multi")
 
         # Should have used get_model_names and accessed all models
         assert env.__getitem__.call_count == 3

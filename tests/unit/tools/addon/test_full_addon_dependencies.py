@@ -17,22 +17,20 @@ async def test_get_addon_dependencies_success() -> None:
         "description": "Connect products to external systems",
     }
 
-    mock_dependent_addons = ["motor_management", "shopify_sync"]
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.open", MagicMock()):
-            with patch("ast.literal_eval", return_value=mock_manifest):
-                with patch("pathlib.Path.rglob") as mock_rglob:
-                    # Mock finding dependent addons
-                    mock_files = [
-                        MagicMock(parent=Path("/addons/motor_management")),
-                        MagicMock(parent=Path("/addons/shopify_sync")),
-                    ]
-                    for f in mock_files:
-                        f.read_text.return_value = "{'depends': ['product_connect']}"
-                    mock_rglob.return_value = mock_files
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.open", MagicMock()):
+        with patch("ast.literal_eval", return_value=mock_manifest):
+            with patch("pathlib.Path.rglob") as mock_rglob:
+                # Mock finding dependent addons
+                mock_files = [
+                    MagicMock(parent=Path("/addons/motor_management")),
+                    MagicMock(parent=Path("/addons/shopify_sync")),
+                ]
+                for f in mock_files:
+                    f.read_text.return_value = "{'depends': ['product_connect']}"
+                mock_rglob.return_value = mock_files
 
-                    result = await get_addon_dependencies("product_connect")
+                result = await get_addon_dependencies("product_connect")
 
     assert result["success"] is True
     assert result["addon"] == "product_connect"
@@ -53,10 +51,9 @@ async def test_get_addon_dependencies_not_found() -> None:
 
 @pytest.mark.asyncio
 async def test_get_addon_dependencies_invalid_manifest() -> None:
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.open", MagicMock()):
-            with patch("ast.literal_eval", side_effect=SyntaxError("Invalid syntax")):
-                result = await get_addon_dependencies("broken_addon")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.open", MagicMock()):
+        with patch("ast.literal_eval", side_effect=SyntaxError("Invalid syntax")):
+            result = await get_addon_dependencies("broken_addon")
 
     assert result["success"] is False
     assert "parse manifest" in result["error"]
@@ -71,11 +68,10 @@ async def test_get_addon_dependencies_empty_depends() -> None:
         "auto_install": False,
     }
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.open", MagicMock()):
-            with patch("ast.literal_eval", return_value=mock_manifest):
-                with patch("pathlib.Path.rglob", return_value=[]):
-                    result = await get_addon_dependencies("simple_addon")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.open", MagicMock()):
+        with patch("ast.literal_eval", return_value=mock_manifest):
+            with patch("pathlib.Path.rglob", return_value=[]):
+                result = await get_addon_dependencies("simple_addon")
 
     assert result["success"] is True
     assert result["manifest"]["depends"] == []
@@ -91,11 +87,10 @@ async def test_get_addon_dependencies_auto_install() -> None:
         "auto_install": True,
     }
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.open", MagicMock()):
-            with patch("ast.literal_eval", return_value=mock_manifest):
-                with patch("pathlib.Path.rglob", return_value=[]):
-                    result = await get_addon_dependencies("auto_addon")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.open", MagicMock()):
+        with patch("ast.literal_eval", return_value=mock_manifest):
+            with patch("pathlib.Path.rglob", return_value=[]):
+                result = await get_addon_dependencies("auto_addon")
 
     assert result["success"] is True
     assert result["manifest"]["auto_install"] is True
@@ -109,16 +104,15 @@ async def test_get_addon_dependencies_circular_dependency() -> None:
         "depends": ["addon_b"],
     }
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.open", MagicMock()):
-            with patch("ast.literal_eval", return_value=mock_manifest):
-                with patch("pathlib.Path.rglob") as mock_rglob:
-                    # Mock addon_b depending on addon_a (circular)
-                    mock_file = MagicMock(parent=Path("/addons/addon_b"))
-                    mock_file.read_text.return_value = "{'depends': ['addon_a']}"
-                    mock_rglob.return_value = [mock_file]
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.open", MagicMock()):
+        with patch("ast.literal_eval", return_value=mock_manifest):
+            with patch("pathlib.Path.rglob") as mock_rglob:
+                # Mock addon_b depending on addon_a (circular)
+                mock_file = MagicMock(parent=Path("/addons/addon_b"))
+                mock_file.read_text.return_value = "{'depends': ['addon_a']}"
+                mock_rglob.return_value = [mock_file]
 
-                    result = await get_addon_dependencies("addon_a")
+                result = await get_addon_dependencies("addon_a")
 
     assert result["success"] is True
     assert "addon_b" in result["dependent_addons"]

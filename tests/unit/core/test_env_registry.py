@@ -111,7 +111,7 @@ class TestHostOdooEnvironmentRegistry:
             # This is the pattern used in actual tools
             models_accessed = []
             for model_name in host_env.registry:
-                model = host_env[model_name]
+                host_env[model_name]
                 models_accessed.append(model_name)
 
             assert len(models_accessed) == 2
@@ -144,7 +144,7 @@ class TestRegistryIntegrationPatterns:
             # Simulate find_method pattern
             models_with_method = []
             for model_name in env.registry:
-                model = env[model_name]
+                env[model_name]
                 # In real usage, we'd check if the model has the method
                 # For testing, we just track all model names
                 models_with_method.append(model_name)
@@ -191,7 +191,7 @@ class TestRegistryIntegrationPatterns:
             # Simulate search_field_type pattern
             models_with_m2o = []
             for model_name in env.registry:
-                model = env[model_name]
+                env[model_name]
                 # In real code, we'd check model._fields here
                 # For testing, just add specific models we know have m2o fields
                 if model_name in ["res.partner", "hr.employee"]:
@@ -219,7 +219,7 @@ class TestRegistryIntegrationPatterns:
             # Simulate search_field_properties pattern
             computed_fields = []
             for model_name in env.registry:
-                model = env[model_name]
+                env[model_name]
                 # In real code, we'd check model._fields here
                 # For testing, just add known computed fields
                 if model_name == "sale.order.line":

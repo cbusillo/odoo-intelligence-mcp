@@ -28,7 +28,7 @@ class TestFindMethodRegistryIssue:
         return env
 
     @pytest.mark.asyncio
-    async def test_find_method_with_iterable_registry(self, mock_env_with_registry):
+    async def test_find_method_with_iterable_registry(self, mock_env_with_registry) -> None:
         """Test that find_method works when registry is properly iterable."""
         env = mock_env_with_registry
         method_name = "create"
@@ -68,7 +68,7 @@ class TestFindMethodRegistryIssue:
                 # The actual implementation would search files, but we're testing registry iteration
 
     @pytest.mark.asyncio
-    async def test_find_method_registry_iteration_pattern(self, mock_env_with_registry):
+    async def test_find_method_registry_iteration_pattern(self, mock_env_with_registry) -> None:
         """Test the specific iteration pattern used in find_method."""
         env = mock_env_with_registry
 
@@ -86,7 +86,7 @@ class TestFindMethodRegistryIssue:
 
         # Iterate through registry as find_method does
         for model_name in env.registry:
-            model = await env[model_name]
+            await env[model_name]
 
         # Should have accessed all models in registry
         assert len(accessed_models) == 4
@@ -96,7 +96,7 @@ class TestFindMethodRegistryIssue:
         assert "res.partner" in accessed_models
 
     @pytest.mark.asyncio
-    async def test_find_method_with_empty_registry(self):
+    async def test_find_method_with_empty_registry(self) -> None:
         """Test find_method behavior with empty registry."""
         env = HostOdooEnvironment("test", "test", "/test")
         env._registry = MockRegistry()
@@ -115,7 +115,7 @@ class TestFindMethodRegistryIssue:
             assert result["method_name"] == method_name
             assert result["models"] == []
 
-    def test_registry_iteration_not_dict_values(self):
+    def test_registry_iteration_not_dict_values(self) -> None:
         """Test that registry iteration returns model names, not dict values."""
         registry = MockRegistry()
         registry._models = {"model.a": MockModel, "model.b": MockModel, "model.c": MockModel}
@@ -131,7 +131,7 @@ class TestFindMethodRegistryIssue:
         assert not any(isinstance(item, MagicMock) for item in model_names)
 
     @pytest.mark.asyncio
-    async def test_find_method_full_flow_with_fixed_registry(self, mock_env_with_registry):
+    async def test_find_method_full_flow_with_fixed_registry(self, mock_env_with_registry) -> None:
         """Test complete find_method flow with properly iterable registry."""
         env = mock_env_with_registry
         method_name = "compute_amount"
@@ -151,13 +151,13 @@ class TestFindMethodRegistryIssue:
             ]
 
             # Mock file system to find the method in source
-            mock_files = [patch("pathlib.Path").start()]
+            [patch("pathlib.Path").start()]
             mock_file_path = MagicMock()
             mock_file_path.suffix = ".py"
             mock_file_path.read_text.return_value = '''
 class SaleOrder(models.Model):
     _name = 'sale.order'
-    
+
     def compute_amount(self):
         """Compute the total amount."""
         return sum(line.price_subtotal for line in self.order_line)

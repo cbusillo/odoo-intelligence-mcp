@@ -33,7 +33,7 @@ class TestHostOdooEnvironment:
 
         # Should be able to iterate over model names
         try:
-            model_names = list(registry)
+            list(registry)
             # This will fail with current implementation since MockRegistry returns empty dict
         except TypeError as e:
             pytest.fail(f"Registry should be iterable but got: {e}")
@@ -61,7 +61,7 @@ class TestHostOdooEnvironment:
             registry = env.registry
 
             # Should contain actual model names
-            model_names = list(registry)
+            list(registry)
             # This assertion will fail because MockRegistry doesn't fetch real models
             # assert len(model_names) > 0
             # assert 'res.partner' in model_names

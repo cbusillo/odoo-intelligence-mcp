@@ -68,7 +68,7 @@ def create_error_response(error: Exception, include_type: bool = True) -> dict[s
     return response
 
 
-def handle_tool_error(func: T) -> T:
+def handle_tool_error[T](func: T) -> T:
     async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
         try:
             return await func(*args, **kwargs)

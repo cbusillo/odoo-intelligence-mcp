@@ -76,10 +76,9 @@ class CodeSecurityValidator:
 
     @classmethod
     def sanitize_code(cls, code: str) -> str:
-        code = code.strip()
+        return code.strip()
 
         # Don't try to auto-fix dangerous code, just validate it
-        return code
 
 
 class SecurityError(Exception):
@@ -87,7 +86,7 @@ class SecurityError(Exception):
 
 
 class SecurityValidator(ast.NodeVisitor):
-    def __init__(self):
+    def __init__(self) -> None:
         self.in_loop = False
         self.loop_depth = 0
 
@@ -113,9 +112,8 @@ class SecurityValidator(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             if node.func.id in CodeSecurityValidator.DANGEROUS_FUNCTIONS:
                 raise SecurityError(f"Call to potentially dangerous function '{node.func.id}' is not allowed")
-        elif isinstance(node.func, ast.Attribute):
-            if node.func.attr in CodeSecurityValidator.DANGEROUS_FUNCTIONS:
-                raise SecurityError(f"Call to potentially dangerous method '{node.func.attr}' is not allowed")
+        elif isinstance(node.func, ast.Attribute) and node.func.attr in CodeSecurityValidator.DANGEROUS_FUNCTIONS:
+            raise SecurityError(f"Call to potentially dangerous method '{node.func.attr}' is not allowed")
         self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
@@ -142,10 +140,7 @@ class SecurityValidator(ast.NodeVisitor):
         self.loop_depth -= 1
 
     def _has_break_condition(self, node: ast.While) -> bool:
-        for child in ast.walk(node):
-            if isinstance(child, ast.Break):
-                return True
-        return False
+        return any(isinstance(child, ast.Break) for child in ast.walk(node))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         if node.name.startswith("_"):

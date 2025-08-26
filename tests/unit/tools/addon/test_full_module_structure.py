@@ -41,12 +41,11 @@ async def test_get_module_structure_complete() -> None:
     def mock_iterdir() -> list[Path]:
         return [Path(f"/addons/test_module/{d}") for d in mock_files if "/" not in d]
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.is_dir", return_value=True):
-            with patch("pathlib.Path.rglob", side_effect=mock_rglob):
-                with patch("pathlib.Path.iterdir", side_effect=mock_iterdir):
-                    with patch("pathlib.Path.name", new_callable=lambda: property(lambda self: self.parts[-1])):
-                        result = await get_module_structure("test_module")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.is_dir", return_value=True):
+        with patch("pathlib.Path.rglob", side_effect=mock_rglob):
+            with patch("pathlib.Path.iterdir", side_effect=mock_iterdir):
+                with patch("pathlib.Path.name", new_callable=lambda: property(lambda self: self.parts[-1])):
+                    result = await get_module_structure("test_module")
 
     assert result["success"] is True
     assert result["module"] == "test_module"
@@ -69,11 +68,10 @@ async def test_get_module_structure_not_found() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_empty_module() -> None:
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.is_dir", return_value=True):
-            with patch("pathlib.Path.rglob", return_value=[]):
-                with patch("pathlib.Path.iterdir", return_value=[]):
-                    result = await get_module_structure("empty_module")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.is_dir", return_value=True):
+        with patch("pathlib.Path.rglob", return_value=[]):
+            with patch("pathlib.Path.iterdir", return_value=[]):
+                result = await get_module_structure("empty_module")
 
     assert result["success"] is True
     assert result["has_models"] is False
@@ -89,12 +87,11 @@ async def test_get_module_structure_models_only() -> None:
         Path("/addons/simple_module/models/__init__.py"),
     ]
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.is_dir", return_value=True):
-            with patch("pathlib.Path.rglob") as mock_rglob:
-                mock_rglob.side_effect = lambda p: mock_model_files if p == "*.py" else []
-                with patch("pathlib.Path.iterdir", return_value=[Path("/addons/simple_module/models")]):
-                    result = await get_module_structure("simple_module")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.is_dir", return_value=True):
+        with patch("pathlib.Path.rglob") as mock_rglob:
+            mock_rglob.side_effect = lambda p: mock_model_files if p == "*.py" else []
+            with patch("pathlib.Path.iterdir", return_value=[Path("/addons/simple_module/models")]):
+                result = await get_module_structure("simple_module")
 
     assert result["success"] is True
     assert result["has_models"] is True
@@ -114,11 +111,10 @@ async def test_get_module_structure_with_static_assets() -> None:
             return [Path("/addons/ui_module/static/src/xml/templates.xml")]
         return []
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.is_dir", return_value=True):
-            with patch("pathlib.Path.rglob", side_effect=mock_rglob):
-                with patch("pathlib.Path.iterdir", return_value=[]):
-                    result = await get_module_structure("ui_module")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.is_dir", return_value=True):
+        with patch("pathlib.Path.rglob", side_effect=mock_rglob):
+            with patch("pathlib.Path.iterdir", return_value=[]):
+                result = await get_module_structure("ui_module")
 
     assert result["success"] is True
     assert len(result["structure"]["static"]["js"]) == 1
@@ -142,11 +138,10 @@ async def test_get_module_structure_with_tests() -> None:
         tests_dir.rglob.return_value = mock_test_files
         return [tests_dir]
 
-    with patch("pathlib.Path.exists", return_value=True):
-        with patch("pathlib.Path.is_dir", return_value=True):
-            with patch("pathlib.Path.rglob", return_value=[]):
-                with patch("pathlib.Path.iterdir", side_effect=mock_iterdir):
-                    result = await get_module_structure("tested_module")
+    with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.is_dir", return_value=True):
+        with patch("pathlib.Path.rglob", return_value=[]):
+            with patch("pathlib.Path.iterdir", side_effect=mock_iterdir):
+                result = await get_module_structure("tested_module")
 
     assert result["success"] is True
     assert len(result["structure"]["tests"]) == 2  # Excluding __init__.py

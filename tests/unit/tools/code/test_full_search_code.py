@@ -19,14 +19,14 @@ async def test_search_code_basic_pattern() -> None:
         "/addons/test_module/models/test_model.py": """
 class TestModel(models.Model):
     _name = 'test.model'
-    
+
     def test_method(self):
         return True
 """,
         "/addons/test_module/models/other_model.py": """
 class OtherModel(models.Model):
     _name = 'other.model'
-    
+
     def other_method(self):
         return False
 """,
@@ -35,9 +35,8 @@ class OtherModel(models.Model):
     def mock_open_file(filename, *args, **kwargs):
         return mock_open(read_data=file_contents.get(str(filename), ""))()
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", side_effect=mock_open_file):
-            result = await search_code("test_method", "py")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
+        result = await search_code("test_method", "py")
 
     assert result["total_count"] == 1
     assert result["items"][0]["file"] == "test_module/models/test_model.py"
@@ -57,9 +56,8 @@ def compute_total(self):
     self.total = total
 """
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            result = await search_code("total", "py")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
+        result = await search_code("total", "py")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 3  # 3 lines contain "total"
@@ -82,9 +80,8 @@ async def test_search_code_xml_files() -> None:
     </record>
 </odoo>"""
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=xml_content)):
-            result = await search_code("test\\.model", "xml")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=xml_content)):
+        result = await search_code("test\\.model", "xml")
 
     assert result["total_count"] == 1
     assert "test.model" in result["items"][0]["matches"][0]["content"]
@@ -97,10 +94,9 @@ async def test_search_code_with_pagination() -> None:
 
     file_content = "def test_method(self):\n    pass"
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            pagination = PaginationParams(limit=10, offset=0)
-            result = await search_code("test_method", "py", pagination)
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
+        pagination = PaginationParams(limit=10, offset=0)
+        result = await search_code("test_method", "py", pagination)
 
     assert len(result["items"]) == 10
     assert result["total_count"] == 30
@@ -114,9 +110,8 @@ async def test_search_code_no_matches() -> None:
 
     file_content = "class MyModel(models.Model):\n    _name = 'my.model'"
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            result = await search_code("nonexistent_pattern", "py")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
+        result = await search_code("nonexistent_pattern", "py")
 
     assert result["total_count"] == 0
     assert result["items"] == []
@@ -132,10 +127,9 @@ class TestModel(models.Model):
     TEST_CONSTANT = 'value'
 """
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Search for uppercase TEST
-            result = await search_code("TEST", "py")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
+        # Search for uppercase TEST
+        result = await search_code("TEST", "py")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 1
@@ -156,10 +150,9 @@ def _onchange_partner(self):
     pass
 """
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            # Search for @api decorators
-            result = await search_code(r"@api\.\w+", "py")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
+        # Search for @api decorators
+        result = await search_code(r"@api\.\w+", "py")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 2
@@ -177,9 +170,8 @@ async def test_search_code_file_read_error() -> None:
             raise PermissionError("Access denied")
         return mock_open(read_data="def test(): pass")()
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", side_effect=mock_open_file):
-            result = await search_code("test", "py")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
+        result = await search_code("test", "py")
 
     # Should still return results from readable files
     assert result["total_count"] == 1
@@ -193,9 +185,9 @@ async def test_search_code_javascript_files() -> None:
     js_content = """
 odoo.define('module.widget', function (require) {
     'use strict';
-    
+
     const Widget = require('web.Widget');
-    
+
     return Widget.extend({
         start: function () {
             console.log('Widget started');
@@ -203,9 +195,8 @@ odoo.define('module.widget', function (require) {
     });
 });"""
 
-    with patch("pathlib.Path.rglob", return_value=mock_files):
-        with patch("builtins.open", mock_open(read_data=js_content)):
-            result = await search_code("Widget", "js")
+    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=js_content)):
+        result = await search_code("Widget", "js")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 3  # 3 occurrences of "Widget"

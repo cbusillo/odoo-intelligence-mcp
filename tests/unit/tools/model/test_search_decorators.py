@@ -7,8 +7,7 @@ import pytest
 class TestDecoratorSearcherFix:
     @pytest.fixture
     def mock_env(self) -> MagicMock:
-        env = MagicMock()
-        return env
+        return MagicMock()
 
     @pytest.fixture
     def mock_model_files(self, tmp_path: Path) -> dict[str, Path]:
@@ -21,14 +20,14 @@ from odoo.exceptions import UserError, ValidationError
 class SaleOrder(models.Model):
     _name = 'sale.order'
     _inherit = 'sale.order'
-    
+
     partner_id = fields.Many2one('res.partner', string='Customer', required=True)
     order_line = fields.One2many('sale.order.line', 'order_id', string='Order Lines')
-    
+
     amount_untaxed = fields.Monetary(string='Untaxed Amount', store=True, compute='_compute_amounts')
     amount_tax = fields.Monetary(string='Taxes', store=True, compute='_compute_amounts')
     amount_total = fields.Monetary(string='Total', store=True, compute='_compute_amounts')
-    
+
     state = fields.Selection([
         ('draft', 'Quotation'),
         ('sent', 'Quotation Sent'),
@@ -36,7 +35,7 @@ class SaleOrder(models.Model):
         ('done', 'Locked'),
         ('cancel', 'Cancelled'),
     ])
-    
+
     @api.depends('order_line.price_total')
     def _compute_amounts(self):
         """Compute the total amounts of the SO."""
@@ -50,13 +49,13 @@ class SaleOrder(models.Model):
                 'amount_tax': amount_tax,
                 'amount_total': amount_untaxed + amount_tax,
             })
-    
+
     @api.constrains('date_order', 'date_planned')
     def _check_dates(self):
         for order in self:
             if order.date_planned and order.date_order and order.date_planned < order.date_order:
                 raise ValidationError(_('Scheduled Date cannot be earlier than Order Date.'))
-    
+
     @api.onchange('partner_id')
     def onchange_partner_id(self):
         """Update the invoice and delivery addresses when the partner is changed."""
@@ -66,14 +65,14 @@ class SaleOrder(models.Model):
                 'partner_shipping_id': False,
             })
             return
-        
+
         addr = self.partner_id.address_get(['delivery', 'invoice'])
         values = {
             'partner_invoice_id': addr['invoice'],
             'partner_shipping_id': addr['delivery'],
         }
         self.update(values)
-    
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -83,7 +82,7 @@ class SaleOrder(models.Model):
                 else:
                     vals['name'] = self.env['ir.sequence'].next_by_code('sale.order') or _('New')
         return super().create(vals_list)
-    
+
     @api.constrains('company_id', 'order_line')
     def _check_order_line_company_id(self):
         for order in self:
@@ -98,45 +97,45 @@ from odoo import models, fields, api
 
 class ProductTemplate(models.Model):
     _name = 'product.template'
-    
+
     name = fields.Char('Name', index=True, required=True, translate=True)
     list_price = fields.Float('Sales Price', default=1.0, digits='Product Price')
-    
+
     qty_available = fields.Float(
         'Quantity On Hand', compute='_compute_quantities',
         digits='Product Unit of Measure', compute_sudo=False)
     virtual_available = fields.Float(
         'Forecasted Quantity', compute='_compute_quantities',
         digits='Product Unit of Measure', compute_sudo=False)
-    
+
     display_name = fields.Char(compute='_compute_display_name', store=True)
     currency_id = fields.Many2one('res.currency', 'Currency')
-    
+
     @api.depends('product_variant_ids.qty_available')
     def _compute_quantities(self):
         res = self._compute_quantities_dict()
         for template in self:
             template.qty_available = res[template.id]['qty_available']
             template.virtual_available = res[template.id]['virtual_available']
-    
+
     @api.depends('name', 'default_code')
     def _compute_display_name(self):
         for template in self:
             template.display_name = template.name
             if template.default_code:
                 template.display_name = f'[{template.default_code}] {template.name}'
-    
+
     @api.onchange('list_price')
     def _onchange_list_price(self):
         if self.list_price < 0:
             raise UserError(_('Sales price cannot be negative.'))
-    
+
     @api.constrains('list_price', 'standard_price')
     def _check_prices(self):
         for template in self:
             if template.list_price < template.standard_price:
                 raise ValidationError(_('Sales price cannot be lower than cost.'))
-    
+
     @api.model
     def create(self, vals):
         # Regular create method, not model_create_multi
@@ -150,15 +149,15 @@ from odoo import models, fields, api
 
 class ResPartner(models.Model):
     _name = 'res.partner'
-    
+
     name = fields.Char(index=True, required=True)
     email = fields.Char('Email')
     phone = fields.Char('Phone')
-    
+
     display_name = fields.Char(compute='_compute_display_name', store=True, index=True)
     partner_share = fields.Boolean(
         'Share Partner', compute='_compute_partner_share', store=True)
-    
+
     @api.depends('is_company', 'name', 'parent_id.display_name', 'type', 'company_name')
     def _compute_display_name(self):
         for partner in self:
@@ -169,23 +168,23 @@ class ResPartner(models.Model):
                 if name and partner.company_name:
                     name = f"{partner.company_name}, {name}"
             partner.display_name = name.strip()
-    
+
     @api.depends('user_ids.share', 'user_ids.active')
     def _compute_partner_share(self):
         for partner in self:
             partner.partner_share = not partner.user_ids or all(user.share for user in partner.user_ids)
-    
+
     @api.onchange('email')
     def onchange_email(self):
         if self.email:
             self.email = self.email.lower().strip()
-    
+
     @api.constrains('email')
     def _check_email(self):
         for partner in self:
             if partner.email and '@' not in partner.email:
                 raise ValidationError(_('Please enter a valid email address.'))
-    
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -201,25 +200,25 @@ from odoo import models, fields, api
 
 class AccountMove(models.Model):
     _name = 'account.move'
-    
+
     partner_id = fields.Many2one('res.partner', string='Partner')
     currency_id = fields.Many2one('res.currency', string='Currency')
-    
+
     amount_total = fields.Monetary(string='Total', store=True, compute='_compute_amount')
     amount_tax = fields.Monetary(string='Tax', store=True, compute='_compute_amount')
-    
+
     @api.depends('line_ids.debit', 'line_ids.credit', 'line_ids.amount_currency')
     def _compute_amount(self):
         for move in self:
             total = sum(move.line_ids.mapped('debit')) - sum(move.line_ids.mapped('credit'))
             move.amount_total = abs(total)
             move.amount_tax = 0  # Simplified
-    
+
     @api.onchange('partner_id')
     def _onchange_partner_id(self):
         if self.partner_id:
             self.currency_id = self.partner_id.currency_id
-    
+
     # Multiple constrains decorators
     @api.constrains('line_ids')
     def _check_balanced(self):
@@ -228,7 +227,7 @@ class AccountMove(models.Model):
                 continue
             if sum(move.line_ids.mapped('debit')) != sum(move.line_ids.mapped('credit')):
                 raise ValidationError(_('Journal Entry must be balanced.'))
-    
+
     @api.constrains('date', 'company_id')
     def _check_date(self):
         for move in self:
@@ -243,11 +242,11 @@ from odoo import models, fields
 
 class ResCurrency(models.Model):
     _name = 'res.currency'
-    
+
     name = fields.Char(string='Currency', size=3, required=True)
     symbol = fields.Char()
     rate = fields.Float(digits=(12, 6))
-    
+
     def get_rate(self):
         return self.rate or 1.0
 """)
@@ -460,7 +459,7 @@ from odoo import models, fields, api
 
 class ComplexModel(models.Model):
     _name = 'complex.model'
-    
+
     # Multi-line depends
     @api.depends(
         'line_ids.product_id',
@@ -470,17 +469,17 @@ class ComplexModel(models.Model):
     )
     def _compute_totals(self):
         pass
-    
+
     # Single line with multiple fields
     @api.constrains('start_date', 'end_date', 'active')
     def _check_date_consistency(self):
         pass
-    
+
     # Nested quotes
     @api.onchange("partner_id")
     def _onchange_partner(self):
         pass
-    
+
     # Multiple decorators on same method
     @api.depends('state')
     @api.depends('partner_id.active')  # Additional depends
@@ -531,7 +530,7 @@ class ComplexModel(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.model.search_decorators.glob")
     @patch("odoo_intelligence_mcp.tools.model.search_decorators.Path")
-    def test_should_find_computed_fields_from_depends(self, mock_path, mock_glob, searcher, mock_model_files):
+    def test_should_find_computed_fields_from_depends(self, mock_path, mock_glob, searcher, mock_model_files) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order"].read_text()
 
