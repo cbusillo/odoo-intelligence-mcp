@@ -12,8 +12,10 @@ async def test_get_inheritance_chain_basic(mock_odoo_env: MockOdooEnvironment) -
 
     assert "model" in result
     assert result["model"] == model_name
-    assert "inheritance_chain" in result
     assert "mro" in result
+    assert "inherits" in result
+    assert "inherited_fields" in result
+    assert "summary" in result
 
 
 @pytest.mark.asyncio
@@ -23,8 +25,8 @@ async def test_get_inheritance_chain_with_inherits(mock_odoo_env: MockOdooEnviro
     result = await analyze_inheritance_chain(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "inheritance_chain" in result
-    assert "inherits_relationships" in result
+    assert "inherits" in result
+    assert "inherits_from" in result
 
 
 @pytest.mark.asyncio
@@ -34,7 +36,8 @@ async def test_get_inheritance_chain_abstract_model(mock_odoo_env: MockOdooEnvir
     result = await analyze_inheritance_chain(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "inheritance_chain" in result
+    assert "mro" in result
+    assert "inherited_methods" in result
 
 
 @pytest.mark.asyncio
@@ -44,8 +47,9 @@ async def test_get_inheritance_chain_complex_hierarchy(mock_odoo_env: MockOdooEn
     result = await analyze_inheritance_chain(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "inheritance_chain" in result
+    assert "mro" in result
     assert "inherited_fields" in result
+    assert "overridden_methods" in result
 
 
 @pytest.mark.asyncio
@@ -65,5 +69,6 @@ async def test_get_inheritance_chain_field_sources(mock_odoo_env: MockOdooEnviro
     result = await analyze_inheritance_chain(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "inheritance_chain" in result
-    assert "field_sources" in result
+    assert "mro" in result
+    assert "inherited_fields" in result
+    assert "inherited_methods" in result

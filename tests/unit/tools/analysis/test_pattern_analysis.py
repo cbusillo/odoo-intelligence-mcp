@@ -10,8 +10,9 @@ async def test_analyze_computed_fields(mock_odoo_env: MockOdooEnvironment) -> No
 
     result = await analyze_patterns(mock_odoo_env, pattern_type)
 
-    assert "results" in result
-    assert isinstance(result["results"], list)
+    assert "computed_fields" in result
+    assert isinstance(result["computed_fields"], dict)  # Paginated structure
+    assert "items" in result["computed_fields"]
 
 
 @pytest.mark.asyncio
@@ -20,8 +21,9 @@ async def test_analyze_related_fields(mock_odoo_env: MockOdooEnvironment) -> Non
 
     result = await analyze_patterns(mock_odoo_env, pattern_type)
 
-    assert "results" in result
-    assert isinstance(result["results"], list)
+    assert "related_fields" in result
+    assert isinstance(result["related_fields"], dict)  # Paginated structure
+    assert "items" in result["related_fields"]
 
 
 @pytest.mark.asyncio
@@ -30,8 +32,9 @@ async def test_analyze_api_decorators(mock_odoo_env: MockOdooEnvironment) -> Non
 
     result = await analyze_patterns(mock_odoo_env, pattern_type)
 
-    assert "results" in result
-    assert isinstance(result["results"], list)
+    assert "api_decorators" in result
+    assert isinstance(result["api_decorators"], dict)  # Paginated structure
+    assert "items" in result["api_decorators"]
 
 
 @pytest.mark.asyncio
@@ -40,8 +43,9 @@ async def test_analyze_custom_methods(mock_odoo_env: MockOdooEnvironment) -> Non
 
     result = await analyze_patterns(mock_odoo_env, pattern_type)
 
-    assert "results" in result
-    assert isinstance(result["results"], list)
+    assert "custom_methods" in result
+    assert isinstance(result["custom_methods"], dict)  # Paginated structure
+    assert "items" in result["custom_methods"]
 
 
 @pytest.mark.asyncio
@@ -50,8 +54,9 @@ async def test_analyze_state_machines(mock_odoo_env: MockOdooEnvironment) -> Non
 
     result = await analyze_patterns(mock_odoo_env, pattern_type)
 
-    assert "results" in result
-    assert isinstance(result["results"], list)
+    assert "state_machines" in result
+    assert isinstance(result["state_machines"], dict)  # Paginated structure
+    assert "items" in result["state_machines"]
 
 
 @pytest.mark.asyncio
@@ -60,8 +65,11 @@ async def test_analyze_all_patterns(mock_odoo_env: MockOdooEnvironment) -> None:
 
     result = await analyze_patterns(mock_odoo_env, pattern_type)
 
-    assert "results" in result
-    assert isinstance(result["results"], list)
+    assert "computed_fields" in result
+    assert "related_fields" in result
+    assert "api_decorators" in result
+    assert "custom_methods" in result
+    assert "state_machines" in result
 
 
 @pytest.mark.asyncio

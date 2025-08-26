@@ -12,9 +12,9 @@ async def test_get_model_relationships_basic(mock_odoo_env: MockOdooEnvironment)
 
     assert "model" in result
     assert result["model"] == model_name
-    assert "many2one" in result
-    assert "one2many" in result
-    assert "many2many" in result
+    assert "relationships" in result
+    assert "relationship_summary" in result
+    assert result["relationship_summary"]["total_relationships"] >= 0
 
 
 @pytest.mark.asyncio
@@ -24,8 +24,9 @@ async def test_get_model_relationships_many2one(mock_odoo_env: MockOdooEnvironme
     result = await get_model_relationships(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "many2one" in result
-    assert isinstance(result["many2one"], list)
+    assert "relationships" in result
+    assert "relationship_summary" in result
+    assert result["relationship_summary"]["many2one_count"] >= 0
 
 
 @pytest.mark.asyncio
@@ -35,8 +36,9 @@ async def test_get_model_relationships_one2many(mock_odoo_env: MockOdooEnvironme
     result = await get_model_relationships(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "one2many" in result
-    assert isinstance(result["one2many"], list)
+    assert "relationships" in result
+    assert "relationship_summary" in result
+    assert result["relationship_summary"]["one2many_count"] >= 0
 
 
 @pytest.mark.asyncio
@@ -46,8 +48,9 @@ async def test_get_model_relationships_many2many(mock_odoo_env: MockOdooEnvironm
     result = await get_model_relationships(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "many2many" in result
-    assert isinstance(result["many2many"], list)
+    assert "relationships" in result
+    assert "relationship_summary" in result
+    assert result["relationship_summary"]["many2many_count"] >= 0
 
 
 @pytest.mark.asyncio
@@ -57,7 +60,8 @@ async def test_get_model_relationships_reverse(mock_odoo_env: MockOdooEnvironmen
     result = await get_model_relationships(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "reverse_relationships" in result
+    assert "relationships" in result
+    assert "relationship_summary" in result
 
 
 @pytest.mark.asyncio

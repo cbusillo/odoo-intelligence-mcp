@@ -12,8 +12,8 @@ async def test_analyze_performance_basic(mock_odoo_env: MockOdooEnvironment) -> 
 
     assert "model" in result
     assert result["model"] == model_name
-    assert "potential_issues" in result
-    assert isinstance(result["potential_issues"], list)
+    assert "performance_issues" in result
+    assert isinstance(result["performance_issues"], dict)  # Paginated structure
 
 
 @pytest.mark.asyncio
@@ -23,8 +23,9 @@ async def test_analyze_performance_n_plus_one_detection(mock_odoo_env: MockOdooE
     result = await analyze_performance(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "potential_issues" in result
+    assert "performance_issues" in result
     assert "recommendations" in result
+    assert isinstance(result["recommendations"], list)
 
 
 @pytest.mark.asyncio
@@ -34,7 +35,7 @@ async def test_analyze_performance_missing_indexes(mock_odoo_env: MockOdooEnviro
     result = await analyze_performance(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "potential_issues" in result
+    assert "performance_issues" in result
 
 
 @pytest.mark.asyncio
@@ -54,5 +55,5 @@ async def test_analyze_performance_complex_model(mock_odoo_env: MockOdooEnvironm
     result = await analyze_performance(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "potential_issues" in result
+    assert "performance_issues" in result
     assert "field_analysis" in result
