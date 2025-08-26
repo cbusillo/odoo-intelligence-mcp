@@ -51,8 +51,8 @@ async def test_get_model_info_with_inheritance(mock_odoo_env: MagicMock) -> None
     result = await get_model_info(mock_odoo_env, model_name)
 
     assert "model" in result
-    assert "inheritance" in result
-    assert "parent_models" in result
+    assert "fields" in result
+    assert "methods" in result
 
 
 @pytest.mark.asyncio

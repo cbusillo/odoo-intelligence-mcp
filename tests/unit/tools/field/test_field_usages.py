@@ -28,7 +28,8 @@ async def test_analyze_field_usage_many2one(mock_odoo_env: MockOdooEnvironment) 
     assert "model" in result
     assert "field" in result
     assert "usages" in result
-    assert "field_type" in result
+    assert "field_info" in result
+    assert result["field_info"]["type"] == "many2one"
 
 
 @pytest.mark.asyncio
@@ -75,4 +76,5 @@ async def test_analyze_field_usage_view_coverage(mock_odoo_env: MockOdooEnvironm
     assert "model" in result
     assert "field" in result
     assert "usages" in result
-    assert "view_usage" in result
+    assert "usage_summary" in result
+    assert result["usage_summary"]["view_count"] >= 0

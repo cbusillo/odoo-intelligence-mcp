@@ -158,6 +158,71 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             if pattern in code:
                 return response
 
+        # Handle model_info queries
+        if "model._table" in code and "model._description" in code and "model._fields.items()" in code:
+            # Check for invalid model
+            if "invalid.model" in code or "nonexistent.model" in code:
+                return {"error": "Model nonexistent.model not found" if "nonexistent.model" in code else "Model invalid.model not found"}
+            
+            model_name = "res.partner" if "res.partner" in code else "product.template" if "product.template" in code else "sale.order" if "sale.order" in code else "account.move"
+            
+            return {
+                "name": model_name,
+                "model": model_name,
+                "table": model_name.replace(".", "_"),
+                "description": f"{model_name.split('.')[-1].title()} Model",
+                "rec_name": "name",
+                "order": "id",
+                "fields": {
+                    "id": {"type": "integer", "string": "ID", "required": False, "readonly": True, "store": True},
+                    "name": {"type": "char", "string": "Name", "required": True, "readonly": False, "store": True},
+                    "email": {"type": "char", "string": "Email", "required": False, "readonly": False, "store": True},
+                },
+                "field_count": 3,
+                "methods": ["create", "write", "unlink", "search", "read", "compute_display_name"],
+                "method_count": 6,
+                "_inherit": ["mail.thread", "mail.activity.mixin"] if model_name == "account.move" else [],
+                "decorators": {"api.depends": 2, "api.constrains": 1} if model_name == "product.template" else {},
+            }
+        
+        # Handle field usage queries
+        if "fields_info = model.fields_get()" in code and "views_using_field" in code:
+            # Check for invalid model
+            if "invalid.model" in code:
+                return {"error": "Model invalid.model not found"}
+            
+            # Check for invalid field
+            if "nonexistent_field" in code:
+                return {"error": "Field nonexistent_field not found in product.template"}
+            
+            model_name = "product.template" if "product.template" in code else "sale.order.line" if "sale.order.line" in code else "sale.order" if "sale.order" in code else "res.partner"
+            field_name = "name" if "'name'" in code else "product_id" if "'product_id'" in code else "amount_total" if "'amount_total'" in code else "email"
+            
+            return {
+                "model": model_name,
+                "field": field_name,
+                "field_info": {
+                    "type": "char" if field_name == "name" else "many2one" if field_name == "product_id" else "float",
+                    "string": "Name" if field_name == "name" else "Product" if field_name == "product_id" else "Total",
+                    "required": field_name == "name",
+                    "readonly": False,
+                    "store": True,
+                },
+                "field_type": "char" if field_name == "name" else "many2one" if field_name == "product_id" else "float",
+                "used_in_views": [
+                    {"id": 1, "name": "Form View", "type": "form", "model": model_name},
+                    {"id": 2, "name": "Tree View", "type": "tree", "model": model_name},
+                ],
+                "used_in_domains": [],
+                "used_in_methods": [{"method": "compute_display_name", "type": "depends"}],
+                "usage_summary": {
+                    "view_count": 2,
+                    "domain_count": 0,
+                    "method_count": 1,
+                    "total_usages": 3,
+                }
+            }
+        
         if code.strip() == "":
             return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
 
