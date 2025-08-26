@@ -11,36 +11,36 @@ This document compares all 28 Odoo Intelligence MCP tools with native/bash comma
 
 ## Tool Comparisons
 
-| Tool | Native Alternative | Speed | Accuracy | Ease of Use | Info Quality | Overall | Notes |
-|------|-------------------|-------|----------|-------------|--------------|---------|-------|
-| model_info | docker exec + odoo shell script | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Instant, structured JSON. Native: 2-3s startup, manual formatting |
-| **search_models** | grep -r "_name.*motor" | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Categorized exact/partial/description matches. Native: Raw text, false positives |
-| **model_relationships** | Complex grep + manual analysis | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete relationship mapping with reverse relations. Native: Hours of manual work |
-| **field_usages** | grep for field name | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Shows usage in views, domains, methods. Native: Basic text search |
-| **performance_analysis** | Manual code review | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Automated N+1 detection, index recommendations. Native: Requires expertise |
-| **pattern_analysis** | Complex grep patterns | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete analysis of computed fields, decorators, methods. Native: Manual pattern construction |
-| **inheritance_chain** | Manual file traversal | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete MRO, inheritance analysis. Native: Manual traversal |
-| **addon_dependencies** | cat __manifest__.py | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Parsed manifest + reverse dependencies. Native: Manual parsing |
-| **search_code** | ripgrep (rg) | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | MCP: Structured JSON, pagination. Native: rg is fast with good context |
-| **module_structure** | tree + ls + cat manifest | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Categorized files, manifest parsed. Native: Multiple commands |
-| **find_method** | grep -r "def method_name" | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Tool needs pagination for common methods |
-| **search_decorators** | grep "@decorator" | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Finds decorators with dependencies. Native: Basic text search |
-| **view_model_usage** | grep in XML files | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete view analysis, field coverage. Native: Basic grep |
-| **workflow_states** | Manual state analysis | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete workflow analysis. Native: Manual inspection |
-| **execute_code** | docker exec + python script | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Direct code execution in Odoo env. Native: Manual setup |
-| **test_runner** | ./scripts/run_tests.sh | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Paginated test results, structured output. Native: Script times out |
-| **field_value_analyzer** | SQL queries | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Statistical analysis of field data. Native: Manual SQL |
-| **permission_checker** | Manual ACL analysis | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete ACL analysis with groups, rules, and recommendations. Native: Manual checks |
-| **resolve_dynamic_fields** | Complex code analysis | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Complete computed/related field analysis. Native: Hours of work |
-| **field_dependencies** | Manual dependency tracking | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Field dependency graphs. Native: Manual tracking |
-| **search_field_properties** | grep field attributes | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Finds fields by property with pagination. Native: Complex grep patterns |
-| **search_field_type** | grep "fields.Type" | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Finds all fields by type with pagination. Native: Regex complexity |
-| **odoo_update_module** | docker exec update command | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Clean execution with proper output. Native: Manual command construction |
-| **odoo_shell** | docker exec + odoo shell | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Clean output separation, timeout control. Native: Mixed stdout/stderr |
-| **odoo_status** | docker ps | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Container health status with optional verbose mode. Fixed image lookup issue |
-| **odoo_restart** | docker restart | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Service-specific restart with status. Native: Basic restart |
-| **odoo_install_module** | docker exec install command | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Clean execution with proper output. Native: Manual command construction |
-| **odoo_logs** | docker logs | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | MCP: Structured JSON, container status. Native: Same functionality |
+| Tool                        | Native Alternative              | Speed | Accuracy | Ease of Use | Info Quality | Overall | Notes                                                                                               |
+|-----------------------------|---------------------------------|-------|----------|-------------|--------------|---------|-----------------------------------------------------------------------------------------------------|
+| model_info                  | docker exec + odoo shell script | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Instant, structured JSON. Native: 2-3s startup, manual formatting                              |
+| **search_models**           | grep -r "_name.*motor"          | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Categorized exact/partial/description matches. Native: Raw text, false positives               |
+| **model_relationships**     | Complex grep + manual analysis  | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete relationship mapping with reverse relations. Native: Hours of manual work             |
+| **field_usages**            | grep for field name             | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Shows usage in views, domains, methods. Native: Basic text search                              |
+| **performance_analysis**    | Manual code review              | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Automated N+1 detection, index recommendations. Native: Requires expertise                     |
+| **pattern_analysis**        | Complex grep patterns           | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete analysis of computed fields, decorators, methods. Native: Manual pattern construction |
+| **inheritance_chain**       | Manual file traversal           | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete MRO, inheritance analysis. Native: Manual traversal                                   |
+| **addon_dependencies**      | cat __manifest__.py             | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Parsed manifest + reverse dependencies. Native: Manual parsing                                 |
+| **search_code**             | ripgrep (rg)                    | ⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐         | ⭐⭐⭐⭐    | MCP: Structured JSON, pagination. Native: rg is fast with good context                              |
+| **module_structure**        | tree + ls + cat manifest        | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Categorized files, manifest parsed. Native: Multiple commands                                  |
+| **find_method**             | grep -r "def method_name"       | ⭐⭐⭐   | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐        | ⭐⭐⭐⭐         | ⭐⭐⭐⭐    | Tool needs pagination for common methods                                                            |
+| **search_decorators**       | grep "@decorator"               | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Finds decorators with dependencies. Native: Basic text search                                  |
+| **view_model_usage**        | grep in XML files               | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete view analysis, field coverage. Native: Basic grep                                     |
+| **workflow_states**         | Manual state analysis           | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete workflow analysis. Native: Manual inspection                                          |
+| **execute_code**            | docker exec + python script     | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Direct code execution in Odoo env. Native: Manual setup                                        |
+| **test_runner**             | ./scripts/run_tests.sh          | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Paginated test results, structured output. Native: Script times out                            |
+| **field_value_analyzer**    | SQL queries                     | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Statistical analysis of field data. Native: Manual SQL                                         |
+| **permission_checker**      | Manual ACL analysis             | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete ACL analysis with groups, rules, and recommendations. Native: Manual checks           |
+| **resolve_dynamic_fields**  | Complex code analysis           | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Complete computed/related field analysis. Native: Hours of work                                |
+| **field_dependencies**      | Manual dependency tracking      | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Field dependency graphs. Native: Manual tracking                                               |
+| **search_field_properties** | grep field attributes           | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Finds fields by property with pagination. Native: Complex grep patterns                        |
+| **search_field_type**       | grep "fields.Type"              | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Finds all fields by type with pagination. Native: Regex complexity                             |
+| **odoo_update_module**      | docker exec update command      | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Clean execution with proper output. Native: Manual command construction                        |
+| **odoo_shell**              | docker exec + odoo shell        | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Clean output separation, timeout control. Native: Mixed stdout/stderr                          |
+| **odoo_status**             | docker ps                       | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Container health status with optional verbose mode. Fixed image lookup issue                   |
+| **odoo_restart**            | docker restart                  | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Service-specific restart with status. Native: Basic restart                                    |
+| **odoo_install_module**     | docker exec install command     | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Clean execution with proper output. Native: Manual command construction                        |
+| **odoo_logs**               | docker logs                     | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐       | ⭐⭐⭐⭐⭐        | ⭐⭐⭐⭐⭐   | MCP: Structured JSON, container status. Native: Same functionality                                  |
 
 ## Summary
 
