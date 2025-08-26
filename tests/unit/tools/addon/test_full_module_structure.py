@@ -25,17 +25,17 @@ async def test_get_module_structure_complete() -> None:
 
     def mock_rglob(pattern: str) -> list[Path]:
         if pattern == "*.py":
-            result = []
+            py_files = []
             for dir_name, files in mock_files.items():
                 if not dir_name.startswith("static"):
-                    result.extend([Path(f"/addons/test_module/{dir_name}/{f}") for f in files if f.endswith(".py")])
-            return result
+                    py_files.extend([Path(f"/addons/test_module/{dir_name}/{f}") for f in files if f.endswith(".py")])
+            return py_files
         elif pattern == "*.xml":
-            result = []
+            xml_files = []
             for dir_name, files in mock_files.items():
                 if not dir_name.startswith("static"):
-                    result.extend([Path(f"/addons/test_module/{dir_name}/{f}") for f in files if f.endswith(".xml")])
-            return result
+                    xml_files.extend([Path(f"/addons/test_module/{dir_name}/{f}") for f in files if f.endswith(".xml")])
+            return xml_files
         return []
 
     def mock_iterdir() -> list[Path]:

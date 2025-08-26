@@ -12,7 +12,7 @@ class TestFindMethodRegistryIssue:
     """Test find_method tool with focus on registry iteration issue."""
 
     @pytest.fixture
-    def mock_env_with_registry(self):
+    def mock_env_with_registry(self) -> HostOdooEnvironment:
         """Create a mock environment with a properly configured registry."""
         env = HostOdooEnvironment("test-container", "test-db", "/test/path")
 
@@ -76,10 +76,10 @@ class TestFindMethodRegistryIssue:
         accessed_models = []
 
         # Mock __getitem__ to track model access
-        async def mock_getitem(model_name):
-            accessed_models.append(model_name)
+        async def mock_getitem(model_name_param: str) -> MagicMock:
+            accessed_models.append(model_name_param)
             model = MagicMock()
-            model._name = model_name
+            model._name = model_name_param
             return model
 
         env.__getitem__ = mock_getitem
@@ -118,7 +118,7 @@ class TestFindMethodRegistryIssue:
     def test_registry_iteration_not_dict_values(self) -> None:
         """Test that registry iteration returns model names, not dict values."""
         registry = MockRegistry()
-        registry._models = {"model.a": MockModel, "model.b": MockModel, "model.c": MockModel}
+        registry._models = {"model.a": MockModel, "model.b": MockModel, "model.c": MockModel}  # type: ignore[assignment]
 
         # When iterating, should get model names (keys), not model objects (values)
         model_names = list(registry)
@@ -151,7 +151,7 @@ class TestFindMethodRegistryIssue:
             ]
 
             # Mock file system to find the method in source
-            [patch("pathlib.Path").start()]
+            _ = patch("pathlib.Path").start()
             mock_file_path = MagicMock()
             mock_file_path.suffix = ".py"
             mock_file_path.read_text.return_value = '''

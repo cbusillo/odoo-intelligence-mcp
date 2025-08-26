@@ -1,6 +1,6 @@
 """Simple tests for addon dependencies analysis."""
 
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -22,14 +22,38 @@ async def test_get_addon_dependencies_success() -> None:
     'external_dependencies': {
         'python': ['requests'],
         'bin': ['wkhtmltopdf']
-    }
+    },
+    'data': [],
+    'external_dependencies': {'python': ['requests'], 'bin': ['wkhtmltopdf']}
 }"""
 
+    # Mock Docker container operations instead of file system
     with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch("pathlib.Path.iterdir", return_value=[]),
-        patch("builtins.open", mock_open(read_data=mock_manifest_content)),
+        patch("odoo_intelligence_mcp.tools.addon.addon_dependencies.DockerClientManager") as mock_docker_manager_class,
+        patch("odoo_intelligence_mcp.tools.addon.addon_dependencies._get_addon_paths", return_value=["/opt/project/addons"]),
     ):
+        # Set up Docker manager mock
+        mock_docker_manager = MagicMock()
+        mock_docker_manager_class.return_value = mock_docker_manager
+
+        # Mock container
+        mock_container = MagicMock()
+        mock_docker_manager.get_container.return_value = mock_container
+
+        # Mock successful manifest read and empty dependent addons listing
+        def mock_exec_run(cmd: list[str]) -> MagicMock:
+            if cmd == ["cat", "/opt/project/addons/test_addon/__manifest__.py"]:
+                mock_result = MagicMock()
+                mock_result.exit_code = 0
+                mock_result.output.decode.return_value = mock_manifest_content
+                return mock_result
+            else:  # ls command for dependent addons
+                mock_result = MagicMock()
+                mock_result.exit_code = 1  # No other addons found
+                return mock_result
+
+        mock_container.exec_run.side_effect = mock_exec_run
+
         result = await get_addon_dependencies(addon_name)
 
     assert result["addon"] == addon_name
@@ -40,7 +64,7 @@ async def test_get_addon_dependencies_success() -> None:
     assert result["external_dependencies"]["python"] == ["requests"]
     assert result["external_dependencies"]["bin"] == ["wkhtmltopdf"]
 
-    assert len(result["depends_on_this"]) == 0
+    assert len(result["depends_on_this"]["items"]) == 0
     assert result["auto_install"] is False
 
     assert result["statistics"]["direct_dependencies"] == 2

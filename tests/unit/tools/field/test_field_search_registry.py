@@ -53,7 +53,7 @@ class TestFieldSearchRegistryIssue:
         # Create a MockRegistry instance
         registry = MockRegistry()
         # Note: MockRegistry.models is a ClassVar, so we need to set it on the class
-        MockRegistry.models = {"res.partner": MockModel, "sale.order": MockModel}
+        MockRegistry.models = {"res.partner": MockModel, "sale.order": MockModel}  # type: ignore[assignment]
         env.registry = registry
 
         # Mock model field access

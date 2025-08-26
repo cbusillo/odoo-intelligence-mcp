@@ -17,7 +17,6 @@ async def test_get_addon_dependencies_success() -> None:
         "description": "Connect products to external systems",
     }
 
-
     with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.open", MagicMock()):
         with patch("ast.literal_eval", return_value=mock_manifest):
             with patch("pathlib.Path.rglob") as mock_rglob:

@@ -57,6 +57,7 @@ class TestDockerRegistryIteration:
         """Test the pattern used by find_method with DockerRegistry."""
         # This is what find_method does:
         try:
+            # noinspection PyTypeChecker
             model_names = list(host_env.registry)
         except (TypeError, AttributeError):
             model_names = []

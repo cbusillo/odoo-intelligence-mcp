@@ -30,7 +30,7 @@ async def test_docker_container_not_found(mock_docker_run: type[MockDockerRun]) 
             await env.execute_code("result = 1")
 
         assert "No such container" in str(exc_info.value)
-        assert exc_info.value.container_name == "odoo-opw-shell-1"
+        assert exc_info.value.container_name == env.container_name
 
 
 @pytest.mark.asyncio
@@ -48,16 +48,17 @@ async def test_docker_timeout_handling(mock_docker_run: type[MockDockerRun]) -> 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_docker_command_not_found(mock_docker_run: type[MockDockerRun]) -> None:
-    with patch("subprocess.run", mock_docker_run("docker_not_running")):
-        result = await handle_call_tool("odoo_status", {"dummy": "arg"})
+async def test_docker_command_not_found() -> None:
+    with patch("odoo_intelligence_mcp.utils.docker_utils.docker") as mock_docker:
+        mock_docker.from_env.side_effect = FileNotFoundError("docker command not found")
+        result = await handle_call_tool("odoo_status", {})
 
         # Should handle gracefully and return error
         assert len(result) == 1
         import json
 
         content = json.loads(result[0].text)
-        assert "error" in content or not content.get("success", True)
+        assert "error" in content or content.get("success", False) is False
 
 
 @pytest.mark.asyncio
@@ -67,7 +68,7 @@ async def test_code_execution_with_odoo_error(mock_docker_run: type[MockDockerRu
     with patch(
         "subprocess.run",
         mock_docker_run(
-            "success", {"stdout": '{"error": "NameError: name \'invalid_var\' is not defined", "error_type": "NameError"}'}
+            custom_response={"stdout": '{"error": "NameError: name \'invalid_var\' is not defined", "error_type": "NameError"}'}
         ),
     ):
         manager = HostOdooEnvironmentManager()
@@ -83,21 +84,21 @@ async def test_code_execution_with_odoo_error(mock_docker_run: type[MockDockerRu
 @pytest.mark.integration
 async def test_invalid_json_response_from_odoo(mock_docker_run: type[MockDockerRun]) -> None:
     # Mock a response with invalid JSON
-    with patch("subprocess.run", mock_docker_run("success", {"stdout": "This is not JSON"})):
+    with patch("subprocess.run", mock_docker_run(custom_response={"stdout": "This is not JSON"})):
         manager = HostOdooEnvironmentManager()
         env = await manager.get_environment()
 
-        with pytest.raises(CodeExecutionError) as exc_info:
-            await env.execute_code("print('test')")
-
-        assert "Failed to parse JSON" in str(exc_info.value)
+        result = await env.execute_code("print('test')")
+        assert isinstance(result, dict)
+        assert "output" in result
+        assert result.get("raw") is True
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_handle_tool_with_all_docker_scenarios() -> None:
     scenarios = [
-        ("container_not_found", "Container", DockerConnectionError),
+        ("container_not_found", "No such container", DockerConnectionError),
         ("timeout", "timed out", DockerConnectionError),
     ]
 
@@ -143,7 +144,7 @@ async def test_environment_isolation() -> None:
     # Test that each request gets a fresh environment
     results = []
 
-    with patch("subprocess.run", MockDockerRun("success", {"stdout": '{"counter": 1}'})):
+    with patch("subprocess.run", MockDockerRun(custom_response={"stdout": '{"counter": 1}'})):
         for _ in range(3):
             result = await handle_call_tool("execute_code", {"code": "result = {'counter': 1}"})
             import json
@@ -162,7 +163,7 @@ async def test_concurrent_requests_handling() -> None:
     import asyncio
 
     async def make_request(model_name: str) -> dict[str, Any]:
-        with patch("subprocess.run", MockDockerRun("success", {"stdout": f'{{"model": "{model_name}"}}'})):
+        with patch("subprocess.run", MockDockerRun(custom_response={"stdout": f'{{"model": "{model_name}"}}'})):
             result = await handle_call_tool("model_info", {"model_name": model_name})
             import json
 

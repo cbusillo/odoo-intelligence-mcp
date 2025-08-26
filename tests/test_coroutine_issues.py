@@ -74,7 +74,7 @@ result = count1 + count2  # This will fail - can't add coroutines
         env = HostOdooEnvironment("test-container", "test-db", "/test/path")
 
         # Mock search to return a coroutine (not awaited)
-        async def mock_search(*args: object, **kwargs: object) -> list[MagicMock]:
+        async def mock_search(*_args: object, **_kwargs: object) -> list[MagicMock]:
             return []  # This would normally return view records
 
         env["ir.ui.view"].search = mock_search

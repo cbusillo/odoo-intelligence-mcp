@@ -1,5 +1,6 @@
 from pathlib import Path
-from unittest.mock import mock_open, patch
+from typing import Any
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -32,11 +33,11 @@ class OtherModel(models.Model):
 """,
     }
 
-    def mock_open_file(filename, *args, **kwargs):
+    def mock_open_file(filename: str, *_args: Any, **_kwargs: Any) -> MagicMock:
         return mock_open(read_data=file_contents.get(str(filename), ""))()
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
-        result = await search_code("test_method", "py")
+        result = await search_code("test_method")
 
     assert result["total_count"] == 1
     assert result["items"][0]["file"] == "test_module/models/test_model.py"
@@ -57,7 +58,7 @@ def compute_total(self):
 """
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
-        result = await search_code("total", "py")
+        result = await search_code("total")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 3  # 3 lines contain "total"
@@ -96,7 +97,7 @@ async def test_search_code_with_pagination() -> None:
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
         pagination = PaginationParams(limit=10, offset=0)
-        result = await search_code("test_method", "py", pagination)
+        result = await search_code("test_method", pagination=pagination)
 
     assert len(result["items"]) == 10
     assert result["total_count"] == 30
@@ -111,7 +112,7 @@ async def test_search_code_no_matches() -> None:
     file_content = "class MyModel(models.Model):\n    _name = 'my.model'"
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
-        result = await search_code("nonexistent_pattern", "py")
+        result = await search_code("nonexistent_pattern")
 
     assert result["total_count"] == 0
     assert result["items"] == []
@@ -129,7 +130,7 @@ class TestModel(models.Model):
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
         # Search for uppercase TEST
-        result = await search_code("TEST", "py")
+        result = await search_code("TEST")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 1
@@ -152,7 +153,7 @@ def _onchange_partner(self):
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
         # Search for @api decorators
-        result = await search_code(r"@api\.\w+", "py")
+        result = await search_code(r"@api\.\w+")
 
     assert result["total_count"] == 1
     assert len(result["items"][0]["matches"]) == 2
@@ -165,13 +166,13 @@ async def test_search_code_file_read_error() -> None:
         Path("/addons/module/models/unreadable.py"),
     ]
 
-    def mock_open_file(filename, *args, **kwargs):
+    def mock_open_file(filename: str, *_args: Any, **_kwargs: Any) -> MagicMock:
         if "unreadable" in str(filename):
             raise PermissionError("Access denied")
         return mock_open(read_data="def test(): pass")()
 
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
-        result = await search_code("test", "py")
+        result = await search_code("test")
 
     # Should still return results from readable files
     assert result["total_count"] == 1

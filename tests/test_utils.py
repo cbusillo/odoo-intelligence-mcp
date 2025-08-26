@@ -6,6 +6,37 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 
+class MockEnv:
+    """Mock environment for testing that properly handles model access and containment checks."""
+
+    def __init__(self) -> None:
+        self.models: dict[str, MagicMock] = {}
+
+    def __contains__(self, model_name: str) -> bool:
+        return model_name in self.models
+
+    def __getitem__(self, model_name: str) -> MagicMock:
+        if model_name not in self.models:
+            raise KeyError(f"Model {model_name} not found")
+        return self.models[model_name]
+
+    def add_model(self, model_name: str, model: MagicMock) -> None:
+        self.models[model_name] = model
+
+
+def create_mock_handle_operation() -> Callable[[str, str, Callable], dict[str, Any]]:
+    """Create a mock handle_container_operation function for testing Docker operations."""
+
+    def mock_handle_operation(container_name: str, operation_name: str, operation_func: Callable) -> dict[str, Any]:
+        # Get the mock container from the closure or create one
+        mock_container = getattr(mock_handle_operation, "container", MagicMock())
+        # Call the operation function to get the inner result
+        inner_result = operation_func(mock_container)
+        return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
+
+    return mock_handle_operation
+
+
 def create_mock_user(login: str = "test_user", name: str = "Test User", groups: list[str] | None = None) -> MagicMock:
     """Create a mock Odoo user with standard properties."""
     mock_user = MagicMock()

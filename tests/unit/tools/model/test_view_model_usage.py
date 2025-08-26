@@ -5,6 +5,7 @@ import pytest
 from odoo_intelligence_mcp.tools.model.view_model_usage import get_view_model_usage
 
 
+# noinspection DuplicatedCode
 class TestViewModelUsageCoroutineFix:
     """
     Test suite demonstrating coroutine issues in view_model_usage and defining expected behavior.
@@ -15,6 +16,7 @@ class TestViewModelUsageCoroutineFix:
     3. Iterating over coroutine results
     """
 
+    # noinspection PyDuplicatedCode
     @pytest.mark.asyncio
     async def test_view_model_usage_handles_view_search(self, mock_odoo_env: MagicMock) -> None:
         """Test that view_model_usage properly handles search() returning coroutines."""
@@ -48,6 +50,8 @@ class TestViewModelUsageCoroutineFix:
         ]
 
         # Mock the view model with async search
+        # noinspection PyDuplicatedCode
+        # noinspection PyDuplicatedCode
         mock_view_model = MagicMock()
         mock_view_model.search = AsyncMock(return_value=mock_views)
 
@@ -175,6 +179,7 @@ class TestViewModelUsageCoroutineFix:
             ),
         ]
 
+        # noinspection PyDuplicatedCode
         mock_view_model = MagicMock()
         mock_view_model.search = AsyncMock(return_value=mock_views)
 
@@ -266,6 +271,7 @@ class TestViewModelUsageCoroutineFix:
             ),
         ]
 
+        # noinspection PyDuplicatedCode
         mock_view_model = MagicMock()
         mock_view_model.search = AsyncMock(return_value=mock_views)
 
@@ -338,6 +344,7 @@ class TestViewModelUsageCoroutineFix:
             ),
         ]
 
+        # noinspection PyDuplicatedCode
         mock_view_model = MagicMock()
         mock_view_model.search = AsyncMock(return_value=mock_views)
 
@@ -359,6 +366,7 @@ class TestViewModelUsageCoroutineFix:
         assert "phone" in unexposed
         assert "is_company" in unexposed
 
+    # noinspection PyDuplicatedCode
     @pytest.mark.asyncio
     async def test_view_model_usage_error_recovery(self, mock_odoo_env: MagicMock) -> None:
         """Test that view_model_usage handles errors gracefully during async operations."""
@@ -386,6 +394,7 @@ class TestViewModelUsageCoroutineFix:
             ),
         ]
 
+        # noinspection PyDuplicatedCode
         mock_view_model = MagicMock()
         mock_view_model.search = AsyncMock(return_value=mock_views)
 
@@ -435,6 +444,7 @@ class TestViewModelUsageCoroutineFix:
             ),
         ]
 
+        # noinspection PyDuplicatedCode
         mock_view_model = MagicMock()
         mock_view_model.search = AsyncMock(return_value=mock_views)
 

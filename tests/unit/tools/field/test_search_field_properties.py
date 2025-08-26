@@ -12,7 +12,7 @@ class TestSearchFieldPropertiesRegistryIssue:
     """Test search_field_properties tool with focus on registry iteration issue."""
 
     @pytest.fixture
-    def mock_env_with_registry(self):
+    def mock_env_with_registry(self) -> HostOdooEnvironment:
         """Create a mock environment with a properly configured registry."""
         env = HostOdooEnvironment("test-container", "test-db", "/test/path")
 
@@ -297,7 +297,7 @@ class TestSearchFieldPropertiesRegistryIssue:
     def test_registry_dict_interface(self) -> None:
         """Test that registry supports dict-like interface while being iterable."""
         registry = MockRegistry()
-        registry._models = {
+        registry._models = {  # type: ignore[assignment]
             "res.users": MagicMock(_name="res.users"),
             "res.groups": MagicMock(_name="res.groups"),
             "ir.model": MagicMock(_name="ir.model"),
@@ -320,8 +320,9 @@ class TestSearchFieldPropertiesRegistryIssue:
         property_type = "computed"
 
         # Add more models to test pagination
-        for i in range(10):
-            env._registry._models[f"test.model.{i}"] = MockModel
+        if hasattr(env._registry, "_models"):
+            for i in range(10):
+                env._registry._models[f"test.model.{i}"] = MockModel
 
         with patch.object(env, "execute_code", new_callable=AsyncMock) as mock_exec:
             # Create models with computed fields, some matching filter
@@ -341,7 +342,7 @@ class TestSearchFieldPropertiesRegistryIssue:
             mock_exec.side_effect = mock_models
 
             # Search with filter for "amount"
-            pagination = PaginationParams(page=1, page_size=5, text_filter="amount")
+            pagination = PaginationParams(page_size=5, filter_text="amount")
             result = await search_field_properties(env, property_type, pagination)
 
             assert "error" not in result

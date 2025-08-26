@@ -1,29 +1,15 @@
+# noinspection DuplicatedCode
 from unittest.mock import MagicMock, Mock
 
 import pytest
 
 from odoo_intelligence_mcp.tools.field.field_value_analyzer import analyze_field_values
+from tests.test_utils import MockEnv
 
 
 @pytest.fixture
-def field_test_env():
+def field_test_env() -> MockEnv:
     """Custom env fixture that properly handles model access and containment checks."""
-
-    class MockEnv:
-        def __init__(self) -> None:
-            self.models = {}
-
-        def __contains__(self, model_name: str) -> bool:
-            return model_name in self.models
-
-        def __getitem__(self, model_name: str) -> MagicMock:
-            if model_name not in self.models:
-                raise KeyError(f"Model {model_name} not found")
-            return self.models[model_name]
-
-        def add_model(self, model_name: str, model: MagicMock) -> None:
-            self.models[model_name] = model
-
     return MockEnv()
 
 
@@ -284,6 +270,7 @@ async def test_field_value_analyzer_with_many2one_field(field_test_env) -> None:
     assert result["relational_analysis"]["relationship_type"] == "many2one"
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_field_value_analyzer_handles_missing_field_gracefully(field_test_env) -> None:
     model_name = "product.template"

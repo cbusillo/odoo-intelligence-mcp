@@ -62,6 +62,3 @@ class TestHostOdooEnvironment:
 
             # Should contain actual model names
             list(registry)
-            # This assertion will fail because MockRegistry doesn't fetch real models
-            # assert len(model_names) > 0
-            # assert 'res.partner' in model_names

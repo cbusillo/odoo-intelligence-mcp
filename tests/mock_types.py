@@ -173,3 +173,48 @@ class ConcreteModelMock:
     _order: str = "id"
     id: int = 1
     display_name: str = "Mock Model"
+
+    def search(self, _domain: object = None, _limit: int = 100, _offset: int = 0, _order: str | None = None) -> "ConcreteModelMock":
+        return self
+
+    def browse(self, _ids: int | list[int]) -> "ConcreteModelMock":
+        return self
+
+    def create(self, _vals: dict | list[dict]) -> "ConcreteModelMock":
+        return self
+
+    # noinspection PyMethodMayBeStatic
+    def write(self, _vals: dict) -> bool:
+        return True
+
+    # noinspection PyMethodMayBeStatic
+    def read(self, _fields: list[str] | None = None) -> list[dict]:
+        return []
+
+    # noinspection PyMethodMayBeStatic
+    def unlink(self) -> bool:
+        return True
+
+    # noinspection PyMethodMayBeStatic
+    def exists(self) -> bool:
+        return True
+
+    def ensure_one(self) -> "ConcreteModelMock":
+        return self
+
+    # noinspection PyMethodMayBeStatic
+    def mapped(self, _path: str) -> list:
+        return []
+
+    def filtered(self, _func: object) -> "ConcreteModelMock":
+        return self
+
+    def sorted(self, _key: object = None, _reverse: bool = False) -> "ConcreteModelMock":
+        return self
+
+    # noinspection PyMethodMayBeStatic
+    def check_access(self, _operation: str, _raise_exception: bool = True) -> bool:
+        return True
+
+    def __getattr__(self, name: str) -> object:
+        return MagicMock()

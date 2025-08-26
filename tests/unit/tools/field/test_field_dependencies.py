@@ -1,34 +1,21 @@
+# noinspection DuplicatedCode
 from unittest.mock import MagicMock, Mock
 
 import pytest
 
 from odoo_intelligence_mcp.tools.field.field_dependencies import get_field_dependencies
+from tests.test_utils import MockEnv
 
 
 @pytest.fixture
-def field_test_env() -> object:
+def field_test_env() -> MockEnv:
     """Custom env fixture that properly handles model access and containment checks."""
-
-    class MockEnv:
-        def __init__(self) -> None:
-            self.models = {}
-
-        def __contains__(self, model_name: str) -> bool:
-            return model_name in self.models
-
-        def __getitem__(self, model_name: str) -> MagicMock:
-            if model_name not in self.models:
-                raise KeyError(f"Model {model_name} not found")
-            return self.models[model_name]
-
-        def add_model(self, model_name: str, model: MagicMock) -> None:
-            self.models[model_name] = model
-
     return MockEnv()
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
-async def test_field_dependencies_finds_standard_fields(field_test_env) -> None:
+async def test_field_dependencies_finds_standard_fields(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "name"
 
@@ -97,7 +84,7 @@ async def test_field_dependencies_finds_standard_fields(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_finds_inherited_fields(field_test_env) -> None:
+async def test_field_dependencies_finds_inherited_fields(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "create_date"
 
@@ -159,7 +146,7 @@ async def test_field_dependencies_finds_inherited_fields(field_test_env) -> None
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_with_computed_field(field_test_env) -> None:
+async def test_field_dependencies_with_computed_field(field_test_env: MockEnv) -> None:
     model_name = "sale.order"
     field_name = "amount_total"
 
@@ -239,7 +226,7 @@ async def test_field_dependencies_with_computed_field(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_with_related_field(field_test_env) -> None:
+async def test_field_dependencies_with_related_field(field_test_env: MockEnv) -> None:
     model_name = "sale.order.line"
     field_name = "partner_id"
 
@@ -298,8 +285,9 @@ async def test_field_dependencies_with_related_field(field_test_env) -> None:
     assert result["direct_dependencies"][0] == "order_id.partner_id"
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
-async def test_field_dependencies_handles_missing_field(field_test_env) -> None:
+async def test_field_dependencies_handles_missing_field(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "nonexistent_field"
 
@@ -323,7 +311,7 @@ async def test_field_dependencies_handles_missing_field(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_with_no_dependencies(field_test_env) -> None:
+async def test_field_dependencies_with_no_dependencies(field_test_env: MockEnv) -> None:
     model_name = "res.partner"
     field_name = "name"
 
@@ -358,7 +346,7 @@ async def test_field_dependencies_with_no_dependencies(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_complex_chain(field_test_env) -> None:
+async def test_field_dependencies_complex_chain(field_test_env: MockEnv) -> None:
     model_name = "project.task"
     field_name = "project_partner_email"
 
@@ -423,7 +411,7 @@ async def test_field_dependencies_complex_chain(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_with_circular_reference(field_test_env) -> None:
+async def test_field_dependencies_with_circular_reference(field_test_env: MockEnv) -> None:
     model_name = "test.model"
     field_name = "field_a"
 
@@ -481,8 +469,9 @@ async def test_field_dependencies_with_circular_reference(field_test_env) -> Non
     assert "field_b" in result["direct_dependencies"]
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
-async def test_field_dependencies_without_fields_attribute(field_test_env) -> None:
+async def test_field_dependencies_without_fields_attribute(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "name"
 
@@ -521,7 +510,7 @@ async def test_field_dependencies_without_fields_attribute(field_test_env) -> No
 
 
 @pytest.mark.asyncio
-async def test_field_dependencies_multiple_dependent_fields(field_test_env) -> None:
+async def test_field_dependencies_multiple_dependent_fields(field_test_env: MockEnv) -> None:
     model_name = "product.product"
     field_name = "standard_price"
 

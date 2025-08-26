@@ -77,6 +77,15 @@ ignore = [
     "SLF001", # Private member access - PyCharm handles this better with context awareness, Odoo uses _fields etc as public API
     "ARG001", # Unused function argument - PyCharm handles this better with context awareness
     "ARG002", # Unused method argument - PyCharm handles this better with context awareness
+    "PLR0911", # Too many return statements - PyCharm handles this better
+    "ANN401", # Dynamically typed expressions (Any) - needed for this project's dynamic nature
+    "PERF401", # Use list.extend - stylistic preference, PyCharm handles this
+    "PERF203", # Try-except in loop - acceptable pattern for file analysis
+    "C403", # Unnecessary list comprehension - stylistic preference
+    "C416", # Unnecessary list comprehension - stylistic preference  
+    "C901", # Too complex - PyCharm handles this better with context
+    "S112", # Try-except-pass - acceptable for file operations
+    "PLC0415", # Import outside top-level - needed for conditional imports
 ]
 
 [tool.ruff.lint.per-file-ignores]

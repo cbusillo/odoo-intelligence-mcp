@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,11 +8,11 @@ from odoo_intelligence_mcp.tools.field.resolve_dynamic_fields import resolve_dyn
 
 class TestDynamicFieldResolverFix:
     @pytest.fixture
-    def mock_env(self):
+    def mock_env(self) -> MagicMock:
         return MagicMock()
 
     @pytest.fixture
-    def mock_model_files(self, tmp_path):
+    def mock_model_files(self, tmp_path) -> dict[str, Path]:
         # Create test model files with computed and related fields
         sale_order_line = tmp_path / "sale_order_line.py"
         sale_order_line.write_text('''
@@ -183,14 +184,16 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_find_computed_fields_with_compute_parameter(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_find_computed_fields_with_compute_parameter(
+        self, mock_path, mock_glob, mock_model_files, mock_env
+    ) -> None:
         mock_glob.glob.return_value = list(mock_model_files.values())
 
         for file_path in mock_model_files.values():
             mock_path.return_value.read_text.return_value = file_path.read_text()
 
         # Test sale.order.line
-        result = resolve_dynamic_fields(mock_env, "sale.order.line")
+        result = await resolve_dynamic_fields(mock_env, "sale.order.line")
         assert result is not None
         assert "computed_fields" in result
         assert len(result["computed_fields"]) > 0
@@ -209,11 +212,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_find_related_fields(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_find_related_fields(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "sale.order.line")
+        result = await resolve_dynamic_fields(mock_env, "sale.order.line")
 
         assert "related_fields" in result
         assert len(result["related_fields"]) > 0
@@ -229,11 +232,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_detect_api_depends_decorators(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_detect_api_depends_decorators(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "sale.order.line")
+        result = await resolve_dynamic_fields(mock_env, "sale.order.line")
 
         # Find _compute_amount in computed fields
         compute_amount_fields = [f for f in result["computed_fields"] if f["compute"] == "_compute_amount"]
@@ -248,11 +251,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_handle_complex_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_handle_complex_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["res.partner"]]
         mock_path.return_value.read_text.return_value = mock_model_files["res.partner"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "res.partner")
+        result = await resolve_dynamic_fields(mock_env, "res.partner")
 
         # Find display_name computed field
         display_name = next((f for f in result["computed_fields"] if f["name"] == "display_name"), None)
@@ -266,11 +269,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_handle_models_without_dynamic_fields(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_handle_models_without_dynamic_fields(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["res.country"]]
         mock_path.return_value.read_text.return_value = mock_model_files["res.country"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "res.country")
+        result = await resolve_dynamic_fields(mock_env, "res.country")
 
         assert result is not None
         assert result["computed_fields"] == []
@@ -278,11 +281,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_identify_store_parameter(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_identify_store_parameter(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "sale.order.line")
+        result = await resolve_dynamic_fields(mock_env, "sale.order.line")
 
         # Find stored computed fields
         stored_fields = [f for f in result["computed_fields"] if f.get("store", False)]
@@ -295,11 +298,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_handle_cross_model_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_handle_cross_model_dependencies(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["product.template"]]
         mock_path.return_value.read_text.return_value = mock_model_files["product.template"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "product.template")
+        result = await resolve_dynamic_fields(mock_env, "product.template")
 
         # Find _compute_quantities
         qty_fields = [f for f in result["computed_fields"] if f["compute"] == "_compute_quantities"]
@@ -310,18 +313,18 @@ class ResCountry(models.Model):
             assert "dependencies" in field
             assert "product_variant_ids.qty_available" in field["dependencies"]
 
-    def test_should_validate_model_name(self, mock_env) -> None:
+    async def test_should_validate_model_name(self, mock_env) -> None:
         with pytest.raises(ValueError):
-            resolve_dynamic_fields(mock_env, "")
+            await resolve_dynamic_fields(mock_env, "")
 
         with pytest.raises(ValueError):
-            resolve_dynamic_fields(mock_env, None)
+            await resolve_dynamic_fields(mock_env, None)  # type: ignore[arg-type]
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
-    def test_should_handle_file_not_found(self, mock_glob, mock_env) -> None:
+    async def test_should_handle_file_not_found(self, mock_glob, mock_env) -> None:
         mock_glob.glob.return_value = []
 
-        result = resolve_dynamic_fields(mock_env, "non.existent.model")
+        result = await resolve_dynamic_fields(mock_env, "non.existent.model")
 
         assert result is not None
         assert result["computed_fields"] == []
@@ -329,11 +332,11 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_parse_field_types(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
+    async def test_should_parse_field_types(self, mock_path, mock_glob, mock_model_files, mock_env) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order.line"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order.line"].read_text()
 
-        result = resolve_dynamic_fields(mock_env, "sale.order.line")
+        result = await resolve_dynamic_fields(mock_env, "sale.order.line")
 
         # Check field types are captured
         price_subtotal = next((f for f in result["computed_fields"] if f["name"] == "price_subtotal"), None)
@@ -346,7 +349,7 @@ class ResCountry(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.glob")
     @patch("odoo_intelligence_mcp.tools.field.resolve_dynamic_fields.Path")
-    def test_should_extract_related_field_attributes(self, mock_path, mock_glob, tmp_path, mock_env) -> None:
+    async def test_should_extract_related_field_attributes(self, mock_path, mock_glob, tmp_path, mock_env) -> None:
         # Create model with various related field configurations
         test_model = tmp_path / "test_model.py"
         test_model.write_text("""
@@ -373,7 +376,7 @@ class TestModel(models.Model):
         mock_glob.glob.return_value = [test_model]
         mock_path.return_value.read_text.return_value = test_model.read_text()
 
-        result = resolve_dynamic_fields(mock_env, "test.model")
+        result = await resolve_dynamic_fields(mock_env, "test.model")
 
         related_fields = {f["name"]: f for f in result["related_fields"]}
 

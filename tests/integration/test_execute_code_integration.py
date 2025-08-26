@@ -10,27 +10,27 @@ from tests.mock_types import MockSubprocessRun
 
 class TestExecuteCodeIntegration:
     @pytest.mark.asyncio
-    async def test_execute_code_basic_model_access(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_basic_model_access(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = "result = len(env.registry)"
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert isinstance(result["result"], int)
         assert result["result"] > 0  # Should have some models registered
 
     @pytest.mark.asyncio
-    async def test_execute_code_model_search_count(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_model_search_count(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = 'result = env["res.users"].search_count([])'
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert isinstance(result["result"], int)
         assert result["result"] >= 1  # Should have at least admin user
 
     @pytest.mark.asyncio
-    async def test_execute_code_model_browse_admin(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_model_browse_admin(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 admin_user = env["res.users"].browse(1)
 result = {
@@ -41,7 +41,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["id"] == 1
@@ -50,7 +50,7 @@ result = {
         assert "name" in result["result"]
 
     @pytest.mark.asyncio
-    async def test_execute_code_field_access(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_field_access(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 partner_fields = env["res.partner"]._fields
 result = {
@@ -61,7 +61,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["has_name_field"] is True
@@ -70,7 +70,7 @@ result = {
         assert result["result"]["total_fields"] > 10  # res.partner has many fields
 
     @pytest.mark.asyncio
-    async def test_execute_code_recordset_operations(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_recordset_operations(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 # Get all companies
 companies = env["res.partner"].search([("is_company", "=", True)], limit=5)
@@ -83,7 +83,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["recordset_type"] == "recordset"
@@ -92,7 +92,7 @@ result = {
         assert isinstance(result["result"]["ids"], list)
 
     @pytest.mark.asyncio
-    async def test_execute_code_datetime_operations(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_datetime_operations(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 from datetime import datetime, timedelta
 now = datetime.now()
@@ -104,7 +104,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["current_year"] >= 2024
@@ -112,7 +112,7 @@ result = {
         assert result["result"]["day_difference"] == 1
 
     @pytest.mark.asyncio
-    async def test_execute_code_json_operations(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_json_operations(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 import json
 data = {"test": "value", "number": 42}
@@ -126,7 +126,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["are_equal"] is True
@@ -134,7 +134,7 @@ result = {
         assert '"test": "value"' in result["result"]["json_string"]
 
     @pytest.mark.asyncio
-    async def test_execute_code_regex_operations(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_regex_operations(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 import re
 text = "Email: test@example.com, Phone: 123-456-7890"
@@ -152,7 +152,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["email_found"] == "test@example.com"
@@ -161,7 +161,7 @@ result = {
         assert result["result"]["has_phone"] is True
 
     @pytest.mark.asyncio
-    async def test_execute_code_model_relationship_analysis(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_model_relationship_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 # Analyze res.partner model relationships
 partner_model = env["res.partner"]
@@ -188,7 +188,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["many2one_count"] > 0
@@ -197,10 +197,10 @@ result = {
         assert isinstance(result["result"]["sample_one2many"], list)
 
     @pytest.mark.asyncio
-    async def test_execute_code_error_handling_with_real_env(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_error_handling_with_real_env(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = 'result = env["nonexistent.model"].search([])'
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is False
         assert "error" in result
@@ -208,7 +208,7 @@ result = {
         assert "hint" in result
 
     @pytest.mark.asyncio
-    async def test_execute_code_complex_data_analysis(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_complex_data_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 # Analyze user distribution by creation date
 users = env["res.users"].search([])
@@ -227,7 +227,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["total_users"] >= 1
@@ -237,10 +237,10 @@ result = {
             assert result["result"]["latest_year"] >= 2020
 
     @pytest.mark.asyncio
-    async def test_execute_code_recordset_return_handling(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_recordset_return_handling(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = 'result = env["res.users"].search([("id", "=", 1)])'
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert result["result_type"] == "recordset"
@@ -250,7 +250,7 @@ result = {
         assert len(result["display_names"]) == 1
 
     @pytest.mark.asyncio
-    async def test_execute_code_environment_context_access(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_environment_context_access(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 result = {
     "env_context": dict(env.context),
@@ -261,7 +261,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert isinstance(result["result"]["env_context"], dict)
@@ -270,7 +270,7 @@ result = {
         # Note: env.cr might not be available in all test environments
 
     @pytest.mark.asyncio
-    async def test_execute_code_model_method_calls(self, real_odoo_env: CompatibleEnvironment) -> None:
+    async def test_execute_code_model_method_calls(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = """
 # Test calling model methods
 partner_model = env["res.partner"]
@@ -284,7 +284,7 @@ result = {
 }
 """
 
-        result = execute_code(real_odoo_env, code)
+        result = await execute_code(real_odoo_env_if_available_if_available, code)
 
         assert result["success"] is True
         assert "name" in result["result"]["fields_get_keys"]
@@ -447,10 +447,10 @@ print("Partner saved successfully.")
     @patch("subprocess.run")
     @pytest.mark.asyncio
     async def test_odoo_shell_vs_execute_code_consistency(
-        self, mock_subprocess_run: MockSubprocessRun, real_odoo_env: CompatibleEnvironment
+        self, mock_subprocess_run: MockSubprocessRun, real_odoo_env_if_available: CompatibleEnvironment
     ) -> None:
         code_for_execute = "result = 2 + 3"
-        execute_result = execute_code(real_odoo_env, code_for_execute)
+        execute_result = await execute_code(real_odoo_env_if_available_if_available, code_for_execute)
 
         mock_subprocess_run.return_value.returncode = 0
         mock_subprocess_run.return_value.stdout = "5\n"

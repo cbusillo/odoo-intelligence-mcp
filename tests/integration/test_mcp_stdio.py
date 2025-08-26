@@ -1,3 +1,4 @@
+# noinspection DuplicatedCode
 import asyncio
 import contextlib
 import json
@@ -15,7 +16,7 @@ class MockStream:
         self.index = 0
         self.written: list[bytes] = []
 
-    async def read(self, n: int = -1) -> bytes:
+    async def read(self, _n: int = -1) -> bytes:
         if self.index < len(self.messages):
             message = self.messages[self.index]
             self.index += 1
@@ -45,7 +46,7 @@ async def test_mcp_initialize_request() -> None:
 
     # Create a task that will run the server
     server_task = asyncio.create_task(
-        app.run(read_stream, write_stream, None)  # type: ignore
+        app.run(read_stream, write_stream, None)  # noinspection PyTypeChecker
     )
 
     # Give server time to process
@@ -70,6 +71,7 @@ async def test_mcp_initialize_request() -> None:
     assert response_json["result"]["serverInfo"]["name"] == "odoo-intelligence"
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_mcp_list_tools_request() -> None:
@@ -86,7 +88,7 @@ async def test_mcp_list_tools_request() -> None:
     write_stream = MockStream([])
 
     server_task = asyncio.create_task(
-        app.run(read_stream, write_stream, None)  # type: ignore
+        app.run(read_stream, write_stream, None)  # noinspection PyTypeChecker
     )
 
     await asyncio.sleep(0.2)
@@ -111,6 +113,7 @@ async def test_mcp_list_tools_request() -> None:
     assert all("name" in tool for tool in tools)
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_mcp_call_tool_request() -> None:
@@ -137,7 +140,7 @@ async def test_mcp_call_tool_request() -> None:
         write_stream = MockStream([])
 
         server_task = asyncio.create_task(
-            app.run(read_stream, write_stream, None)  # type: ignore
+            app.run(read_stream, write_stream, None)  # noinspection PyTypeChecker
         )
 
         await asyncio.sleep(0.2)
@@ -162,6 +165,7 @@ async def test_mcp_call_tool_request() -> None:
     assert content[0]["type"] == "text"
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_mcp_error_handling() -> None:
@@ -179,7 +183,7 @@ async def test_mcp_error_handling() -> None:
     write_stream = MockStream([])
 
     server_task = asyncio.create_task(
-        app.run(read_stream, write_stream, None)  # type: ignore
+        app.run(read_stream, write_stream, None)  # noinspection PyTypeChecker
     )
 
     await asyncio.sleep(0.2)

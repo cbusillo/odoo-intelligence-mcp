@@ -225,7 +225,7 @@ async def test_tool_input_validation() -> None:
     result = await handle_call_tool("model_info", {"model_name": 123})
 
     assert len(result) == 1
-    content = json.loads(result[0].text)
+    _content = json.loads(result[0].text)
     # Should still work as the handler will convert to string
 
 

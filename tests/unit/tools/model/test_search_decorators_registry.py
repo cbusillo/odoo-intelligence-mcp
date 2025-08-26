@@ -11,7 +11,7 @@ class TestSearchDecoratorsRegistryFix:
     """Test search_decorators with focus on registry iteration issue."""
 
     @pytest.fixture
-    def mock_env_with_registry(self):
+    def mock_env_with_registry(self) -> HostOdooEnvironment:
         """Create a mock environment with a properly configured registry."""
         return HostOdooEnvironment("test-container", "test-db", "/test/path")
 
@@ -41,7 +41,7 @@ class TestSearchDecoratorsRegistryFix:
         env.registry = MockRegistry()
 
         # MockRegistry.models is a ClassVar, we need to set it properly
-        MockRegistry.models = {"sale.order": MockModel, "product.template": MockModel}
+        MockRegistry.models = {"sale.order": MockModel, "product.template": MockModel}  # type: ignore[assignment]
 
         # Mock model access
         sale_order = MagicMock()
@@ -94,7 +94,7 @@ class TestSearchDecoratorsRegistryFix:
 
         # Make registry raise TypeError when trying to iterate
         class BadRegistry:
-            def __iter__(self):
+            def __iter__(self) -> None:
                 raise TypeError("Cannot iterate")
 
         env.registry = BadRegistry()
@@ -115,7 +115,7 @@ class TestSearchDecoratorsRegistryFix:
         env = MagicMock()
 
         # Add async get_model_names method
-        async def mock_get_model_names():
+        async def mock_get_model_names() -> list[str]:
             return ["res.partner", "res.users", "product.product"]
 
         env.get_model_names = mock_get_model_names

@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock, patch
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -9,7 +10,7 @@ class TestWorkflowStatesAnalyzerFix:
     # No longer need analyzer fixture since we use function directly
 
     @pytest.fixture
-    def mock_model_files(self, tmp_path):
+    def mock_model_files(self, tmp_path: Path) -> dict[str, Path]:
         # Create test model files with state fields and workflow patterns
         sale_order = tmp_path / "sale_order.py"
         sale_order.write_text('''
@@ -161,7 +162,10 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_find_state_fields_in_common_models(self, mock_path, mock_glob, mock_model_files) -> None:
+    # noinspection LSPLocalInspectionTool
+    async def test_should_find_state_fields_in_common_models(
+        self, mock_path: MagicMock, mock_glob: MagicMock, mock_model_files: dict[str, Path]
+    ) -> None:
         # Setup mocks
         mock_glob.glob.return_value = list(mock_model_files.values())
 
@@ -252,7 +256,10 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_identify_state_transition_methods(self, mock_path, mock_glob, mock_model_files) -> None:
+    # noinspection LSPLocalInspectionTool
+    async def test_should_identify_state_transition_methods(
+        self, mock_path: MagicMock, mock_glob: MagicMock, mock_model_files: dict[str, Path]
+    ) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order"].read_text()
 
@@ -286,7 +293,10 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_detect_button_actions(self, mock_path, mock_glob, mock_model_files) -> None:
+    # noinspection LSPLocalInspectionTool
+    async def test_should_detect_button_actions(
+        self, mock_path: MagicMock, mock_glob: MagicMock, mock_model_files: dict[str, Path]
+    ) -> None:
         mock_glob.glob.return_value = [mock_model_files["purchase.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["purchase.order"].read_text()
 
@@ -305,7 +315,10 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_find_fields_depending_on_state(self, mock_path, mock_glob, mock_model_files) -> None:
+    # noinspection LSPLocalInspectionTool
+    async def test_should_find_fields_depending_on_state(
+        self, mock_path: MagicMock, mock_glob: MagicMock, mock_model_files: dict[str, Path]
+    ) -> None:
         mock_glob.glob.return_value = [mock_model_files["sale.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["sale.order"].read_text()
 
@@ -328,7 +341,10 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_handle_models_without_state_fields(self, mock_path, mock_glob, mock_model_files) -> None:
+    # noinspection LSPLocalInspectionTool
+    async def test_should_handle_models_without_state_fields(
+        self, mock_path: MagicMock, mock_glob: MagicMock, mock_model_files: dict[str, Path]
+    ) -> None:
         mock_glob.glob.return_value = [mock_model_files["product.template"]]
         mock_path.return_value.read_text.return_value = mock_model_files["product.template"].read_text()
 
@@ -343,7 +359,10 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_parse_selection_field_correctly(self, mock_path, mock_glob, mock_model_files) -> None:
+    # noinspection LSPLocalInspectionTool
+    async def test_should_parse_selection_field_correctly(
+        self, mock_path: MagicMock, mock_glob: MagicMock, mock_model_files: dict[str, Path]
+    ) -> None:
         mock_glob.glob.return_value = [mock_model_files["repair.order"]]
         mock_path.return_value.read_text.return_value = mock_model_files["repair.order"].read_text()
 
@@ -389,7 +408,7 @@ class ProductTemplate(models.Model):
             assert states_dict[key] == label
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
-    async def test_should_handle_file_not_found(self, mock_glob) -> None:
+    async def test_should_handle_file_not_found(self, mock_glob: MagicMock) -> None:
         mock_glob.glob.return_value = []
 
         mock_env = AsyncMock()
@@ -410,7 +429,7 @@ class ProductTemplate(models.Model):
 
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.glob")
     @patch("odoo_intelligence_mcp.tools.analysis.workflow_states.Path")
-    async def test_should_detect_complex_state_transitions(self, mock_path, mock_glob, tmp_path) -> None:
+    async def test_should_detect_complex_state_transitions(self, mock_path: MagicMock, mock_glob: MagicMock, tmp_path: Path) -> None:
         # Create a model with complex state transitions
         complex_model = tmp_path / "complex_workflow.py"
         complex_model.write_text('''
