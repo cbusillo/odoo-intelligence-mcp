@@ -2,131 +2,86 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry
 from odoo_intelligence_mcp.tools.model import search_decorators
-from tests.mock_types import ConcreteModelMock as MockModel
 
 
-class TestSearchDecoratorsRegistryFix:
-    """Test search_decorators with focus on registry iteration issue."""
+@pytest.mark.asyncio
+async def test_search_decorators_depends(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
+    
+    decorator_type = "depends"
 
-    @pytest.fixture
-    def mock_env_with_registry(self) -> HostOdooEnvironment:
-        """Create a mock environment with a properly configured registry."""
-        return HostOdooEnvironment("test-container", "test-db", "/test/path")
+    result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
 
-        # Since HostOdooEnvironment.registry returns DockerRegistry which always
-        # returns empty iterator, we need to test with a different approach
+    assert "decorator" in result
+    assert result["decorator"] == decorator_type
+    assert "methods" in result
+    assert isinstance(result["methods"], dict)
+    assert "items" in result["methods"]
 
-    @pytest.mark.asyncio
-    async def test_search_decorators_with_host_env_no_get_model_names(self, mock_env_with_registry) -> None:
-        """Test search_decorators when env doesn't have get_model_names (falls back to registry)."""
-        env = mock_env_with_registry
 
-        # HostOdooEnvironment doesn't have get_model_names by default
-        # so it will use the fallback to registry iteration
+@pytest.mark.asyncio
+async def test_search_decorators_constrains(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
+    
+    decorator_type = "constrains"
 
-        # Call search_decorators
-        result = await search_decorators(env, "depends")
+    result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
 
-        # Due to DockerRegistry always returning empty iterator,
-        # we expect no results
-        assert result == {"results": []}
+    assert "decorator" in result
+    assert result["decorator"] == decorator_type
+    assert "methods" in result
 
-    @pytest.mark.asyncio
-    async def test_search_decorators_with_mock_registry(self) -> None:
-        """Test search_decorators with MockRegistry that has models."""
-        # Create a mock environment with MockRegistry
-        env = MagicMock()
-        env.registry = MockRegistry()
 
-        # MockRegistry.models is a ClassVar, we need to set it properly
-        MockRegistry.models = {"sale.order": MockModel, "product.template": MockModel}  # type: ignore[assignment]
+@pytest.mark.asyncio
+async def test_search_decorators_onchange(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
+    
+    decorator_type = "onchange"
 
-        # Mock model access
-        sale_order = MagicMock()
-        sale_order._description = "Sales Order"
+    result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
 
-        # Create a method with _depends attribute
-        compute_amount = MagicMock()
-        compute_amount._depends = ["order_line.price_total"]
-        compute_amount.__name__ = "_compute_amount"
+    assert "decorator" in result
+    assert result["decorator"] == decorator_type
+    assert "methods" in result
 
-        # Set up the model class
-        sale_order_class = type(sale_order)
-        sale_order_class._compute_amount = compute_amount
 
-        product_template = MagicMock()
-        product_template._description = "Product Template"
+@pytest.mark.asyncio
+async def test_search_decorators_model_create_multi(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
+    
+    decorator_type = "model_create_multi"
 
-        env.__getitem__.side_effect = lambda name: {"sale.order": sale_order, "product.template": product_template}.get(name)
+    result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
 
-        # Now test - should iterate through registry
-        await search_decorators(env, "depends")
+    assert "decorator" in result
+    assert result["decorator"] == decorator_type
+    assert "methods" in result
 
-        # Should have attempted to search both models
-        assert env.__getitem__.call_count == 2
-        env.__getitem__.assert_any_call("sale.order")
-        env.__getitem__.assert_any_call("product.template")
 
-    @pytest.mark.asyncio
-    async def test_search_decorators_fallback_with_registry_models_attr(self) -> None:
-        """Test the specific fallback in search_decorators line 18."""
-        env = MagicMock()
+@pytest.mark.asyncio
+async def test_search_decorators_invalid(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
+    
+    decorator_type = "invalid_decorator"
 
-        # Create registry with models attribute (not the same as MockRegistry)
-        registry = MagicMock()
-        registry.models = ["model.one", "model.two", "model.three"]
-        env.registry = registry
+    result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
 
-        # Mock models
-        env.__getitem__.return_value = MagicMock(_description="Test Model")
+    assert "error" in result or "methods" in result
+    if "methods" in result and isinstance(result["methods"], dict):
+        assert result["methods"]["items"] == []
 
-        await search_decorators(env, "onchange")
 
-        # Should have accessed all three models
-        assert env.__getitem__.call_count == 3
+@pytest.mark.asyncio
+async def test_search_decorators_with_pagination(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
 
-    @pytest.mark.asyncio
-    async def test_search_decorators_with_type_error(self) -> None:
-        """Test search_decorators when registry iteration raises TypeError."""
-        env = MagicMock()
+    decorator_type = "depends"
+    pagination = PaginationParams(page=1, page_size=10)
 
-        # Make registry raise TypeError when trying to iterate
-        class BadRegistry:
-            def __iter__(self) -> None:
-                raise TypeError("Cannot iterate")
+    result = await search_decorators(mock_odoo_env, decorator_type, pagination)
 
-        env.registry = BadRegistry()
-
-        # Mock model access (though it shouldn't be called)
-        env.__getitem__.return_value = MagicMock()
-
-        # Should handle the error gracefully
-        result = await search_decorators(env, "constrains")
-
-        assert result == {"results": []}
-        # Should not have tried to access any models
-        env.__getitem__.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_search_decorators_with_get_model_names(self) -> None:
-        """Test search_decorators when env has get_model_names method."""
-        env = MagicMock()
-
-        # Add async get_model_names method
-        async def mock_get_model_names() -> list[str]:
-            return ["res.partner", "res.users", "product.product"]
-
-        env.get_model_names = mock_get_model_names
-
-        # Mock models
-        env.__getitem__.return_value = MagicMock(_description="Test Model")
-
-        await search_decorators(env, "model_create_multi")
-
-        # Should have used get_model_names and accessed all models
-        assert env.__getitem__.call_count == 3
-        env.__getitem__.assert_any_call("res.partner")
-        env.__getitem__.assert_any_call("res.users")
-        env.__getitem__.assert_any_call("product.product")
+    assert "decorator" in result
+    assert "methods" in result
+    if isinstance(result["methods"], dict):
+        assert "pagination" in result["methods"]

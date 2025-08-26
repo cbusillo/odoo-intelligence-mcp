@@ -544,65 +544,68 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             # Check for invalid model
             if "invalid.model" in code:
                 return {"error": "Model invalid.model not found"}
-            
+
             # Check for invalid field
             if "nonexistent_field" in code:
                 return {"error": "Field nonexistent_field not found in res.partner"}
+
+            # Extract model_name and field_name from the code
+            model_name = None
+            field_name = None
             
-            model_name = (
-                "sale.order" if "sale.order" in code
-                else "sale.order.line" if "sale.order.line" in code
-                else "account.move" if "account.move" in code
-                else "res.partner" if "res.partner" in code
-                else "product.template"
-            )
+            # Look for model_name = 'xxx' pattern
+            import re
+            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+            if model_match:
+                model_name = model_match.group(1)
             
-            field_name = (
-                "partner_id" if "partner_id" in code
-                else "product_id" if "product_id" in code
-                else "state" if "state" in code
-                else "name"
-            )
+            field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
+            if field_match:
+                field_name = field_match.group(1)
             
+            if not model_name:
+                model_name = "res.partner"
+            if not field_name:
+                field_name = "name"
+
             return {
                 "field": field_name,
                 "model": model_name,
                 "type": "many2one" if field_name in ["partner_id", "product_id"] else "char",
+                "direct_dependencies": [],
+                "indirect_dependencies": [],
                 "dependent_fields": [],
                 "dependency_chain": [],
-                "depends_on": [],
                 "summary": {
                     "total_dependents": 0,
                     "total_dependencies": 0,
                     "is_computed": False,
                     "is_related": False,
-                }
+                },
             }
-        
+
         # Handle field value analyzer queries
         if "# Analyze field values" in code and '"analysis":' in code:
             # Check for invalid model
             if "invalid.model" in code:
                 return {"error": "Model invalid.model not found"}
-            
+
             # Check for invalid field
             if "nonexistent_field" in code:
                 return {"error": "Field nonexistent_field not found in res.partner"}
-            
+
             model_name = (
-                "sale.order" if "sale.order" in code
-                else "product.product" if "product.product" in code
-                else "res.partner" if "res.partner" in code
+                "sale.order"
+                if "sale.order" in code
+                else "product.product"
+                if "product.product" in code
+                else "res.partner"
+                if "res.partner" in code
                 else "product.template"
             )
-            
-            field_name = (
-                "state" if "state" in code
-                else "email" if "email" in code
-                else "barcode" if "barcode" in code
-                else "name"
-            )
-            
+
+            field_name = "state" if "state" in code else "email" if "email" in code else "barcode" if "barcode" in code else "name"
+
             return {
                 "model": model_name,
                 "field": field_name,
@@ -616,23 +619,27 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     "value_distribution": {},
                     "most_common": [],
                     "least_common": [],
-                }
+                },
             }
-        
+
         # Handle resolve dynamic fields queries
         if "computed_fields = {}" in code and "related_fields = {}" in code and "dependency_graph = {}" in code:
             # Check for invalid model
             if "invalid.model" in code:
                 return {"error": "Model invalid.model not found"}
-            
+
             model_name = (
-                "sale.order.line" if "sale.order.line" in code
-                else "account.move.line" if "account.move.line" in code
-                else "sale.order" if "sale.order" in code
-                else "account.move" if "account.move" in code
+                "sale.order.line"
+                if "sale.order.line" in code
+                else "account.move.line"
+                if "account.move.line" in code
+                else "sale.order"
+                if "sale.order" in code
+                else "account.move"
+                if "account.move" in code
                 else "product.template"
             )
-            
+
             return {
                 "model": model_name,
                 "computed_fields": {},
@@ -642,30 +649,124 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     "total_computed": 0,
                     "total_related": 0,
                     "total_dependencies": 0,
-                }
+                },
             }
-        
+
         # Handle search field properties queries
         if "fields_by_property = []" in code and "'property': property_type" in code:
             # Check for invalid property
             if "invalid_property" in code:
                 return {"error": "Unsupported property type: invalid_property"}
-            
+
             property_type = (
-                "computed" if "'computed'" in code
-                else "related" if "'related'" in code
-                else "stored" if "'stored'" in code
-                else "required" if "'required'" in code
+                "computed"
+                if "'computed'" in code
+                else "related"
+                if "'related'" in code
+                else "stored"
+                if "'stored'" in code
+                else "required"
+                if "'required'" in code
                 else "readonly"
             )
-            
+
             return {
                 "property": property_type,
                 "fields": [],
                 "total_fields": 0,
                 "models_scanned": 100,
             }
-        
+
+        # Handle find_method queries
+        if "model_names = list(env.registry.models.keys())" in code or "hasattr(model_class, method_name)" in code:
+            # Extract method_name from code
+            import re
+            method_match = re.search(r"method_name = ['\"]([^'\"]+)['\"]", code)
+            method_name = method_match.group(1) if method_match else "create"
+            
+            if method_name == "nonexistent_method":
+                return {
+                    "method_name": method_name,
+                    "models": [],
+                    "total_models_with_method": 0
+                }
+            
+            return {
+                "method_name": method_name,
+                "models": [
+                    {
+                        "model": "sale.order", 
+                        "module": "odoo.addons.sale.models.sale_order",
+                        "signature": "(self, vals)",
+                        "source_preview": "1: def create(self, vals):\n2:     # Implementation"
+                    },
+                    {
+                        "model": "res.partner", 
+                        "module": "odoo.addons.base.models.res_partner",
+                        "signature": "(self, vals)",
+                        "source_preview": "1: def create(self, vals):\n2:     # Implementation"
+                    }
+                ],
+                "total_models_with_method": 2
+            }
+
+        # Handle search_decorators queries
+        if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
+            # Extract decorator from code
+            import re
+            decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
+            decorator = decorator_match.group(1) if decorator_match else "depends"
+            
+            if decorator == "invalid_decorator":
+                return {"decorator": decorator, "methods": [], "total_matches": 0}
+            
+            return {
+                "decorator": decorator,
+                "methods": [
+                    {
+                        "model": "sale.order",
+                        "methods": [
+                            {
+                                "method": f"_compute_{decorator}",
+                                f"{decorator}_on" if decorator == "depends" else decorator: ["field1", "field2"],
+                                "signature": "(self)"
+                            }
+                        ]
+                    }
+                ],
+                "total_matches": 1
+            }
+
+        # Handle view_model_usage queries
+        if '"exposed_fields": set()' in code and 'views = env["ir.ui.view"].search' in code:
+            # Check for invalid model
+            if "invalid.model" in code:
+                return {"error": "Model invalid.model not found"}
+            
+            # Extract model_name from code
+            import re
+            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+            model_name = model_match.group(1) if model_match else "res.partner"
+            
+            return {
+                "model": model_name,
+                "views": [
+                    {"name": f"{model_name}.form", "type": "form", "xml_id": f"{model_name.split('.')[0]}.view_form", "module": model_name.split('.')[0], "fields": ["name", "partner_id"]},
+                    {"name": f"{model_name}.tree", "type": "tree", "xml_id": f"{model_name.split('.')[0]}.view_tree", "module": model_name.split('.')[0], "fields": ["name", "state"]}
+                ],
+                "exposed_fields": ["name", "partner_id", "state"],
+                "view_types": {"form": 1, "tree": 1},
+                "field_usage_count": {"name": 2, "partner_id": 1, "state": 1},
+                "field_coverage": {
+                    "total_fields": 10,
+                    "exposed_fields": 3,
+                    "coverage_percentage": 30.0,
+                    "unexposed_fields": ["create_date", "write_date", "create_uid", "write_uid", "active", "company_id", "user_id"]
+                },
+                "buttons": [],
+                "actions": []
+            }
+
         # Handle inheritance chain queries
         if "mro_entries = []" in code and "inherits_list = getattr(model_class" in code:
             # Check for invalid model
