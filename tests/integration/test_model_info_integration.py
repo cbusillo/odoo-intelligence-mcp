@@ -1,19 +1,15 @@
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.model.model_info import get_model_info
+from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestModelInfoIntegration:
-    @pytest.fixture
-    async def odoo_env(self) -> HostOdooEnvironment:
-        manager = HostOdooEnvironmentManager()
-        return await manager.get_environment()
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_info_res_partner(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_info(odoo_env, "res.partner")
+    async def test_get_model_info_res_partner(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_info(real_odoo_env_if_available, "res.partner")
 
         assert "error" not in result
         assert result["name"] == "res.partner"
@@ -40,8 +36,8 @@ class TestModelInfoIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_info_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_info(odoo_env, "product.template")
+    async def test_get_model_info_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_info(real_odoo_env_if_available, "product.template")
 
         assert "error" not in result
         assert result["name"] == "product.template"
@@ -56,8 +52,8 @@ class TestModelInfoIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_info_motor_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_info(odoo_env, "motor.product.template")
+    async def test_get_model_info_motor_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_info(real_odoo_env_if_available, "motor.product.template")
 
         assert "error" not in result
         assert result["name"] == "motor.product.template"
@@ -66,17 +62,17 @@ class TestModelInfoIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_info_nonexistent_model(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_info(odoo_env, "nonexistent.model")
+    async def test_get_model_info_nonexistent_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_info(real_odoo_env_if_available, "nonexistent.model")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_info_selection_fields(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_model_info_selection_fields(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a model that has selection fields
-        result = await get_model_info(odoo_env, "res.partner")
+        result = await get_model_info(real_odoo_env_if_available, "res.partner")
 
         # Find a selection field (e.g., type)
         if "type" in result["fields"]:
