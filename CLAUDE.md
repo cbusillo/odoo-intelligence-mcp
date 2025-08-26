@@ -85,8 +85,8 @@ async def new_tool(env: Any, param: str) -> dict[str, Any]:
 ## Configuration
 
 **Environment Variables** (for portability to any Odoo project):
-- `ODOO_CONTAINER_PREFIX`: Container name prefix (default: "odoo-opw")
-- `ODOO_DB_NAME`: Database name (default: "opw")
+- `ODOO_CONTAINER_PREFIX`: Container name prefix (default: "odoo")
+- `ODOO_DB_NAME`: Database name (default: "odoo")
 - `ODOO_ADDONS_PATH`: Addon paths (default: "/opt/project/addons,/odoo/addons,/volumes/enterprise")
 
 ## Architecture
@@ -114,8 +114,8 @@ async def new_tool(env: Any, param: str) -> dict[str, Any]:
 
 ## Docker Connection
 
-**Primary container**: `{ODOO_CONTAINER_PREFIX}-script-runner-1` (default prefix: odoo-opw)
-**Database**: `opw`
+**Primary container**: `{ODOO_CONTAINER_PREFIX}-script-runner-1` (default prefix: odoo)
+**Database**: `odoo`
 **Execution**: Uses `/odoo/odoo-bin shell` with `--no-http`
 
 ## Testing

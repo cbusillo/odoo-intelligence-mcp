@@ -28,7 +28,7 @@ To add this MCP server to any project:
 
 ```bash
 # Add the MCP server (use --project flag to ensure uv finds the correct environment)
-claude mcp add-json odoo-intelligence '{"command": "uv", "args": ["run", "--project", "/Users/cbusillo/Developer/odoo-intelligence-mcp", "odoo-intelligence-mcp"]}'
+claude mcp add-json odoo-intelligence '{"command": "uv", "args": ["run", "--project", "/path/to/odoo-intelligence-mcp", "odoo-intelligence-mcp"]}'
 ```
 
 **Note**: The `--project` flag is required when running from a different directory to ensure `uv` finds the correct virtual environment.
@@ -38,9 +38,9 @@ Restart Claude Code after configuration changes.
 ### Environment
 
 Default configuration (can be customized via environment variables):
-- **Database**: `opw` (env: `ODOO_DB_NAME`)
+- **Database**: `odoo` (env: `ODOO_DB_NAME`)
 - **Addons Path**: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (env: `ODOO_ADDONS_PATH`)
-- **Container Prefix**: `odoo-opw` (env: `ODOO_CONTAINER_PREFIX`)
+- **Container Prefix**: `odoo` (env: `ODOO_CONTAINER_PREFIX`)
 
 Containers are automatically derived from the prefix:
 - Primary: `{prefix}-script-runner-1` (used for most operations)

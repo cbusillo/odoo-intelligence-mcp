@@ -92,14 +92,14 @@ def load_env_config() -> dict[str, str]:
             break
         current_path = current_path.parent
 
-    container_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo-opw")
+    container_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
     return {
         "container_name": f"{container_prefix}-script-runner-1",  # Primary container for all operations
         "script_runner_container": f"{container_prefix}-script-runner-1",
         "web_container": f"{container_prefix}-web-1",
         "shell_container": f"{container_prefix}-shell-1",  # Available if needed for specific operations
         "container_prefix": container_prefix,
-        "database": os.getenv("ODOO_DB_NAME", "opw"),
+        "database": os.getenv("ODOO_DB_NAME", "odoo"),
         "addons_path": os.getenv("ODOO_ADDONS_PATH", "/opt/project/addons,/odoo/addons,/volumes/enterprise"),
     }
 

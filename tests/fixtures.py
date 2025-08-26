@@ -176,8 +176,14 @@ def enhanced_mock_odoo_env(
 
 @pytest_asyncio.fixture
 async def real_odoo_env_if_available() -> HostOdooEnvironmentManager | None:
-    if not container_running("odoo-opw-shell-1"):
-        pytest.skip("Odoo container not running")
+    # Get container name from environment or use default
+    import os
+
+    container_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
+    shell_container = f"{container_prefix}-shell-1"
+
+    if not container_running(shell_container):
+        pytest.skip(f"Odoo container {shell_container} not running")
 
     manager = HostOdooEnvironmentManager()
     return await manager.get_environment()
@@ -186,8 +192,8 @@ async def real_odoo_env_if_available() -> HostOdooEnvironmentManager | None:
 @pytest.fixture
 def docker_error_responses() -> dict[str, dict[str, Any]]:
     return {
-        "container_not_found": {"returncode": 125, "stderr": "Error: No such container: odoo-opw-shell-1"},
-        "container_not_running": {"returncode": 126, "stderr": "Error: Container odoo-opw-shell-1 is not running"},
+        "container_not_found": {"returncode": 125, "stderr": "Error: No such container: odoo-shell-1"},
+        "container_not_running": {"returncode": 126, "stderr": "Error: Container odoo-shell-1 is not running"},
         "docker_not_running": {"returncode": 1, "stderr": "Cannot connect to the Docker daemon"},
         "timeout": {"timeout": True},
         "permission_denied": {"returncode": 126, "stderr": "Permission denied while trying to connect to the Docker daemon"},
@@ -212,7 +218,7 @@ class MockDockerRun:
         elif self.scenario == "container_not_found":
             result.returncode = 125
             result.stdout = ""
-            result.stderr = "Error: No such container: odoo-opw-shell-1"
+            result.stderr = "Error: No such container: odoo-shell-1"
         elif self.scenario == "docker_not_running":
             raise FileNotFoundError("docker command not found")
         else:
