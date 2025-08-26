@@ -135,14 +135,22 @@ All paginated tools support **two pagination styles** - you can use either one:
 ### Examples
 
 ```python
-# Page-based pagination (recommended)
-result = await pattern_analysis(env, "computed_fields", page=2, page_size=50)
+from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager
 
-# Offset-based pagination (alternative)
-result = await search_models(env, "product", limit=20, offset=40)
-
-# With filtering
-result = await find_method(env, "create", page=1, page_size=100, filter="sale")
+async def example_usage() -> None:
+    env = await HostOdooEnvironmentManager().get_environment()
+    
+    # Page-based pagination (recommended)
+    computed_fields = await pattern_analysis(env, "computed_fields", page=2, page_size=50)
+    print(f"Found {len(computed_fields['data'])} computed fields")
+    
+    # Offset-based pagination (alternative)
+    product_models = await search_models(env, "product", limit=20, offset=40)
+    print(f"Found {len(product_models['data'])} product models")
+    
+    # With filtering
+    create_methods = await find_method(env, "create", page=1, page_size=100, filter="sale")
+    print(f"Found {len(create_methods['data'])} create methods in sale")
 ```
 
 ### Response Structure
@@ -151,7 +159,7 @@ Paginated responses include metadata:
 ```json
 {
   "success": true,
-  "data": [...],  // The actual results
+  "data": [],
   "pagination": {
     "page": 2,
     "page_size": 50,
@@ -171,15 +179,32 @@ Paginated responses include metadata:
 
 ## Development
 
+### Testing Requirements
+
+**IMPORTANT**: Before committing any changes, ALL tests must pass with proper coverage:
+
 ```bash
-# Format and lint
+# Run the FULL test suite - ALL tests must pass
+uv run mcp-test
+
+# Alternative test commands:
+uv run mcp-test-unit      # Unit tests only
+uv run mcp-test-integration  # Integration tests only
+uv run mcp-test-cov       # Run with coverage report
+
+# Required: 80% minimum code coverage
+# All tests must pass - no failures, no errors
+```
+
+### Code Quality
+
+```bash
+# Format and lint (run before committing)
+uv run mcp-format  # Format code with ruff
+uv run mcp-lint    # Fix linting issues
+
+# Or manually:
 ruff format . && ruff check . --fix
-
-# Run tests
-uv run pytest
-
-# Test changes directly in container before MCP restart
-docker exec -i odoo-opw-web-1 bash -c "cd /mcp_servers/odoo_intelligence_mcp && /venv/bin/python -c 'test_code_here'"
 ```
 
 See CLAUDE.md for detailed development guidelines and patterns.

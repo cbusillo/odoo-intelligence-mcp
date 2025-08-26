@@ -10,8 +10,9 @@ Development guidelines for the Odoo Intelligence MCP Server.
 
 **Setup**: `uv sync` (installs dependencies in local venv)
 **Run**: `uv run odoo_intelligence_mcp` (runs on host, connects to Docker)
-**Format**: `ruff format . && ruff check . --fix`
-**Tests**: `uv run pytest`
+**Format**: `uv run mcp-format && uv run mcp-lint`
+**Tests**: `uv run mcp-test` (ALL must pass - no failures allowed)
+**Coverage**: `uv run mcp-test-cov` (minimum 80% required)
 
 ## Code Standards
 
@@ -49,7 +50,9 @@ Development guidelines for the Odoo Intelligence MCP Server.
 2. **Follow MCP patterns** - Study existing tool implementations in `server.py`
 3. **Handle large responses** - Use `pagination_utils.py` for >25K token responses
 4. **Close cursors properly** - Always use try/finally blocks in tool handlers
-5. **Format before commit** - `ruff format . && ruff check . --fix`
+5. **Run ALL tests before commit** - `uv run mcp-test` must pass 100%
+6. **Format before commit** - `uv run mcp-format && uv run mcp-lint`
+7. **Check coverage** - `uv run mcp-test-cov` must show ≥80% coverage
 
 ## MCP Tool Development
 
@@ -64,10 +67,12 @@ Development guidelines for the Odoo Intelligence MCP Server.
 **Required patterns**:
 
 ```python
-async def new_tool(env: Any, param: str) -> dict[str, Any]:
+from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+
+async def get_model_fields(env: HostOdooEnvironment, model_name: str) -> dict[str, Any]:
     try:
-        # Implementation
-        return {"success": True, "data": result}
+        fields_data = await env.execute_code(f"result = env['{model_name}'].fields_get()")
+        return {"success": True, "model": model_name, "fields": fields_data}
     except Exception as e:
         return {
             "success": False,
@@ -129,7 +134,7 @@ from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.model.model_info import get_model_info
 
 
-async def test():
+async def test() -> None:
     env = await HostOdooEnvironmentManager().get_environment()
     result = await get_model_info(env, "res.partner")
     print(result)
