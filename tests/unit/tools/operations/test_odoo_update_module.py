@@ -6,6 +6,7 @@ from docker.errors import NotFound
 from odoo_intelligence_mcp.tools.operations.module_update import odoo_update_module
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_update_module_success() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.module_update.docker") as mock_docker:
@@ -77,9 +78,11 @@ async def test_odoo_update_module_with_force_install() -> None:
         assert "-u" not in call_args
 
 
+# noinspection PyDuplicatedCode,DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_update_module_failure() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.module_update.docker") as mock_docker:
+        # noinspection PyDuplicatedCode
         mock_client = MagicMock()
         mock_container = MagicMock()
 

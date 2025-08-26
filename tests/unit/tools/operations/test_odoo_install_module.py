@@ -6,6 +6,7 @@ from docker.errors import NotFound
 from odoo_intelligence_mcp.tools.operations.module_update import odoo_install_module
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_install_module_success() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.module_update.docker") as mock_docker:
@@ -52,6 +53,7 @@ async def test_odoo_install_multiple_modules() -> None:
         assert len(result["modules"]) == 3
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_install_module_failure() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.module_update.docker") as mock_docker:

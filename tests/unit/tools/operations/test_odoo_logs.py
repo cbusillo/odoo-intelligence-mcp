@@ -3,31 +3,26 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_logs import odoo_logs
+from tests.helpers.docker_test_helpers import (
+    create_docker_manager_with_get_container,
+    create_mock_handle_operation_with_error_handling,
+    get_expected_container_names,
+    setup_docker_manager_mock,
+)
 
 
 @pytest.mark.asyncio
 async def test_odoo_logs_default() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_logs.DockerClientManager") as mock_manager:
-        mock_container = MagicMock()
+        mock_instance = create_docker_manager_with_get_container(mock_manager)
+        mock_container = mock_instance.get_container.return_value
         mock_container.logs.return_value = b"Log line 1\nLog line 2\nLog line 3"
-        mock_container.status = "running"
-
-        mock_instance = MagicMock()
-        mock_instance.get_container.return_value = mock_container
-
-        # Mock handle_container_operation to return the expected structure
-        def mock_handle_operation(container_name, operation_name, operation_func):
-            # Call the operation function to get the inner result
-            inner_result = operation_func(mock_container)
-            return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
-
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
-        mock_manager.return_value = mock_instance
 
         result = await odoo_logs()
 
         assert result["success"] is True
-        assert result["container"] == "odoo-opw-web-1"  # Default container
+        containers = get_expected_container_names()
+        assert result["container"] == containers["web"]  # Default container
         assert result["data"]["lines_requested"] == 100  # Default lines
         assert result["data"]["status"] == "running"
         assert "Log line 1" in result["data"]["logs"]
@@ -41,24 +36,16 @@ async def test_odoo_logs_default() -> None:
 @pytest.mark.asyncio
 async def test_odoo_logs_custom_parameters() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_logs.DockerClientManager") as mock_manager:
-        mock_container = MagicMock()
+        mock_instance = create_docker_manager_with_get_container(mock_manager)
+        mock_container = mock_instance.get_container.return_value
         mock_container.logs.return_value = b"Custom log line"
         mock_container.status = "exited"
 
-        mock_instance = MagicMock()
-        mock_instance.get_container.return_value = mock_container
-
-        def mock_handle_operation(container_name, operation_name, operation_func):
-            inner_result = operation_func(mock_container)
-            return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
-
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
-        mock_manager.return_value = mock_instance
-
-        result = await odoo_logs(container="odoo-opw-shell-1", lines=50)
+        containers = get_expected_container_names()
+        result = await odoo_logs(container=containers["shell"], lines=50)
 
         assert result["success"] is True
-        assert result["container"] == "odoo-opw-shell-1"
+        assert result["container"] == containers["shell"]
         assert result["data"]["lines_requested"] == 50
         assert result["data"]["status"] == "exited"
         mock_container.logs.assert_called_once_with(tail=50)
@@ -93,18 +80,9 @@ async def test_odoo_logs_decode_error_handling() -> None:
         mock_container.logs.return_value = b"\xff\xfe Invalid UTF-8"
         mock_container.status = "running"
 
-        mock_instance = MagicMock()
+        mock_handle_operation = create_mock_handle_operation_with_error_handling()
+        mock_instance = setup_docker_manager_mock(mock_manager, mock_handle_operation)
         mock_instance.get_container.return_value = mock_container
-
-        def mock_handle_operation(container_name, operation_name, operation_func):
-            try:
-                inner_result = operation_func(mock_container)
-                return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
-            except UnicodeDecodeError as e:
-                return {"success": False, "error": str(e), "error_type": "UnicodeDecodeError", "container": container_name}
-
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
-        mock_manager.return_value = mock_instance
 
         result = await odoo_logs()
 
@@ -120,15 +98,8 @@ async def test_odoo_logs_empty_logs() -> None:
         mock_container.logs.return_value = b""
         mock_container.status = "running"
 
-        mock_instance = MagicMock()
+        mock_instance = create_docker_manager_with_get_container(mock_manager)
         mock_instance.get_container.return_value = mock_container
-
-        def mock_handle_operation(container_name, operation_name, operation_func):
-            inner_result = operation_func(mock_container)
-            return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
-
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
-        mock_manager.return_value = mock_instance
 
         result = await odoo_logs()
 
@@ -146,15 +117,8 @@ async def test_odoo_logs_multiline_with_timestamps() -> None:
         mock_container.logs.return_value = log_content
         mock_container.status = "running"
 
-        mock_instance = MagicMock()
+        mock_instance = create_docker_manager_with_get_container(mock_manager)
         mock_instance.get_container.return_value = mock_container
-
-        def mock_handle_operation(container_name, operation_name, operation_func):
-            inner_result = operation_func(mock_container)
-            return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
-
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
-        mock_manager.return_value = mock_instance
 
         result = await odoo_logs()
 
@@ -174,15 +138,8 @@ async def test_odoo_logs_large_number_of_lines() -> None:
         mock_container.logs.return_value = b"\n".join(log_lines)
         mock_container.status = "running"
 
-        mock_instance = MagicMock()
+        mock_instance = create_docker_manager_with_get_container(mock_manager)
         mock_instance.get_container.return_value = mock_container
-
-        def mock_handle_operation(container_name, operation_name, operation_func):
-            inner_result = operation_func(mock_container)
-            return {"success": True, "operation": operation_name, "container": container_name, "data": inner_result}
-
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
-        mock_manager.return_value = mock_instance
 
         result = await odoo_logs(lines=1000)
 

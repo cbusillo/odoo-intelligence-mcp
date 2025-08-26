@@ -3,14 +3,18 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_status import odoo_status
+from tests.helpers.docker_test_helpers import get_expected_container_names
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_status_all_running() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
         # Mock containers
+        containers = get_expected_container_names()
+        container_names = [containers["web"], containers["shell"], containers["script_runner"]]
         mock_containers = {}
-        for name in ["odoo-opw-web-1", "odoo-opw-shell-1", "odoo-opw-script-runner-1"]:
+        for name in container_names:
             container = MagicMock()
             container.status = "running"
             container.short_id = "abc123"
@@ -20,7 +24,7 @@ async def test_odoo_status_all_running() -> None:
 
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None  # Docker is available
-        mock_instance.get_container.side_effect = lambda name: mock_containers.get(name)
+        mock_instance.get_container.side_effect = lambda container_name: mock_containers.get(container_name)
         mock_manager.return_value = mock_instance
 
         result = await odoo_status()
@@ -32,6 +36,7 @@ async def test_odoo_status_all_running() -> None:
         assert all(c["running"] for c in result["containers"].values())
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_status_with_verbose() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
@@ -46,6 +51,7 @@ async def test_odoo_status_with_verbose() -> None:
         }
         container.image.tags = ["odoo:16.0"]
 
+        # noinspection DuplicatedCode
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None
         mock_instance.get_container.return_value = container
@@ -66,10 +72,11 @@ async def test_odoo_status_with_verbose() -> None:
 async def test_odoo_status_some_stopped() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
         # Mock containers with different states
+        containers = get_expected_container_names()
         mock_containers = {
-            "odoo-opw-web-1": MagicMock(status="exited", short_id="abc123", attrs={"State": {}, "Created": "", "Config": {}}),
-            "odoo-opw-shell-1": MagicMock(status="running", short_id="def456", attrs={"State": {}, "Created": "", "Config": {}}),
-            "odoo-opw-script-runner-1": MagicMock(
+            containers["web"]: MagicMock(status="exited", short_id="abc123", attrs={"State": {}, "Created": "", "Config": {}}),
+            containers["shell"]: MagicMock(status="running", short_id="def456", attrs={"State": {}, "Created": "", "Config": {}}),
+            containers["script_runner"]: MagicMock(
                 status="running", short_id="ghi789", attrs={"State": {}, "Created": "", "Config": {}}
             ),
         }
@@ -79,7 +86,7 @@ async def test_odoo_status_some_stopped() -> None:
 
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None
-        mock_instance.get_container.side_effect = lambda name: mock_containers.get(name)
+        mock_instance.get_container.side_effect = lambda container_name: mock_containers.get(container_name)
         mock_manager.return_value = mock_instance
 
         result = await odoo_status()
@@ -87,8 +94,9 @@ async def test_odoo_status_some_stopped() -> None:
         assert result["success"] is True
         assert result["overall_status"] == "unhealthy"
         assert result["running_containers"] == 2
-        assert not result["containers"]["odoo-opw-web-1"]["running"]
-        assert result["containers"]["odoo-opw-shell-1"]["running"]
+        containers = get_expected_container_names()
+        assert not result["containers"][containers["web"]]["running"]
+        assert result["containers"][containers["shell"]]["running"]
 
 
 @pytest.mark.asyncio
@@ -124,6 +132,7 @@ async def test_odoo_status_docker_not_running() -> None:
         assert result["error_type"] == "DockerConnectionError"
 
 
+# noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_status_verbose_image_error_handling() -> None:
     """Test the fix for verbose mode image lookup error"""
@@ -140,6 +149,7 @@ async def test_odoo_status_verbose_image_error_handling() -> None:
         # Simulate the error that was occurring
         container.image.tags = []  # Empty tags list
 
+        # noinspection DuplicatedCode
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None
         mock_instance.get_container.return_value = container

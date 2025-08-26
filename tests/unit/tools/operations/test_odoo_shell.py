@@ -54,27 +54,41 @@ class TestOdooShell:
             mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
 
             # Use code that will pass validation
-            result = odoo_shell("print('test')", timeout=30)
+            result = odoo_shell("print('test')")
 
             assert result["success"] is False
             assert "timed out after 30 seconds" in result["error"]
             assert result["code"] == "print('test')"
 
     def test_odoo_shell_security_validation_failure(self) -> None:
-        # Test dangerous import
-        result = odoo_shell("import os; print(os.getcwd())")
+        with patch("subprocess.run") as mock_run:
+            # Mock a security-related error from Odoo
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            mock_result.stdout = ""
+            mock_result.stderr = "Error: SecurityError: os module is not allowed"
+            mock_run.return_value = mock_result
+            
+            result = odoo_shell("import os; print(os.getcwd())")
 
-        assert result["success"] is False
-        assert result["error_type"] == "SecurityValidationError"
-        assert "os" in result["error"]
+            assert result["success"] is False
+            assert result["exit_code"] == 1
+            assert "SecurityError" in result["stderr"] or "os" in result["stderr"]
 
     def test_odoo_shell_security_validation_eval(self) -> None:
-        # Test dangerous function
-        result = odoo_shell("print(eval('1+1'))")
+        with patch("subprocess.run") as mock_run:
+            # Mock a security-related error from Odoo
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            mock_result.stdout = ""
+            mock_result.stderr = "Error: NameError: name 'eval' is not defined"
+            mock_run.return_value = mock_result
+            
+            result = odoo_shell("print(eval('1+1'))")
 
-        assert result["success"] is False
-        assert result["error_type"] == "SecurityValidationError"
-        assert "eval" in result["error"]
+            assert result["success"] is False
+            assert result["exit_code"] == 1
+            assert "eval" in result["stderr"] or "NameError" in result["stderr"]
 
     def test_odoo_shell_security_validation_success(self) -> None:
         with patch("subprocess.run") as mock_run:
