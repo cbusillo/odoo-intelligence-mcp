@@ -71,6 +71,7 @@ result = implementations
         return implementations
 
     # Apply pagination
+    assert isinstance(implementations, list)  # Type assertion for PyCharm
     paginated_results = paginate_dict_list(implementations, pagination, search_fields=["model", "module", "signature"])
 
     result = {"method_name": method_name, "implementations": paginated_results.to_dict()}

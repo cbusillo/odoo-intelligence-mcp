@@ -1,4 +1,4 @@
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, Protocol, TypedDict
 
 
 class FieldInfo(TypedDict):
@@ -304,13 +304,11 @@ ToolArguments = (
 )
 
 
-class OdooEnvironment:
+class OdooEnvironment(Protocol):
     def __getitem__(self, model_name: str) -> object: ...
 
     @property
-    def cr(self) -> object:
-        return ...
+    def cr(self) -> object: ...
 
     @property
-    def registry(self) -> dict[str, object]:
-        return ...
+    def registry(self) -> dict[str, object]: ...

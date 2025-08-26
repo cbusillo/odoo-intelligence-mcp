@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any
 
 from ..type_defs.odoo_types import CompatibleEnvironment, Field, Model
@@ -9,7 +9,7 @@ class ModelIterator:
         self.env = env
         self.exclude_system_models = exclude_system_models
 
-    async def iter_models(self, filter_func: Any = None) -> AsyncIterator[tuple[str, Model]]:
+    async def iter_models(self, filter_func: Callable[[str], bool] | None = None) -> AsyncIterator[tuple[str, Model]]:
         model_names = await self.env.get_model_names()
         for model_name in model_names:
             if self.exclude_system_models and self._is_system_model(model_name):
@@ -20,11 +20,14 @@ class ModelIterator:
 
             yield model_name, self.env[model_name]
 
-    def iter_model_fields(self, model_name: str, field_filter: Any = None) -> Iterator[tuple[str, Field]]:
+    def iter_model_fields(
+        self, model_name: str, field_filter: Callable[[str, Field], bool] | None = None
+    ) -> Iterator[tuple[str, Field]]:
         if model_name not in self.env:
             return
 
         model = self.env[model_name]
+        # noinspection PyProtectedMember
         for field_name, field in model._fields.items():
             if field_filter and not field_filter(field_name, field):
                 continue
@@ -50,6 +53,7 @@ def extract_field_info(field: Field) -> dict[str, Any]:
 
 
 def extract_model_info(model: Model) -> dict[str, Any]:
+    # noinspection PyProtectedMember
     return {
         "name": model._name,
         "description": getattr(model, "_description", ""),

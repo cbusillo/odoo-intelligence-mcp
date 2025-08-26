@@ -191,7 +191,7 @@ class ModelInspector(BaseService):
 
         return recommendations
 
-    async def _safe_execute(self, operation: str, func: Callable[..., Any], *args: object, **kwargs: object) -> Any:  # noqa: ANN401
+    async def _safe_execute(self, operation: str, func: Callable[..., Any], *args: object, **kwargs: object) -> Any:
         try:
             return await func(*args, **kwargs)
         except ServiceError:

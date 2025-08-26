@@ -253,17 +253,23 @@ else:
     all_usages = []
 
     # Add view usages
-    for usage in result.get("used_in_views", []):
+    view_usages = result.get("used_in_views", [])
+    assert isinstance(view_usages, list)  # Type assertion for PyCharm
+    for usage in view_usages:
         usage["usage_type"] = "view"
         all_usages.append(usage)
 
     # Add domain usages
-    for usage in result.get("used_in_domains", []):
+    domain_usages = result.get("used_in_domains", [])
+    assert isinstance(domain_usages, list)  # Type assertion for PyCharm
+    for usage in domain_usages:
         usage["usage_type"] = "domain"
         all_usages.append(usage)
 
     # Add method usages
-    for usage in result.get("used_in_methods", []):
+    method_usages = result.get("used_in_methods", [])
+    assert isinstance(method_usages, list)  # Type assertion for PyCharm
+    for usage in method_usages:
         usage["usage_type"] = "method"
         all_usages.append(usage)
 

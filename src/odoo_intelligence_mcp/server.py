@@ -103,16 +103,16 @@ async def _handle_search_code(_env: CompatibleEnvironment, arguments: dict[str, 
 
 async def _handle_find_files(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pattern = get_required(arguments, "pattern")
-    file_type = get_optional_str(arguments, "file_type", None)
+    file_type = get_optional_str(arguments, "file_type")
     pagination = PaginationParams.from_arguments(arguments)
     return await find_files(pattern, file_type, pagination)
 
 
 async def _handle_read_odoo_file(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     file_path = get_required(arguments, "file_path")
-    start_line = get_optional_int(arguments, "start_line", None)
-    end_line = get_optional_int(arguments, "end_line", None)
-    pattern = get_optional_str(arguments, "pattern", None)
+    start_line = get_optional_int(arguments, "start_line")
+    end_line = get_optional_int(arguments, "end_line")
+    pattern = get_optional_str(arguments, "pattern")
     context_lines = get_optional_int(arguments, "context_lines", 5)
     return await read_odoo_file(file_path, start_line, end_line, pattern, context_lines)
 
@@ -208,7 +208,7 @@ async def _handle_odoo_shell(_env: CompatibleEnvironment, arguments: dict[str, o
 
 
 async def _handle_odoo_status(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
-    verbose = get_optional_bool(arguments, "verbose", False)
+    verbose = get_optional_bool(arguments, "verbose")
     return await odoo_status(verbose)
 
 
@@ -268,6 +268,7 @@ TOOL_HANDLERS = {
 
 @app.list_tools()
 async def handle_list_tools() -> list[Tool]:
+    # noinspection PyDataclass,Annotator
     return [
         Tool(
             name="model_info",
@@ -845,10 +846,12 @@ async def handle_list_tools() -> list[Tool]:
 @app.call_tool()
 async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> list[TextContent]:
     if not arguments:
+        # noinspection Annotator
         return [TextContent(type="text", text=json.dumps({"error": "No arguments provided"}))]
 
     handler = TOOL_HANDLERS.get(name)
     if not handler:
+        # noinspection Annotator
         return [TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}))]
 
     try:
@@ -856,7 +859,9 @@ async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> li
 
         try:
             result = await handler(env, arguments)
-            return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
+            response_text = json.dumps(result, indent=2, default=str)
+            # noinspection Annotator
+            return [TextContent(type="text", text=response_text)]
         finally:
             if hasattr(env, "cr") and env.cr and hasattr(env.cr, "close"):
                 env.cr.close()
@@ -864,13 +869,18 @@ async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> li
     except OdooMCPError as e:
         logger.exception(f"Error in tool {name}")
         error_response = create_error_response(e)
-        return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
+        response_text = json.dumps(error_response, indent=2)
+        # noinspection Annotator
+        return [TextContent(type="text", text=response_text)]
     except Exception as e:
         logger.exception(f"Unexpected error in tool {name}")
         error_response = create_error_response(e)
-        return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
+        response_text = json.dumps(error_response, indent=2)
+        # noinspection Annotator
+        return [TextContent(type="text", text=response_text)]
 
 
+# noinspection Annotator
 async def run_server() -> None:
     async with stdio_server() as (read_stream, write_stream):
         await app.run(

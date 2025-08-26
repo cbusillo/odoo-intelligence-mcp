@@ -151,9 +151,7 @@ result = patterns
         # Apply filtering and pagination based on pattern type
         if pattern_type != "all":
             pattern_data = raw_patterns.get(pattern_type, [])
-            if not isinstance(pattern_data, list):
-                return {"error": f"Invalid pattern type: {pattern_type}"}
-
+            assert isinstance(pattern_data, list)  # Type assertion for PyCharm
             search_fields = search_fields_map.get(pattern_type, ["model"])
             paginated_result = paginate_dict_list(pattern_data, pagination, search_fields)
 

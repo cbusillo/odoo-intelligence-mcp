@@ -106,33 +106,45 @@ else:
     all_relationships = []
 
     # Add direct relationships
-    for rel in result.get("many2one_fields", []):
+    many2one_fields = result.get("many2one_fields", [])
+    assert isinstance(many2one_fields, list)  # Type assertion for PyCharm
+    for rel in many2one_fields:
         rel["relationship_type"] = "many2one"
         rel["direction"] = "outgoing"
         all_relationships.append(rel)
 
-    for rel in result.get("one2many_fields", []):
+    one2many_fields = result.get("one2many_fields", [])
+    assert isinstance(one2many_fields, list)  # Type assertion for PyCharm
+    for rel in one2many_fields:
         rel["relationship_type"] = "one2many"
         rel["direction"] = "outgoing"
         all_relationships.append(rel)
 
-    for rel in result.get("many2many_fields", []):
+    many2many_fields = result.get("many2many_fields", [])
+    assert isinstance(many2many_fields, list)  # Type assertion for PyCharm
+    for rel in many2many_fields:
         rel["relationship_type"] = "many2many"
         rel["direction"] = "outgoing"
         all_relationships.append(rel)
 
     # Add reverse relationships
-    for rel in result.get("reverse_many2one", []):
+    reverse_many2one = result.get("reverse_many2one", [])
+    assert isinstance(reverse_many2one, list)  # Type assertion for PyCharm
+    for rel in reverse_many2one:
         rel["relationship_type"] = "many2one"
         rel["direction"] = "incoming"
         all_relationships.append(rel)
 
-    for rel in result.get("reverse_one2many", []):
+    reverse_one2many = result.get("reverse_one2many", [])
+    assert isinstance(reverse_one2many, list)  # Type assertion for PyCharm
+    for rel in reverse_one2many:
         rel["relationship_type"] = "one2many"
         rel["direction"] = "incoming"
         all_relationships.append(rel)
 
-    for rel in result.get("reverse_many2many", []):
+    reverse_many2many = result.get("reverse_many2many", [])
+    assert isinstance(reverse_many2many, list)  # Type assertion for PyCharm
+    for rel in reverse_many2many:
         rel["relationship_type"] = "many2many"
         rel["direction"] = "incoming"
         all_relationships.append(rel)

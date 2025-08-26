@@ -31,10 +31,10 @@ class BaseService(ABC):
     def clear_cache(self) -> None:
         self._cache.clear()
 
-    def _get_cached(self, key: str) -> Any | None:  # noqa: ANN401
+    def _get_cached(self, key: str) -> Any | None:
         return self._cache.get(key)
 
-    def _set_cached(self, key: str, value: Any) -> None:  # noqa: ANN401
+    def _set_cached(self, key: str, value: Any) -> None:
         self._cache[key] = value
 
     def _validate_model_exists(self, model_name: str) -> None:
@@ -44,10 +44,11 @@ class BaseService(ABC):
     def _validate_field_exists(self, model_name: str, field_name: str) -> None:
         self._validate_model_exists(model_name)
         model = self.env[model_name]
+        # noinspection PyProtectedMember
         if field_name not in model._fields:
             raise ServiceValidationError(f"Field '{field_name}' not found on model '{model_name}'")
 
-    def _safe_execute(self, operation: str, func: Callable[..., Any], *args: object, **kwargs: object) -> Any:  # noqa: ANN401
+    def _safe_execute(self, operation: str, func: Callable[..., Any], *args: object, **kwargs: object) -> Any:
         try:
             return func(*args, **kwargs)
         except ServiceError:

@@ -1,9 +1,12 @@
 import ast
 import re
+from typing import ClassVar
 
 
 class CodeSecurityValidator:
-    DANGEROUS_IMPORTS = {
+    MAX_LOOP_DEPTH = 3  # Maximum allowed nested loop depth
+    # noinspection SpellCheckingInspection
+    DANGEROUS_IMPORTS: ClassVar[set[str]] = {
         "os",
         "subprocess",
         "sys",
@@ -24,9 +27,19 @@ class CodeSecurityValidator:
         "__import__",
     }
 
-    DANGEROUS_FUNCTIONS = {"eval", "exec", "compile", "__import__", "open", "file", "input", "raw_input", "execfile"}
+    DANGEROUS_FUNCTIONS: ClassVar[set[str]] = {
+        "eval",
+        "exec",
+        "compile",
+        "__import__",
+        "open",
+        "file",
+        "input",
+        "raw_input",
+        "execfile",
+    }
 
-    DANGEROUS_ATTRIBUTES = {
+    DANGEROUS_ATTRIBUTES: ClassVar[set[str]] = {
         "__class__",
         "__bases__",
         "__subclasses__",
@@ -39,7 +52,17 @@ class CodeSecurityValidator:
         "__name__",
     }
 
-    ALLOWED_MODULES = {"datetime", "json", "re", "math", "collections", "itertools", "functools", "operator", "decimal"}
+    ALLOWED_MODULES: ClassVar[set[str]] = {
+        "datetime",
+        "json",
+        "re",
+        "math",
+        "collections",
+        "itertools",
+        "functools",
+        "operator",
+        "decimal",
+    }
 
     MAX_CODE_LENGTH = 10000
     MAX_LOOP_ITERATIONS = 10000
@@ -123,15 +146,15 @@ class SecurityValidator(ast.NodeVisitor):
 
     def visit_For(self, node: ast.For) -> None:
         self.loop_depth += 1
-        if self.loop_depth > 3:
-            raise SecurityError("Nested loops exceed maximum depth of 3")
+        if self.loop_depth > CodeSecurityValidator.MAX_LOOP_DEPTH:
+            raise SecurityError(f"Nested loops exceed maximum depth of {CodeSecurityValidator.MAX_LOOP_DEPTH}")
         self.generic_visit(node)
         self.loop_depth -= 1
 
     def visit_While(self, node: ast.While) -> None:
         self.loop_depth += 1
-        if self.loop_depth > 3:
-            raise SecurityError("Nested loops exceed maximum depth of 3")
+        if self.loop_depth > CodeSecurityValidator.MAX_LOOP_DEPTH:
+            raise SecurityError(f"Nested loops exceed maximum depth of {CodeSecurityValidator.MAX_LOOP_DEPTH}")
 
         if not self._has_break_condition(node):
             raise SecurityError("While loop must have a clear termination condition")
@@ -139,7 +162,8 @@ class SecurityValidator(ast.NodeVisitor):
         self.generic_visit(node)
         self.loop_depth -= 1
 
-    def _has_break_condition(self, node: ast.While) -> bool:
+    @staticmethod
+    def _has_break_condition(node: ast.While) -> bool:
         return any(isinstance(child, ast.Break) for child in ast.walk(node))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:

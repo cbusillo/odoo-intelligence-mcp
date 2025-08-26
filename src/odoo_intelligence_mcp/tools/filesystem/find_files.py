@@ -37,7 +37,7 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
     for addon_path in addon_paths:
         # Use find command to search for files
         find_cmd = ["find", addon_path, "-type", "f", "-name", pattern]
-        exec_result = container.exec_run(find_cmd, stdout=True, stderr=False)
+        exec_result = container.exec_run(find_cmd)
 
         if exec_result.exit_code == 0 and exec_result.output:
             file_paths = exec_result.output.decode("utf-8").strip().split("\n")

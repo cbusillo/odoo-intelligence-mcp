@@ -112,7 +112,9 @@ else:
         paginated_result = raw_result.copy()
 
         if "performance_issues" in raw_result and isinstance(raw_result["performance_issues"], list):
-            paginated_issues = paginate_dict_list(raw_result["performance_issues"], pagination, ["field", "type", "description"])
+            issues_list = raw_result["performance_issues"]
+            assert isinstance(issues_list, list)  # Type assertion for PyCharm
+            paginated_issues = paginate_dict_list(issues_list, pagination, ["field", "type", "description"])
             paginated_result["performance_issues"] = paginated_issues.to_dict()
             # Update issue count to reflect paginated results
             paginated_result["issue_count"] = paginated_issues.total_count

@@ -1,13 +1,11 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-
-if TYPE_CHECKING:
-    from ...type_defs.odoo_types import CompatibleEnvironment
+from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def analyze_workflow_states(
-    env: "CompatibleEnvironment", model_name: str, pagination: PaginationParams | None = None
+    env: CompatibleEnvironment, model_name: str, pagination: PaginationParams | None = None
 ) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
@@ -169,17 +167,23 @@ else:
 
         # Paginate state_transitions
         if "state_transitions" in raw_result and isinstance(raw_result["state_transitions"], list):
-            paginated_transitions = paginate_dict_list(raw_result["state_transitions"], pagination, ["method", "affects_field"])
+            transitions = raw_result["state_transitions"]
+            assert isinstance(transitions, list)  # Type assertion for PyCharm
+            paginated_transitions = paginate_dict_list(transitions, pagination, ["method", "affects_field"])
             paginated_result["state_transitions"] = paginated_transitions.to_dict()
 
         # Paginate button_actions
         if "button_actions" in raw_result and isinstance(raw_result["button_actions"], list):
-            paginated_actions = paginate_dict_list(raw_result["button_actions"], pagination, ["method", "affects_field"])
+            actions = raw_result["button_actions"]
+            assert isinstance(actions, list)  # Type assertion for PyCharm
+            paginated_actions = paginate_dict_list(actions, pagination, ["method", "affects_field"])
             paginated_result["button_actions"] = paginated_actions.to_dict()
 
         # Paginate automated_transitions
         if "automated_transitions" in raw_result and isinstance(raw_result["automated_transitions"], list):
-            paginated_automated = paginate_dict_list(raw_result["automated_transitions"], pagination, ["method", "affects_field"])
+            automated = raw_result["automated_transitions"]
+            assert isinstance(automated, list)  # Type assertion for PyCharm
+            paginated_automated = paginate_dict_list(automated, pagination, ["method", "affects_field"])
             paginated_result["automated_transitions"] = paginated_automated.to_dict()
 
         return validate_response_size(paginated_result)

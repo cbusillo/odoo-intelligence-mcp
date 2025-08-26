@@ -63,19 +63,25 @@ result = {{
         all_matches = []
 
         # Add exact matches with priority
-        for match in result.get("exact_matches", []):
+        exact_matches = result.get("exact_matches", [])
+        assert isinstance(exact_matches, list)  # Type assertion for PyCharm
+        for match in exact_matches:
             match["match_type"] = "exact"
             match["priority"] = 1
             all_matches.append(match)
 
         # Add partial matches
-        for match in result.get("partial_matches", []):
+        partial_matches = result.get("partial_matches", [])
+        assert isinstance(partial_matches, list)  # Type assertion for PyCharm
+        for match in partial_matches:
             match["match_type"] = "partial"
             match["priority"] = 2
             all_matches.append(match)
 
         # Add description matches
-        for match in result.get("description_matches", []):
+        description_matches = result.get("description_matches", [])
+        assert isinstance(description_matches, list)  # Type assertion for PyCharm
+        for match in description_matches:
             match["match_type"] = "description"
             match["priority"] = 3
             all_matches.append(match)

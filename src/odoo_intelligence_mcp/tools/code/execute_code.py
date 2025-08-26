@@ -9,6 +9,7 @@ from ...core.env import load_env_config
 from ...type_defs.odoo_types import CompatibleEnvironment
 
 
+# noinspection PyTooManyReturnStatements
 async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
     try:
         # Check if the environment has a Docker-based execute_code method
@@ -30,8 +31,6 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
                     return {"success": True, "output": result["output"]}
                 else:
                     return {"success": True, "result": result}
-            else:
-                return {"success": True, "result": result}
         else:
             # Fallback to local execution for testing with mock environments
             namespace = {
@@ -52,13 +51,17 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
             if "result" in namespace:
                 result_value = namespace["result"]
                 if hasattr(result_value, "_name"):
+                    # noinspection PyProtectedMember
+                    model_name = result_value._name
+                    # noinspection PyTypeChecker
+                    display_names = [rec.display_name for rec in result_value[:10]]
                     return {
                         "success": True,
                         "result_type": "recordset",
-                        "model": result_value._name,
+                        "model": model_name,
                         "count": len(result_value),
                         "ids": result_value.ids[:100],
-                        "display_names": [rec.display_name for rec in result_value[:10]],
+                        "display_names": display_names,
                     }
                 if isinstance(result_value, (dict, list, str, int, float, bool, type(None))):
                     return {"success": True, "result": result_value}

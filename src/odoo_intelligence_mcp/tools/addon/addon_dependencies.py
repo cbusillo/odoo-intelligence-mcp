@@ -19,7 +19,7 @@ def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
         if isinstance(container, dict):
             return None
 
-        exec_result = container.exec_run(["cat", manifest_path], stdout=True, stderr=False)
+        exec_result = container.exec_run(["cat", manifest_path])
         if exec_result.exit_code == 0:
             manifest_content = exec_result.output.decode("utf-8")
             return ast.literal_eval(manifest_content)
@@ -71,7 +71,7 @@ def _find_dependent_addons(addon_name: str, addon_paths: list[str]) -> list[dict
 
     for base_path in addon_paths:
         # List directories in base_path
-        list_result = container.exec_run(["ls", "-d", f"{base_path}/*/"], stdout=True, stderr=False)
+        list_result = container.exec_run(["ls", "-d", f"{base_path}/*/"])
         if list_result.exit_code != 0:
             continue
 

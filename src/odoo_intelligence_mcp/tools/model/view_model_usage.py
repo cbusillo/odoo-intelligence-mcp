@@ -1,13 +1,11 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
-
-if TYPE_CHECKING:
-    from ...type_defs.odoo_types import CompatibleEnvironment
+from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def get_view_model_usage(
-    env: "CompatibleEnvironment", model_name: str, pagination: PaginationParams | None = None
+    env: CompatibleEnvironment, model_name: str, pagination: PaginationParams | None = None
 ) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
@@ -109,6 +107,7 @@ else:
 
         # Apply pagination to views
         views = result.get("views", [])
+        assert isinstance(views, list)  # Type assertion for PyCharm
         paginated_views = paginate_dict_list(views, pagination, ["name", "type", "xml_id", "inherit_id"])
 
         return {

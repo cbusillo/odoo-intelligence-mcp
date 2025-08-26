@@ -149,12 +149,16 @@ else:
 
         # Paginate dependent_fields
         if "dependent_fields" in raw_result and isinstance(raw_result["dependent_fields"], list):
-            paginated_fields = paginate_dict_list(raw_result["dependent_fields"], pagination, ["field", "type"])
+            dependent_fields = raw_result["dependent_fields"]
+            assert isinstance(dependent_fields, list)  # Type assertion for PyCharm
+            paginated_fields = paginate_dict_list(dependent_fields, pagination, ["field", "type"])
             paginated_result["dependent_fields"] = paginated_fields.to_dict()
 
         # Paginate dependency_chain
         if "dependency_chain" in raw_result and isinstance(raw_result["dependency_chain"], list):
-            paginated_chain = paginate_dict_list(raw_result["dependency_chain"], pagination, ["path"])
+            dependency_chain = raw_result["dependency_chain"]
+            assert isinstance(dependency_chain, list)  # Type assertion for PyCharm
+            paginated_chain = paginate_dict_list(dependency_chain, pagination, ["path"])
             paginated_result["dependency_chain"] = paginated_chain.to_dict()
 
         return validate_response_size(paginated_result)

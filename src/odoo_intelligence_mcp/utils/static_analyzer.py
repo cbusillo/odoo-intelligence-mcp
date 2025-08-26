@@ -37,7 +37,7 @@ class OdooStaticAnalyzer:
                         content = py_file.read_text()
                         if f'_name = "{model_name}"' in content or f"_name = '{model_name}'" in content:
                             return py_file
-                    except Exception:
+                    except (OSError, UnicodeDecodeError, PermissionError):
                         continue
 
         return None
@@ -73,7 +73,9 @@ class OdooStaticAnalyzer:
         if not node.targets or not isinstance(node.targets[0], ast.Name):
             return
 
-        field_name = node.targets[0].id
+        target = node.targets[0]
+        assert isinstance(target, ast.Name)  # Type narrowing for PyCharm
+        field_name = target.id
 
         if isinstance(node.value, ast.Call):
             field_info = self._extract_field_info(node.value, source)
@@ -94,7 +96,8 @@ class OdooStaticAnalyzer:
 
         return field_info
 
-    def _extract_keyword_value(self, node: ast.AST, source: str) -> Any:
+    # noinspection PyTypeHints
+    def _extract_keyword_value(self, node: ast.expr, source: str) -> Any:
         if isinstance(node, ast.Constant):
             return node.value
         elif isinstance(node, ast.Name):
@@ -120,6 +123,7 @@ class OdooStaticAnalyzer:
         }
 
         for decorator in node.decorator_list:
+            # noinspection PyTypeChecker
             decorator_info = self._analyze_decorator(decorator, source)
             if decorator_info:
                 method_info["decorators"].append(decorator_info)
@@ -168,6 +172,7 @@ class OdooStaticAnalyzer:
             parts.reverse()
             return {"name": ".".join(parts)}
         elif isinstance(node, ast.Call):
+            # noinspection PyTypeChecker
             base_info = self._analyze_decorator(node.func, source)
             if base_info:
                 args = []
@@ -178,8 +183,10 @@ class OdooStaticAnalyzer:
                 return base_info
         return None
 
-    def _get_method_signature(self, node: ast.FunctionDef) -> str:
+    @staticmethod
+    def _get_method_signature(node: ast.FunctionDef) -> str:
         args = [arg.arg for arg in node.args.args]
+        # noinspection PyTypeChecker
         return f"({', '.join(args)})"
 
     def find_state_fields(self, model_name: str) -> dict[str, Any]:
@@ -214,8 +221,8 @@ class OdooStaticAnalyzer:
             if "compute" in field_info.get("parameters", {})
         }
 
-
-    def _find_compute_dependencies(self, model_info: dict[str, Any], compute_method: str) -> list[str]:
+    @staticmethod
+    def _find_compute_dependencies(model_info: dict[str, Any], compute_method: str) -> list[str]:
         for decorator_info in model_info.get("decorators", {}).get("depends", []):
             if decorator_info["method"] == compute_method:
                 return decorator_info["depends_on"]
@@ -238,6 +245,7 @@ class OdooStaticAnalyzer:
 
         return related_fields
 
+    # noinspection PyTooManyBranches
     def search_decorators_in_files(self, decorator_type: str) -> list[dict[str, Any]]:
         results = []
         decorator_patterns = {
@@ -283,21 +291,24 @@ class OdooStaticAnalyzer:
 
                             results.append(result)
 
-                except Exception:
+                except (SyntaxError, UnicodeDecodeError, OSError):
                     continue
 
         return results
 
-    def _extract_model_name(self, content: str) -> str | None:
+    @staticmethod
+    def _extract_model_name(content: str) -> str | None:
         match = re.search(r'_name\s*=\s*["\']([^"\']+)["\']', content)
         return match.group(1) if match else None
 
-    def _find_method_name_after_decorator(self, content: str, decorator_pos: int) -> str | None:
+    @staticmethod
+    def _find_method_name_after_decorator(content: str, decorator_pos: int) -> str | None:
         after_decorator = content[decorator_pos:]
         match = re.search(r"def\s+(\w+)\s*\(", after_decorator)
         return match.group(1) if match else None
 
-    def _parse_decorator_args(self, args_str: str) -> list[str]:
+    @staticmethod
+    def _parse_decorator_args(args_str: str) -> list[str]:
         args_str = args_str.strip()
         if not args_str:
             return []

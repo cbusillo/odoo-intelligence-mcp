@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from docker.errors import APIError, NotFound
+
 from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
 
@@ -11,27 +13,9 @@ from ...utils.docker_utils import DockerClientManager
 async def read_odoo_file(
     file_path: str, start_line: int | None = None, end_line: int | None = None, pattern: str | None = None, context_lines: int = 5
 ) -> dict[str, Any]:
-    """
-    Read a file from Odoo source (core, enterprise, or custom addons).
-
-    Args:
-        file_path: Path to file (can be relative to addon or absolute container path)
-                  Examples:
-                  - "sale/views/sale_views.xml" (finds in any addon path)
-                  - "/odoo/addons/sale/views/sale_views.xml" (absolute)
-                  - "addons/product_connect/models/motor.py" (custom)
-        start_line: Optional line number to start reading from (1-based)
-        end_line: Optional line number to stop reading at (inclusive)
-        pattern: Optional pattern to search for and show context around
-        context_lines: Number of lines to show before/after pattern matches (default 5)
-
-    Returns:
-        Dict with content or error message
-    """
     path = Path(file_path)
 
     def process_content(content: str, source_path: str) -> dict[str, Any]:
-        """Process file content based on parameters."""
         lines = content.split("\n")
         total_lines = len(lines)
 
@@ -46,8 +30,8 @@ async def read_odoo_file(
                         end = min(total_lines, i + context_lines)
                         context = "\n".join(f"{j:4}: {lines[j - 1]}" for j in range(start, end + 1))
                         matches.append({"line": i, "match": line.strip(), "context": context})
-            except re.error as e:
-                return {"success": False, "error": f"Invalid regex pattern: {e}"}
+            except re.error as regex_error:
+                return {"success": False, "error": f"Invalid regex pattern: {regex_error}"}
 
             if matches:
                 return {
@@ -107,7 +91,7 @@ async def read_odoo_file(
     # Try as absolute path first
     if path.is_absolute():
         try:
-            exec_result = container_result.exec_run(["cat", str(path)], stdout=True, stderr=True, demux=True)
+            exec_result = container_result.exec_run(["cat", str(path)], demux=True)
             stdout = exec_result.output[0].decode("utf-8") if exec_result.output[0] else ""
             stderr = exec_result.output[1].decode("utf-8") if exec_result.output[1] else ""
 
@@ -146,15 +130,15 @@ async def read_odoo_file(
     for potential_path in paths_to_try:
         try:
             # First check if file exists
-            test_result = container_result.exec_run(["test", "-f", potential_path], stdout=False, stderr=False)
+            test_result = container_result.exec_run(["test", "-f", potential_path])
             if test_result.exit_code == 0:
                 # File exists, read it
-                exec_result = container_result.exec_run(["cat", potential_path], stdout=True, stderr=True, demux=True)
+                exec_result = container_result.exec_run(["cat", potential_path], demux=True)
                 stdout = exec_result.output[0].decode("utf-8") if exec_result.output[0] else ""
 
                 if exec_result.exit_code == 0:
                     return process_content(stdout, potential_path)
-        except:
+        except (APIError, NotFound, AttributeError, ValueError):
             continue
 
     return {

@@ -189,11 +189,15 @@ else:
         paginated_result = raw_result.copy()
 
         if "runtime_fields" in raw_result and isinstance(raw_result["runtime_fields"], list):
-            paginated_runtime = paginate_dict_list(raw_result["runtime_fields"], pagination, ["field", "type"])
+            runtime_fields = raw_result["runtime_fields"]
+            assert isinstance(runtime_fields, list)  # Type assertion for PyCharm
+            paginated_runtime = paginate_dict_list(runtime_fields, pagination, ["field", "type"])
             paginated_result["runtime_fields"] = paginated_runtime.to_dict()
             # Update summary count to reflect total, not paginated
             if "summary" in paginated_result:
-                paginated_result["summary"]["runtime_field_count"] = paginated_runtime.total_count
+                summary = paginated_result["summary"]
+                assert isinstance(summary, dict)  # Type assertion for PyCharm
+                summary["runtime_field_count"] = paginated_runtime.total_count
 
         return validate_response_size(paginated_result)
 

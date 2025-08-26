@@ -1,13 +1,11 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
-
-if TYPE_CHECKING:
-    from ...type_defs.odoo_types import CompatibleEnvironment
+from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def search_decorators(
-    env: "CompatibleEnvironment", decorator: str, pagination: PaginationParams | None = None
+    env: CompatibleEnvironment, decorator: str, pagination: PaginationParams | None = None
 ) -> dict[str, Any]:
     code = f"""
 import inspect
@@ -76,7 +74,9 @@ result = {{"results": results}}
 
         if pagination and "results" in result:
             # Apply pagination to the results
-            paginated_result = paginate_dict_list(result["results"], pagination, ["model", "description"])
+            results_list = result["results"]
+            assert isinstance(results_list, list)  # Type assertion for PyCharm
+            paginated_result = paginate_dict_list(results_list, pagination, ["model", "description"])
 
             return {"decorator": decorator, "results": paginated_result.to_dict()}
 

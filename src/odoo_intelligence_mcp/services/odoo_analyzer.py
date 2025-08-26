@@ -258,7 +258,7 @@ class OdooAnalyzer(BaseService):
             "concerns": concerns,
         }
 
-    async def _safe_execute(self, operation: str, func: Callable[..., Any], *args: object, **kwargs: object) -> Any:  # noqa: ANN401
+    async def _safe_execute(self, operation: str, func: Callable[..., Any], *args: object, **kwargs: object) -> Any:
         try:
             return await func(*args, **kwargs)
         except Exception as e:

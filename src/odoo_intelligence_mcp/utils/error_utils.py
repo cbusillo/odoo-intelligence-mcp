@@ -76,7 +76,7 @@ def handle_tool_error[T](func: T) -> T:
             return create_error_response(e)
         except Exception as e:
             # For unexpected errors, provide a generic response
-            return create_error_response(e, include_type=True)
+            return create_error_response(e)
 
     return wrapper  # type: ignore
 
@@ -84,9 +84,6 @@ def handle_tool_error[T](func: T) -> T:
 def validate_model_name(model_name: str) -> None:
     if not model_name:
         raise InvalidArgumentError("model_name", "non-empty string", model_name)
-
-    if not isinstance(model_name, str):
-        raise InvalidArgumentError("model_name", "string", model_name)
 
     # Basic validation for model name format
     if not all(part.replace("_", "").isalnum() for part in model_name.split(".")):
@@ -97,9 +94,6 @@ def validate_field_name(field_name: str) -> None:
     if not field_name:
         raise InvalidArgumentError("field_name", "non-empty string", field_name)
 
-    if not isinstance(field_name, str):
-        raise InvalidArgumentError("field_name", "string", field_name)
-
     # Basic validation for field name format
     if not field_name.replace("_", "").isalnum():
         raise InvalidArgumentError("field_name", "valid field name (alphanumeric with underscores)", field_name)
@@ -108,9 +102,6 @@ def validate_field_name(field_name: str) -> None:
 def validate_method_name(method_name: str) -> None:
     if not method_name:
         raise InvalidArgumentError("method_name", "non-empty string", method_name)
-
-    if not isinstance(method_name, str):
-        raise InvalidArgumentError("method_name", "string", method_name)
 
     # Basic validation for method name format
     if not method_name.replace("_", "").isalnum():

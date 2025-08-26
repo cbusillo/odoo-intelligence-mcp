@@ -48,7 +48,7 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
                             verbose_info["image"] = container.image.tags[0]
                         else:
                             verbose_info["image"] = container.attrs.get("Config", {}).get("Image", "unknown")
-                    except Exception:
+                    except (AttributeError, TypeError, KeyError, IndexError):
                         verbose_info["image"] = container.attrs.get("Config", {}).get("Image", "unknown")
 
                     container_info.update(verbose_info)
