@@ -1,27 +1,21 @@
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.field.field_usages import get_field_usages
+from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestFieldUsagesIntegration:
-    @pytest.fixture
-    async def odoo_env(self) -> HostOdooEnvironment:
-        manager = HostOdooEnvironmentManager()
-        return await manager.get_environment()
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_res_partner_name(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_field_usages(odoo_env, "res.partner", "name")
+    async def test_get_field_usages_res_partner_name(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
         assert result["field"] == "name"
         assert "field_info" in result
-        assert "used_in_views" in result
-        assert "used_in_domains" in result
-        assert "used_in_methods" in result
+        assert "usages" in result
         assert "usage_summary" in result
 
         # Check field info
@@ -42,8 +36,8 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_res_partner_email(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_field_usages(odoo_env, "res.partner", "email")
+    async def test_get_field_usages_res_partner_email(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "email")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
@@ -58,9 +52,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_many2one_field(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_many2one_field(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a many2one field
-        result = await get_field_usages(odoo_env, "res.partner", "parent_id")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "parent_id")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
@@ -72,9 +66,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_one2many_field(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_one2many_field(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a one2many field if it exists
-        result = await get_field_usages(odoo_env, "res.partner", "child_ids")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "child_ids")
 
         if "error" not in result:
             assert result["model"] == "res.partner"
@@ -88,9 +82,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_computed_field(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_computed_field(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with display_name which is typically computed
-        result = await get_field_usages(odoo_env, "res.partner", "display_name")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "display_name")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
@@ -104,8 +98,8 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_product_template_name(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_field_usages(odoo_env, "product.template", "name")
+    async def test_get_field_usages_product_template_name(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_field_usages(real_odoo_env_if_available, "product.template", "name")
 
         assert "error" not in result
         assert result["model"] == "product.template"
@@ -120,9 +114,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_motor_product_template(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_motor_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a custom model from the project
-        result = await get_field_usages(odoo_env, "motor.product.template", "name")
+        result = await get_field_usages(real_odoo_env_if_available, "motor.product.template", "name")
 
         if "error" not in result:
             assert result["model"] == "motor.product.template"
@@ -133,25 +127,25 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_nonexistent_model(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_field_usages(odoo_env, "nonexistent.model", "field")
+    async def test_get_field_usages_nonexistent_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_field_usages(real_odoo_env_if_available, "nonexistent.model", "field")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_nonexistent_field(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_field_usages(odoo_env, "res.partner", "nonexistent_field")
+    async def test_get_field_usages_nonexistent_field(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "nonexistent_field")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_selection_field(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_selection_field(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a selection field - type field in res.partner
-        result = await get_field_usages(odoo_env, "res.partner", "type")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "type")
 
         if "error" not in result:
             assert result["model"] == "res.partner"
@@ -162,9 +156,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_state_field(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_state_field(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a state field if available
-        result = await get_field_usages(odoo_env, "sale.order", "state")
+        result = await get_field_usages(real_odoo_env_if_available, "sale.order", "state")
 
         if "error" not in result:
             assert result["model"] == "sale.order"
@@ -178,9 +172,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_views_analysis(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_views_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test that views are properly analyzed
-        result = await get_field_usages(odoo_env, "res.partner", "name")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
         views = result["used_in_views"]
@@ -195,9 +189,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_domains_analysis(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_domains_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test that domains are properly analyzed
-        result = await get_field_usages(odoo_env, "res.partner", "name")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
         domains = result["used_in_domains"]
@@ -212,9 +206,9 @@ class TestFieldUsagesIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_field_usages_methods_analysis(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_field_usages_methods_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test that methods are properly analyzed
-        result = await get_field_usages(odoo_env, "res.partner", "name")
+        result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
         methods = result["used_in_methods"]
