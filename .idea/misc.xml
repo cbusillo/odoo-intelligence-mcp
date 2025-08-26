@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="sdkName" value="uv (odoo_intelligence_mcp)" />
+    <option name="sdkName" value="uv (odoo-intelligence-mcp)" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="uv (odoo-intelligence-mcp)" project-jdk-type="Python SDK" />
   <component name="PythonCompatibilityInspectionAdvertiser">
     <option name="version" value="3" />
-  </component>
-  <component name="PythonRemoteInterpreterManager">
-    <interpreter-path-mappings>
-      <mapping local-path="$PROJECT_DIR$/src" remote-path="/mcp_server/src" />
-      <mapping local-path="$PROJECT_DIR$/tests" remote-path="/mcp_server/tests" />
-    </interpreter-path-mappings>
   </component>
 </project>
