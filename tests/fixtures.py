@@ -5,11 +5,12 @@ from unittest.mock import MagicMock
 import pytest
 import pytest_asyncio
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager
+from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 
 
 def docker_available() -> bool:
     try:
+        # noinspection LSPLocalInspectionTool
         result = subprocess.run(["docker", "ps"], capture_output=True, timeout=5)
         return result.returncode == 0
     except (subprocess.SubprocessError, FileNotFoundError):
@@ -20,6 +21,7 @@ def container_running(container_name: str) -> bool:
     if not docker_available():
         return False
 
+    # noinspection LSPLocalInspectionTool
     result = subprocess.run(
         ["docker", "ps", "--filter", f"name={container_name}", "--format", "{{.Names}}"], capture_output=True, text=True
     )
@@ -175,7 +177,7 @@ def enhanced_mock_odoo_env(
 
 
 @pytest_asyncio.fixture
-async def real_odoo_env_if_available() -> HostOdooEnvironmentManager | None:
+async def real_odoo_env_if_available() -> HostOdooEnvironment | None:
     # Get container name from environment or use default
     import os
 
@@ -191,9 +193,14 @@ async def real_odoo_env_if_available() -> HostOdooEnvironmentManager | None:
 
 @pytest.fixture
 def docker_error_responses() -> dict[str, dict[str, Any]]:
+    from odoo_intelligence_mcp.core.env import load_env_config
+    
+    config = load_env_config()
+    container_name = config["shell_container"]
+    
     return {
-        "container_not_found": {"returncode": 125, "stderr": "Error: No such container: odoo-shell-1"},
-        "container_not_running": {"returncode": 126, "stderr": "Error: Container odoo-shell-1 is not running"},
+        "container_not_found": {"returncode": 125, "stderr": f"Error: No such container: {container_name}"},
+        "container_not_running": {"returncode": 126, "stderr": f"Error: Container {container_name} is not running"},
         "docker_not_running": {"returncode": 1, "stderr": "Cannot connect to the Docker daemon"},
         "timeout": {"timeout": True},
         "permission_denied": {"returncode": 126, "stderr": "Permission denied while trying to connect to the Docker daemon"},
@@ -216,9 +223,11 @@ class MockDockerRun:
             result.stdout = self.custom_response.get("stdout", '{"success": true}') if self.custom_response else '{"success": true}'
             result.stderr = ""
         elif self.scenario == "container_not_found":
+            from odoo_intelligence_mcp.core.env import load_env_config
+            config = load_env_config()
             result.returncode = 125
             result.stdout = ""
-            result.stderr = "Error: No such container: odoo-shell-1"
+            result.stderr = f"Error: No such container: {config['shell_container']}"
         elif self.scenario == "docker_not_running":
             raise FileNotFoundError("docker command not found")
         else:

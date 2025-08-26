@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import textwrap
 from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
@@ -77,7 +78,20 @@ result = list(env.registry.models.keys())
 
 
 def load_env_config() -> dict[str, str]:
-    # Look for .env file in project root (where pyproject.toml is)
+    # Detect if we're running in test mode
+    is_testing = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
+
+    if is_testing:
+        # For testing: Load target project's .env file (../odoo-ai/.env)
+        developer_dir = Path(__file__).parent.parent.parent.parent.parent  # Go up to Developer/ directory
+        target_env_path = developer_dir / "odoo-ai" / ".env"
+        if target_env_path.exists():
+            load_dotenv(target_env_path, override=True)
+            logger.info("Loaded target project .env from %s (test mode)", target_env_path)
+        else:
+            logger.debug("Target project .env file not found at %s (test mode)", target_env_path)
+
+    # Look for local .env file in project root (where pyproject.toml is)
     current_path = Path(__file__).parent
     while current_path != current_path.parent:
         env_path = current_path / ".env"
@@ -85,10 +99,10 @@ def load_env_config() -> dict[str, str]:
         if pyproject_path.exists():
             # Found project root
             if env_path.exists():
-                load_dotenv(env_path)
-                logger.info("Loaded .env from %s", env_path)
+                load_dotenv(env_path, override=not is_testing)  # Don't override test env vars
+                logger.info("Loaded local .env from %s", env_path)
             else:
-                logger.debug(".env file not found at %s (optional)", env_path)
+                logger.debug("Local .env file not found at %s (optional)", env_path)
             break
         current_path = current_path.parent
 
@@ -119,7 +133,7 @@ class HostOdooEnvironmentManager:
         logger.info("Cache invalidation called (no-op for Docker exec)")
 
 
-# noinspection PyMethodMayBeStatic,PyUnusedLocal
+# noinspection PyMethodMayBeStatic
 class HostOdooEnvironment:
     def __init__(self, container_name: str, database: str, addons_path: str) -> None:
         self.container_name = container_name
@@ -186,6 +200,7 @@ class HostOdooEnvironment:
         """Get all model names from the Odoo registry."""
         registry = self.registry
         if isinstance(registry, DockerRegistry):
+            # noinspection PyProtectedMember
             return await registry._fetch_models()
         return []
 
@@ -194,7 +209,25 @@ class HostOdooEnvironment:
         model_names = await self.get_model_names()
         return model_name in model_names
 
+    def ensure_container_running(self) -> None:
+        check_cmd = ["docker", "ps", "--filter", f"name={self.container_name}", "--format", "{{.Names}}"]
+        result = subprocess.run(check_cmd, capture_output=True, text=True)  # noqa: ASYNC221
+        
+        if self.container_name not in result.stdout:
+            logger.info(f"Container {self.container_name} is not running. Starting it...")
+            start_cmd = ["docker", "start", self.container_name]
+            start_result = subprocess.run(start_cmd, capture_output=True, text=True)  # noqa: ASYNC221
+            
+            if start_result.returncode == 0:
+                logger.info(f"Successfully started container {self.container_name}")
+                import time
+                time.sleep(2)  # Give container time to fully start
+            else:
+                logger.warning(f"Failed to start container {self.container_name}: {start_result.stderr}")
+
     async def execute_code(self, code: str) -> dict[str, object] | str | int | float | bool | None:
+        self.ensure_container_running()
+        
         wrapped_code = textwrap.dedent(
             f"""
             import json
@@ -240,9 +273,8 @@ class HostOdooEnvironment:
             process = subprocess.run(docker_cmd, input=wrapped_code, text=True, capture_output=True, timeout=30)  # noqa: ASYNC221
 
             if process.returncode != 0:
-                raise DockerConnectionError(
-                    self.container_name, f"Command failed with return code {process.returncode}: {process.stderr}"
-                )
+                error_msg = f"Command failed with return code {process.returncode}: {process.stderr}"
+                raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
 
             output_lines = process.stdout.strip().split("\n")
             json_output = output_lines[-1] if output_lines else "{}"
