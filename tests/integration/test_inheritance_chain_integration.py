@@ -1,19 +1,15 @@
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.model.inheritance_chain import analyze_inheritance_chain
+from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestInheritanceChainIntegration:
-    @pytest.fixture
-    async def odoo_env(self) -> HostOdooEnvironment:
-        manager = HostOdooEnvironmentManager()
-        return await manager.get_environment()
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_res_partner(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "res.partner")
+    async def test_analyze_inheritance_chain_res_partner(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "res.partner")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
@@ -49,8 +45,8 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "product.template")
+    async def test_analyze_inheritance_chain_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "product.template")
 
         assert "error" not in result
         assert result["model"] == "product.template"
@@ -72,8 +68,8 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_res_users(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "res.users")
+    async def test_analyze_inheritance_chain_res_users(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "res.users")
 
         assert "error" not in result
         assert result["model"] == "res.users"
@@ -87,8 +83,8 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_sale_order(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "sale.order")
+    async def test_analyze_inheritance_chain_sale_order(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "sale.order")
 
         assert "error" not in result
         assert result["model"] == "sale.order"
@@ -106,8 +102,8 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_motor_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "motor.product.template")
+    async def test_analyze_inheritance_chain_motor_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "motor.product.template")
 
         assert "error" not in result
         assert result["model"] == "motor.product.template"
@@ -124,16 +120,16 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_nonexistent_model(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "nonexistent.model")
+    async def test_analyze_inheritance_chain_nonexistent_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "nonexistent.model")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_ir_model(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "ir.model")
+    async def test_analyze_inheritance_chain_ir_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "ir.model")
 
         assert "error" not in result
         assert result["model"] == "ir.model"
@@ -150,8 +146,8 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_mail_thread(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "mail.thread")
+    async def test_analyze_inheritance_chain_mail_thread(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "mail.thread")
 
         assert "error" not in result
         assert result["model"] == "mail.thread"
@@ -168,9 +164,9 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_overridden_methods(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_analyze_inheritance_chain_overridden_methods(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a model that likely has overridden methods
-        result = await analyze_inheritance_chain(odoo_env, "res.partner")
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "res.partner")
 
         assert "error" not in result
 
@@ -188,8 +184,8 @@ class TestInheritanceChainIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_inheritance_chain_summary_calculations(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_inheritance_chain(odoo_env, "product.template")
+    async def test_analyze_inheritance_chain_summary_calculations(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_inheritance_chain(real_odoo_env_if_available, "product.template")
 
         assert "error" not in result
 
