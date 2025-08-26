@@ -7,7 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 
-from tests.fixtures import mock_docker_run, real_odoo_env_if_available
+# Import fixtures to make them available to tests
+from .fixtures import real_odoo_env_if_available  # noqa: F401
 
 
 @pytest.fixture(scope="session")

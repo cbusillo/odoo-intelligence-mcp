@@ -65,7 +65,7 @@ claude mcp add-json odoo-intelligence '...'
 
 ```bash
 # Test individual functions
-docker exec -i odoo-opw-web-1 bash -c "cd /mcp_servers/odoo_intelligence_mcp && /venv/bin/python -c '
+docker exec -i ${ODOO_CONTAINER_PREFIX}-web-1 bash -c "cd /mcp_servers/odoo_intelligence_mcp && /venv/bin/python -c '
 import sys
 sys.path.insert(0, \"/mcp_servers/odoo_intelligence_mcp/src\")
 from odoo_intelligence_mcp.server import model_info

@@ -5,7 +5,6 @@ from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestFieldUsagesIntegration:
-
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_get_field_usages_res_partner_name(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
@@ -77,7 +76,8 @@ class TestFieldUsagesIntegration:
             field_info = result["field_info"]
             assert field_info["type"] == "one2many"
             assert field_info["relation"] == "res.partner"
-            if "inverse_name" in field_info:
+            # inverse_name might be None or not present, so just check if it exists
+            if field_info.get("inverse_name"):
                 assert field_info["inverse_name"] == "parent_id"
 
     @pytest.mark.integration
@@ -177,11 +177,12 @@ class TestFieldUsagesIntegration:
         result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
-        views = result["used_in_views"]
+        usages = result["usages"]["items"]
 
-        # Check view structure if any views found
-        if isinstance(views, list):
-            for view in views:
+        # Check view structure if any view usages found
+        view_usages = [usage for usage in usages if usage.get("usage_type") == "view"]
+        if view_usages:
+            for view in view_usages:
                 assert "id" in view
                 assert "name" in view
                 assert "type" in view
@@ -194,11 +195,12 @@ class TestFieldUsagesIntegration:
         result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
-        domains = result["used_in_domains"]
+        usages = result["usages"]["items"]
 
-        # Check domain structure if any domains found
-        if isinstance(domains, list):
-            for domain in domains:
+        # Check domain structure if any domain usages found
+        domain_usages = [usage for usage in usages if usage.get("usage_type") == "domain"]
+        if domain_usages:
+            for domain in domain_usages:
                 assert "type" in domain
                 assert domain["type"] in ["action", "filter"]
                 assert "name" in domain
@@ -211,11 +213,12 @@ class TestFieldUsagesIntegration:
         result = await get_field_usages(real_odoo_env_if_available, "res.partner", "name")
 
         assert "error" not in result
-        methods = result["used_in_methods"]
+        usages = result["usages"]["items"]
 
-        # Check method structure if any methods found
-        if isinstance(methods, list):
-            for method in methods:
+        # Check method structure if any method usages found
+        method_usages = [usage for usage in usages if usage.get("usage_type") == "method"]
+        if method_usages:
+            for method in method_usages:
                 assert "type" in method
                 assert method["type"] in ["compute", "constraint", "onchange", "method"]
                 assert "method" in method

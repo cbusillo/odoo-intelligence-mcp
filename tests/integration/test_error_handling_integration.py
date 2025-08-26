@@ -57,7 +57,11 @@ async def test_handle_call_tool_docker_connection_error() -> None:
     AsyncMock()
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment") as mock_get_env:
-        mock_get_env.side_effect = DockerConnectionError("odoo-opw-shell-1", "Container not running")
+        from odoo_intelligence_mcp.core.env import load_env_config
+
+        config = load_env_config()
+        container_name = config["container_name"]
+        mock_get_env.side_effect = DockerConnectionError(container_name, "Container not running")
 
         result = await handle_call_tool("model_info", {"model_name": "res.partner"})
 
@@ -65,10 +69,15 @@ async def test_handle_call_tool_docker_connection_error() -> None:
     content = json.loads(result[0].text)
 
     assert content["success"] is False
-    assert "odoo-opw-shell-1" in content["error"]
+    from odoo_intelligence_mcp.core.env import load_env_config
+
+    config = load_env_config()
+    container_name = config["container_name"]
+
+    assert container_name in content["error"]
     assert "Container not running" in content["error"]
     assert content["error_type"] == "DockerConnectionError"
-    assert content["container"] == "odoo-opw-shell-1"
+    assert content["container"] == container_name
 
 
 @pytest.mark.asyncio

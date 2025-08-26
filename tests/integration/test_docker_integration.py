@@ -35,26 +35,33 @@ async def test_host_odoo_environment_execute_code() -> None:
     env_manager = HostOdooEnvironmentManager()
 
     with patch("subprocess.run") as mock_run:
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = '{"result": 123}'
-        mock_result.stderr = ""
-        mock_run.return_value = mock_result
+        # Mock responses for container check (not found), start (success), and execute (success)
+        mock_results = [
+            # Container check - not found
+            MagicMock(returncode=0, stdout="", stderr=""),
+            # Container start - success
+            MagicMock(returncode=0, stdout="odoo-script-runner-1\n", stderr=""),
+            # Code execution - success
+            MagicMock(returncode=0, stdout='{"result": 123}', stderr=""),
+        ]
+        mock_run.side_effect = mock_results
 
         env = await env_manager.get_environment()
         result = await env.execute_code("result = 123")
 
         assert result == {"result": 123}
 
-        # Verify subprocess was called correctly
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args[0][0]
-        assert "docker" in call_args
-        assert "exec" in call_args
-        assert "-i" in call_args
-        assert env_manager.container_name in call_args
-        assert "/odoo/odoo-bin" in call_args
-        assert "shell" in call_args
+        # Verify subprocess was called 3 times (check, start, execute)
+        assert mock_run.call_count == 3
+
+        # Check the final call was the code execution
+        final_call_args = mock_run.call_args_list[-1][0][0]
+        assert "docker" in final_call_args
+        assert "exec" in final_call_args
+        assert "-i" in final_call_args
+        assert env_manager.container_name in final_call_args
+        assert "/odoo/odoo-bin" in final_call_args
+        assert "shell" in final_call_args
 
 
 @pytest.mark.asyncio

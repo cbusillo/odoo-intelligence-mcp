@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager
+from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager, load_env_config
 from odoo_intelligence_mcp.server import handle_call_tool
 from odoo_intelligence_mcp.utils.error_utils import CodeExecutionError, DockerConnectionError
 from tests.fixtures import MockDockerRun, container_running
@@ -120,7 +120,7 @@ async def test_handle_tool_with_all_docker_scenarios() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-@pytest.mark.skipif(not container_running("odoo-opw-shell-1"), reason="Requires running Odoo container")
+@pytest.mark.skipif(not container_running(load_env_config()["container_name"]), reason="Requires running Odoo container")
 async def test_real_model_info_if_available() -> None:
     # This test runs against real Odoo if available
     result = await handle_call_tool("model_info", {"model_name": "res.partner"})

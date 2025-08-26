@@ -82,6 +82,9 @@ def handle_tool_error[T](func: T) -> T:
 
 
 def validate_model_name(model_name: str) -> None:
+    if not isinstance(model_name, str):
+        raise InvalidArgumentError("model_name", "string", model_name)
+
     if not model_name:
         raise InvalidArgumentError("model_name", "non-empty string", model_name)
 
@@ -91,6 +94,9 @@ def validate_model_name(model_name: str) -> None:
 
 
 def validate_field_name(field_name: str) -> None:
+    if not isinstance(field_name, str):
+        raise InvalidArgumentError("field_name", "string", field_name)
+
     if not field_name:
         raise InvalidArgumentError("field_name", "non-empty string", field_name)
 
