@@ -245,7 +245,19 @@ class HostOdooEnvironment:
                 sys.stdout = original_stdout
 
                 if 'result' in locals():
-                    print(json.dumps(result))
+                    # Handle recordsets specially
+                    if hasattr(result, '_name'):
+                        # It's a recordset
+                        serialized = {{
+                            "result_type": "recordset",
+                            "model": result._name,
+                            "count": len(result),
+                            "ids": result.ids[:100],  # Limit to 100 IDs
+                            "display_names": [rec.display_name for rec in result[:10]]  # First 10 names
+                        }}
+                        print(json.dumps(serialized))
+                    else:
+                        print(json.dumps(result))
                 elif output:
                     print(json.dumps({{"output": output}}))
                 else:

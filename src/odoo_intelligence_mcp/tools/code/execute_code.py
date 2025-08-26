@@ -29,6 +29,12 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
                 elif "output" in result and result.get("raw"):
                     # Raw output from Docker
                     return {"success": True, "output": result["output"]}
+                elif "result_type" in result and result["result_type"] == "recordset":
+                    # Recordset from Docker
+                    return {"success": True, **result}
+                elif "success" in result:
+                    # Already formatted response from mock or Docker
+                    return result
                 else:
                     return {"success": True, "result": result}
             else:

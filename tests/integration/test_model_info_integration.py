@@ -5,7 +5,6 @@ from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestModelInfoIntegration:
-
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_get_model_info_res_partner(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:

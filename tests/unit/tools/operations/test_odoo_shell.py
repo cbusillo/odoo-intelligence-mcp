@@ -68,7 +68,7 @@ class TestOdooShell:
             mock_result.stdout = ""
             mock_result.stderr = "Error: SecurityError: os module is not allowed"
             mock_run.return_value = mock_result
-            
+
             result = odoo_shell("import os; print(os.getcwd())")
 
             assert result["success"] is False
@@ -83,7 +83,7 @@ class TestOdooShell:
             mock_result.stdout = ""
             mock_result.stderr = "Error: NameError: name 'eval' is not defined"
             mock_run.return_value = mock_result
-            
+
             result = odoo_shell("print(eval('1+1'))")
 
             assert result["success"] is False
