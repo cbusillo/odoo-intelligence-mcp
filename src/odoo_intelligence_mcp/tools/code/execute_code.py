@@ -31,6 +31,9 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
                     return {"success": True, "output": result["output"]}
                 else:
                     return {"success": True, "result": result}
+            else:
+                # Handle non-dict results (str, int, float, bool, None)
+                return {"success": True, "result": result}
         else:
             # Fallback to local execution for testing with mock environments
             namespace = {
