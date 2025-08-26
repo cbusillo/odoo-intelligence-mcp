@@ -178,26 +178,23 @@ def enhanced_mock_odoo_env(
 
 @pytest_asyncio.fixture
 async def real_odoo_env_if_available() -> HostOdooEnvironment | None:
-    # Get container name from environment or use default
-    import os
-
-    container_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
-    shell_container = f"{container_prefix}-shell-1"
-
-    if not container_running(shell_container):
-        pytest.skip(f"Odoo container {shell_container} not running")
-
+    # Use the existing environment manager which loads config from env.py
     manager = HostOdooEnvironmentManager()
+
+    # Check if the container is running using the configured container name
+    if not container_running(manager.container_name):
+        pytest.skip(f"Odoo container {manager.container_name} not running")
+
     return await manager.get_environment()
 
 
 @pytest.fixture
 def docker_error_responses() -> dict[str, dict[str, Any]]:
     from odoo_intelligence_mcp.core.env import load_env_config
-    
+
     config = load_env_config()
-    container_name = config["shell_container"]
-    
+    container_name = config["container_name"]  # Use primary container
+
     return {
         "container_not_found": {"returncode": 125, "stderr": f"Error: No such container: {container_name}"},
         "container_not_running": {"returncode": 126, "stderr": f"Error: Container {container_name} is not running"},
@@ -224,6 +221,7 @@ class MockDockerRun:
             result.stderr = ""
         elif self.scenario == "container_not_found":
             from odoo_intelligence_mcp.core.env import load_env_config
+
             config = load_env_config()
             result.returncode = 125
             result.stdout = ""

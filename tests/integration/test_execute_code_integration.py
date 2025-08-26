@@ -310,9 +310,13 @@ class TestOdooShellIntegration:
         assert result["exit_code"] == 0
 
         # Verify Docker command was constructed correctly
+        from odoo_intelligence_mcp.core.env import load_env_config
+        config = load_env_config()
+        
         mock_subprocess_run.assert_called_once()
         args = mock_subprocess_run.call_args[0][0]
-        assert args == ["docker", "exec", "-i", "odoo-opw-shell-1", "/odoo/odoo-bin", "shell", "--database=opw"]
+        expected_args = ["docker", "exec", "-i", config["container_name"], "/odoo/odoo-bin", "shell", f"--database={config['database']}"]
+        assert args == expected_args
 
     @pytest.mark.asyncio
     @patch("subprocess.run")
@@ -392,7 +396,10 @@ print(f"Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
     @patch("subprocess.run")
     @pytest.mark.asyncio
     async def test_odoo_shell_timeout_handling(self, mock_subprocess_run: MockSubprocessRun) -> None:
-        mock_subprocess_run.side_effect = subprocess.TimeoutExpired(cmd=["docker", "exec", "-i", "odoo-opw-shell-1"], timeout=5)
+        from odoo_intelligence_mcp.core.env import load_env_config
+        config = load_env_config()
+        
+        mock_subprocess_run.side_effect = subprocess.TimeoutExpired(cmd=["docker", "exec", "-i", config["container_name"]], timeout=5)
 
         code = "import time; time.sleep(10)"
         result = odoo_shell(code, timeout=5)
