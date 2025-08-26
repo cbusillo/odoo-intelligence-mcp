@@ -13,7 +13,7 @@ class TestExecuteCodeIntegration:
     async def test_execute_code_basic_model_access(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = "result = len(env.registry)"
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert isinstance(result["result"], int)
@@ -23,7 +23,7 @@ class TestExecuteCodeIntegration:
     async def test_execute_code_model_search_count(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = 'result = env["res.users"].search_count([])'
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert isinstance(result["result"], int)
@@ -41,7 +41,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["id"] == 1
@@ -61,7 +61,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["has_name_field"] is True
@@ -83,7 +83,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["recordset_type"] == "recordset"
@@ -104,7 +104,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["current_year"] >= 2024
@@ -126,7 +126,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["are_equal"] is True
@@ -152,7 +152,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["email_found"] == "test@example.com"
@@ -188,7 +188,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["many2one_count"] > 0
@@ -200,7 +200,7 @@ result = {
     async def test_execute_code_error_handling_with_real_env(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = 'result = env["nonexistent.model"].search([])'
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is False
         assert "error" in result
@@ -227,7 +227,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result"]["total_users"] >= 1
@@ -240,7 +240,7 @@ result = {
     async def test_execute_code_recordset_return_handling(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         code = 'result = env["res.users"].search([("id", "=", 1)])'
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert result["result_type"] == "recordset"
@@ -261,7 +261,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert isinstance(result["result"]["env_context"], dict)
@@ -284,7 +284,7 @@ result = {
 }
 """
 
-        result = await execute_code(real_odoo_env_if_available_if_available, code)
+        result = await execute_code(real_odoo_env_if_available, code)
 
         assert result["success"] is True
         assert "name" in result["result"]["fields_get_keys"]
@@ -450,7 +450,7 @@ print("Partner saved successfully.")
         self, mock_subprocess_run: MockSubprocessRun, real_odoo_env_if_available: CompatibleEnvironment
     ) -> None:
         code_for_execute = "result = 2 + 3"
-        execute_result = await execute_code(real_odoo_env_if_available_if_available, code_for_execute)
+        execute_result = await execute_code(real_odoo_env_if_available, code_for_execute)
 
         mock_subprocess_run.return_value.returncode = 0
         mock_subprocess_run.return_value.stdout = "5\n"

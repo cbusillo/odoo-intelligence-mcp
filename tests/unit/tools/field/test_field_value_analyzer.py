@@ -14,7 +14,7 @@ def field_test_env() -> MockEnv:
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_finds_standard_fields(field_test_env) -> None:
+async def test_field_value_analyzer_finds_standard_fields(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "name"
 
@@ -77,7 +77,7 @@ async def test_field_value_analyzer_finds_standard_fields(field_test_env) -> Non
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_finds_inherited_fields(field_test_env) -> None:
+async def test_field_value_analyzer_finds_inherited_fields(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "create_date"
 
@@ -131,7 +131,7 @@ async def test_field_value_analyzer_finds_inherited_fields(field_test_env) -> No
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_with_computed_fields(field_test_env) -> None:
+async def test_field_value_analyzer_with_computed_fields(field_test_env: MockEnv) -> None:
     model_name = "sale.order"
     field_name = "amount_total"
 
@@ -179,7 +179,7 @@ async def test_field_value_analyzer_with_computed_fields(field_test_env) -> None
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_with_selection_field(field_test_env) -> None:
+async def test_field_value_analyzer_with_selection_field(field_test_env: MockEnv) -> None:
     model_name = "sale.order"
     field_name = "state"
 
@@ -227,7 +227,7 @@ async def test_field_value_analyzer_with_selection_field(field_test_env) -> None
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_with_many2one_field(field_test_env) -> None:
+async def test_field_value_analyzer_with_many2one_field(field_test_env: MockEnv) -> None:
     model_name = "sale.order"
     field_name = "partner_id"
 
@@ -272,7 +272,7 @@ async def test_field_value_analyzer_with_many2one_field(field_test_env) -> None:
 
 # noinspection DuplicatedCode
 @pytest.mark.asyncio
-async def test_field_value_analyzer_handles_missing_field_gracefully(field_test_env) -> None:
+async def test_field_value_analyzer_handles_missing_field_gracefully(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "nonexistent_field"
 
@@ -295,7 +295,7 @@ async def test_field_value_analyzer_handles_missing_field_gracefully(field_test_
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_with_empty_records(field_test_env) -> None:
+async def test_field_value_analyzer_with_empty_records(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "name"
 
@@ -320,7 +320,7 @@ async def test_field_value_analyzer_with_empty_records(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_with_domain_filter(field_test_env) -> None:
+async def test_field_value_analyzer_with_domain_filter(field_test_env: MockEnv) -> None:
     model_name = "res.partner"
     field_name = "name"
     domain = [["is_company", "=", True]]
@@ -353,7 +353,7 @@ async def test_field_value_analyzer_with_domain_filter(field_test_env) -> None:
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_data_quality_analysis(field_test_env) -> None:
+async def test_field_value_analyzer_data_quality_analysis(field_test_env: MockEnv) -> None:
     model_name = "res.partner"
     field_name = "email"
 
@@ -398,7 +398,7 @@ async def test_field_value_analyzer_data_quality_analysis(field_test_env) -> Non
 
 
 @pytest.mark.asyncio
-async def test_field_value_analyzer_handles_all_field_info_from_fields_get(field_test_env) -> None:
+async def test_field_value_analyzer_handles_all_field_info_from_fields_get(field_test_env: MockEnv) -> None:
     model_name = "product.template"
     field_name = "list_price"
 
