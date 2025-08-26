@@ -70,7 +70,7 @@ async def test_handle_call_tool_model_info_success() -> None:
         }
     )
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("model_info", {"model_name": "res.partner"})
 
     assert len(result) == 1
@@ -87,7 +87,7 @@ async def test_handle_call_tool_with_error() -> None:
     mock_env = AsyncMock()
     mock_env.execute_code = AsyncMock(side_effect=Exception("Test error"))
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("model_info", {"model_name": "res.partner"})
 
     assert len(result) == 1
@@ -109,7 +109,7 @@ async def test_handle_call_tool_search_models() -> None:
         }
     )
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("search_models", {"pattern": "product"})
 
     assert len(result) == 1
@@ -133,7 +133,7 @@ async def test_handle_call_tool_field_usages() -> None:
         }
     )
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("field_usages", {"model_name": "product.template", "field_name": "name"})
 
     assert len(result) == 1
@@ -156,7 +156,7 @@ async def test_handle_call_tool_with_pagination() -> None:
         }
     )
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("pattern_analysis", {"pattern_type": "computed_fields", "limit": 5, "offset": 0})
 
     assert len(result) == 1
@@ -175,7 +175,7 @@ async def test_handle_call_tool_odoo_status() -> None:
         mock_run.return_value.stdout = "running"
         mock_run.return_value.stderr = ""
 
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
             # Pass an empty dict as arguments, not None
             result = await handle_call_tool("odoo_status", {"dummy": "arg"})
 
@@ -192,7 +192,7 @@ async def test_handle_call_tool_execute_code() -> None:
     mock_env = MagicMock()
     mock_env.execute_code = MagicMock(return_value={"result": 4})
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("execute_code", {"code": "result = 2 + 2"})
 
     assert len(result) == 1
@@ -238,7 +238,7 @@ async def test_environment_cleanup() -> None:
     mock_env.cr = mock_cr
     mock_env.execute_code = AsyncMock(return_value={"success": True})
 
-    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
+    with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         await handle_call_tool("model_info", {"model_name": "res.partner"})
 
     # Verify cursor was closed
