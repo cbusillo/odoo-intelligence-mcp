@@ -184,6 +184,75 @@ async def test_read_docker_connection_error() -> None:
 
 
 @pytest.mark.asyncio
+async def test_read_file_with_relative_path_search() -> None:
+    """Test searching for files using relative paths in addon directories."""
+    with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
+        with patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths:
+            mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
+            
+            mock_instance = mock_docker.return_value
+            mock_container = mock_instance.get_container.return_value
+            
+            # First exec_run (absolute path check) fails
+            first_exec = MagicMock()
+            first_exec.exit_code = 1
+            first_exec.output = (b"", b"not found")
+            
+            # Second exec_run (test -f for first addon path) succeeds
+            test_exec = MagicMock()
+            test_exec.exit_code = 0
+            
+            # Third exec_run (cat file) succeeds
+            cat_exec = MagicMock()
+            cat_exec.exit_code = 0
+            cat_exec.output = (b"# Product module code\nclass Product:\n    pass", b"")
+            
+            mock_container.exec_run.side_effect = [first_exec, test_exec, cat_exec]
+            
+            result = await read_odoo_file("product/models/product.py")
+            
+            assert result["success"] is True
+            assert "Product module code" in result["content"]
+            # Path could be from either addon path
+            assert result["path"] in [
+                "/odoo/addons/product/models/product.py",
+                "/volumes/addons/product/models/product.py"
+            ]
+
+
+@pytest.mark.asyncio
+async def test_read_file_with_addon_prefix_path() -> None:
+    """Test reading files with addons/ or enterprise/ prefix."""
+    with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
+        with patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths:
+            mock_paths.return_value = ["/odoo/addons", "/volumes/enterprise"]
+            
+            mock_instance = mock_docker.return_value
+            mock_container = mock_instance.get_container.return_value
+            
+            # First exec_run (absolute path) fails
+            first_exec = MagicMock()
+            first_exec.exit_code = 1
+            first_exec.output = (b"", b"not found")
+            
+            # Second exec_run (test -f for mapped path) succeeds
+            test_exec = MagicMock()
+            test_exec.exit_code = 0
+            
+            # Third exec_run (cat file) succeeds
+            cat_exec = MagicMock()
+            cat_exec.exit_code = 0
+            cat_exec.output = (b"# Enterprise module", b"")
+            
+            mock_container.exec_run.side_effect = [first_exec, test_exec, cat_exec]
+            
+            result = await read_odoo_file("enterprise/hr_payroll/models/hr_payslip.py")
+            
+            assert result["success"] is True
+            assert "Enterprise module" in result["content"]
+
+
+@pytest.mark.asyncio
 async def test_read_with_out_of_range_start_line() -> None:
     """Test out of range start_line validation."""
     test_content = "\n".join(f"line {i}" for i in range(1, 11))  # 10 lines
