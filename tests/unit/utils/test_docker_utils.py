@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+
 import pytest
 from docker.errors import APIError, DockerException, NotFound
 
@@ -10,9 +11,9 @@ def test_docker_client_manager_init_success() -> None:
     with patch("odoo_intelligence_mcp.utils.docker_utils.docker.from_env") as mock_docker:
         mock_client = MagicMock()
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         assert manager.client == mock_client
         mock_docker.assert_called_once()
 
@@ -21,7 +22,7 @@ def test_docker_client_manager_init_failure() -> None:
     """Test DockerClientManager initialization when Docker is not available."""
     with patch("odoo_intelligence_mcp.utils.docker_utils.docker.from_env") as mock_docker:
         mock_docker.side_effect = DockerException("Docker not available")
-        
+
         with pytest.raises(DockerException):
             DockerClientManager()
 
@@ -35,11 +36,11 @@ def test_get_container_success() -> None:
         mock_container.status = "running"
         mock_client.containers.get.return_value = mock_container
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         result = manager.get_container("test-container")
-        
+
         assert result == mock_container
         mock_client.containers.get.assert_called_with("test-container")
 
@@ -50,11 +51,11 @@ def test_get_container_not_found() -> None:
         mock_client = MagicMock()
         mock_client.containers.get.side_effect = NotFound("Container not found")
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         result = manager.get_container("missing-container")
-        
+
         assert isinstance(result, dict)
         assert result["success"] is False
         assert "Container 'missing-container' not found" in result["error"]
@@ -67,11 +68,11 @@ def test_get_container_api_error() -> None:
         mock_client = MagicMock()
         mock_client.containers.get.side_effect = APIError("API error")
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         result = manager.get_container("test-container")
-        
+
         assert isinstance(result, dict)
         assert "API error" in result["error"]
 
@@ -84,14 +85,14 @@ def test_handle_container_operation_success() -> None:
         mock_container.name = "test-container"
         mock_client.containers.get.return_value = mock_container
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         def operation(container):
             return {"result": "success"}
-        
+
         result = manager.handle_container_operation("test-container", "test_op", operation)
-        
+
         assert result["success"] is True
         assert result["operation"] == "test_op"
         assert result["data"]["result"] == "success"
@@ -104,14 +105,14 @@ def test_handle_container_operation_failure() -> None:
         mock_container = MagicMock()
         mock_client.containers.get.return_value = mock_container
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         def operation(container):
             raise ValueError("Operation failed")
-        
+
         result = manager.handle_container_operation("test-container", "test_op", operation)
-        
+
         assert result["success"] is False
         assert result["error"] == "Error during test_op: Operation failed"
         assert result["error_type"] == "ValueError"
@@ -122,22 +123,22 @@ def test_handle_container_operation_container_error() -> None:
     with patch("odoo_intelligence_mcp.utils.docker_utils.docker.from_env") as mock_docker:
         mock_client = MagicMock()
         mock_docker.return_value = mock_client
-        
+
         manager = DockerClientManager()
-        
+
         with patch.object(manager, "get_container") as mock_get:
             mock_get.return_value = {
                 "success": False,
-                "error": "Container not found", 
+                "error": "Container not found",
                 "error_type": "NotFound",
-                "container": "missing-container"
+                "container": "missing-container",
             }
-            
+
             def operation(container):
                 return {"result": "success"}
-            
+
             result = manager.handle_container_operation("missing-container", "test_op", operation)
-            
+
             assert result["success"] is False
             assert result["error"] == "Container not found"
             assert result["error_type"] == "NotFound"

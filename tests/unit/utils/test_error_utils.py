@@ -1,5 +1,4 @@
 from typing import Any
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -62,7 +61,7 @@ class TestCustomExceptions:
 def test_create_error_response_basic() -> None:
     error = ValueError("Test error")
     response = create_error_response(error)
-    
+
     assert response["success"] is False
     assert response["error"] == "Test error"
     assert response["error_type"] == "ValueError"
@@ -71,7 +70,7 @@ def test_create_error_response_basic() -> None:
 def test_create_error_response_without_type() -> None:
     error = ValueError("Test error")
     response = create_error_response(error, include_type=False)
-    
+
     assert response["success"] is False
     assert response["error"] == "Test error"
     assert "error_type" not in response
@@ -80,7 +79,7 @@ def test_create_error_response_without_type() -> None:
 def test_create_error_response_with_odoo_error() -> None:
     error = ModelNotFoundError("test.model")
     response = create_error_response(error)
-    
+
     assert response["success"] is False
     assert response["error"] == "Model 'test.model' not found in Odoo registry"
     assert response["error_type"] == "ModelNotFoundError"
@@ -89,7 +88,7 @@ def test_create_error_response_with_odoo_error() -> None:
 def test_create_error_response_with_field_error() -> None:
     error = FieldNotFoundError("test.model", "test_field")
     response = create_error_response(error)
-    
+
     assert response["success"] is False
     assert response["error"] == "Field 'test_field' not found in model 'test.model'"
     assert response["error_type"] == "FieldNotFoundError"
@@ -100,7 +99,7 @@ def test_create_error_response_with_field_error() -> None:
 def test_create_error_response_with_docker_error() -> None:
     error = DockerConnectionError("test-container", "Connection refused")
     response = create_error_response(error)
-    
+
     assert response["success"] is False
     assert response["error_type"] == "DockerConnectionError"
     assert response["container"] == "test-container"
@@ -109,7 +108,7 @@ def test_create_error_response_with_docker_error() -> None:
 def test_create_error_response_with_code_error() -> None:
     error = CodeExecutionError("print('hello')", "SyntaxError")
     response = create_error_response(error)
-    
+
     assert response["success"] is False
     assert response["error_type"] == "CodeExecutionError"
     assert response["code"] == "print('hello')"
@@ -119,7 +118,7 @@ def test_create_error_response_with_code_error() -> None:
 def test_create_error_response_with_invalid_arg_error() -> None:
     error = InvalidArgumentError("count", "int", "abc")
     response = create_error_response(error)
-    
+
     assert response["success"] is False
     assert response["error_type"] == "InvalidArgumentError"
     assert response["argument"] == "count"
@@ -131,7 +130,7 @@ async def test_handle_tool_error_with_success() -> None:
     @handle_tool_error
     async def successful_tool() -> dict[str, Any]:
         return {"success": True, "data": "result"}
-    
+
     result = await successful_tool()
     assert result == {"success": True, "data": "result"}
 
@@ -141,7 +140,7 @@ async def test_handle_tool_error_with_odoo_error() -> None:
     @handle_tool_error
     async def failing_tool() -> dict[str, Any]:
         raise ModelNotFoundError("test.model")
-    
+
     result = await failing_tool()
     assert result["success"] is False
     assert "Model 'test.model' not found" in result["error"]
@@ -153,7 +152,7 @@ async def test_handle_tool_error_with_generic_exception() -> None:
     @handle_tool_error
     async def failing_tool() -> dict[str, Any]:
         raise ValueError("Something went wrong")
-    
+
     result = await failing_tool()
     assert result["success"] is False
     assert result["error"] == "Something went wrong"
