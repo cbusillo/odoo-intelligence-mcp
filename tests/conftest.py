@@ -127,7 +127,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 "display_names": ["Test Partner"],
             }
 
-        if "product.template" in code and "mapped" in code:
+        if "product.template" in code and "mapped" in code and "from collections import Counter" not in code:
             return {"success": True, "result": [100.0, 200.0, 150.0]}
 
         # Handle SQL query patterns
@@ -176,7 +176,6 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             "calculations": {"success": True, "result": {"calculation": 155, "text": "Result is 155"}},
             # Remove lambda pattern too
             "count_draft": {"success": True, "result": {"total": 30, "by_state": {"draft": 10, "confirmed": 15, "done": 5}}},
-            "search_count": {"success": True, "result": {"counts": {"draft": 10, "confirmed": 15}, "total": 25}},
             "test data": {"success": True, "result": {"calculation": 30, "partner_id": 123, "test_partners_count": 1}},
         }
 
@@ -604,10 +603,30 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             model_name = model_match.group(1) if model_match else "product.template"
             field_name = field_match.group(1) if field_match else "name"
             
+            # Return the correct structure that matches what the actual function returns
             return {
                 "model": model_name,
                 "field": field_name,
-                "field_type": "selection" if field_name == "state" else "char",
+                "field_info": {
+                    "type": "selection" if field_name == "state" else "char",
+                    "string": field_name.replace("_", " ").title(),
+                    "required": False,
+                    "readonly": False,
+                    "store": True,
+                    "compute": None,
+                    "relation": None,
+                },
+                "statistics": {
+                    "total_records": 100,
+                    "sample_size": 100,
+                    "null_count": 5,
+                    "empty_count": 3,
+                    "unique_count": 10,
+                    "null_percentage": 5.0,
+                    "unique_percentage": 10.53,
+                },
+                "value_distribution": [("Value1", 20), ("Value2", 15), ("Value3", 10)],
+                "sample_values": ["Value1", "Value2", "Value3", None, "", "Value4"],
                 "analysis": {
                     "total_records": 100,
                     "analyzed_records": 100,
@@ -620,6 +639,43 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 },
             }
 
+        # Handle search_field_properties queries 
+        if "property_type = " in code and "model_names = list(env.registry.models.keys())" in code:
+            # Extract property_type from code
+            import re
+            property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
+            property_type = property_match.group(1) if property_match else "computed"
+            
+            return {
+                "results": [
+                    {
+                        "model": "sale.order",
+                        "description": "Sales Order",
+                        "fields": [
+                            {
+                                "field": f"test_{property_type}_field",
+                                "type": "char",
+                                "string": f"Test {property_type.title()} Field",
+                                "compute_method": "_compute_test" if property_type == "computed" else None,
+                                "related_path": "partner_id.name" if property_type == "related" else None,
+                                "stored": "True" if property_type == "computed" else None,
+                            }
+                        ],
+                    },
+                    {
+                        "model": "res.partner",
+                        "description": "Contact",
+                        "fields": [
+                            {
+                                "field": f"{property_type}_email",
+                                "type": "char",
+                                "string": f"{property_type.title()} Email",
+                            }
+                        ],
+                    },
+                ]
+            }
+        
         # Handle resolve dynamic fields queries
         if '"computed_fields": {}' in code and '"related_fields": {}' in code and '"runtime_fields": []' in code:
             # Check for invalid model
@@ -700,26 +756,27 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             method_name = method_match.group(1) if method_match else "create"
 
             if method_name == "nonexistent_method":
-                return {"method_name": method_name, "models": [], "total_models_with_method": 0}
+                return []  # Return empty list for nonexistent methods
 
-            return {
-                "method_name": method_name,
-                "models": [
-                    {
-                        "model": "sale.order",
-                        "module": "odoo.addons.sale.models.sale_order",
-                        "signature": "(self, vals)",
-                        "source_preview": "1: def create(self, vals):\n2:     # Implementation",
-                    },
-                    {
-                        "model": "res.partner",
-                        "module": "odoo.addons.base.models.res_partner",
-                        "signature": "(self, vals)",
-                        "source_preview": "1: def create(self, vals):\n2:     # Implementation",
-                    },
-                ],
-                "total_models_with_method": 2,
-            }
+            # Return list of implementations (the function wraps this in the result dict)
+            return [
+                {
+                    "model": "sale.order",
+                    "module": "odoo.addons.sale.models.sale_order",
+                    "signature": "(self, vals)",
+                    "doc": "",
+                    "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
+                    "has_super": True,
+                },
+                {
+                    "model": "res.partner",
+                    "module": "odoo.addons.base.models.res_partner",
+                    "signature": "(self, vals)",
+                    "doc": "",
+                    "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
+                    "has_super": False,
+                },
+            ]
 
         # Handle search_decorators queries
         if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:

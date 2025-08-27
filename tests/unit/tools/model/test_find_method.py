@@ -15,9 +15,9 @@ async def test_find_method_basic(mock_odoo_env: MagicMock) -> None:
 
     assert "method_name" in result
     assert result["method_name"] == method_name
-    assert "models" in result
-    assert isinstance(result["models"], dict)
-    assert "items" in result["models"]
+    assert "implementations" in result
+    assert isinstance(result["implementations"], dict)
+    assert "items" in result["implementations"]
 
 
 @pytest.mark.asyncio
@@ -30,8 +30,8 @@ async def test_find_method_with_results(mock_odoo_env: MagicMock) -> None:
 
     assert "method_name" in result
     assert result["method_name"] == method_name
-    assert "models" in result
-    assert isinstance(result["models"], dict)
+    assert "implementations" in result
+    assert isinstance(result["implementations"], dict)
 
 
 @pytest.mark.asyncio
@@ -44,9 +44,9 @@ async def test_find_method_not_found(mock_odoo_env: MagicMock) -> None:
 
     assert "method_name" in result
     assert result["method_name"] == method_name
-    assert "models" in result
-    if isinstance(result["models"], dict):
-        assert result["models"]["items"] == []
+    assert "implementations" in result
+    if isinstance(result["implementations"], dict):
+        assert result["implementations"]["items"] == []
 
 
 @pytest.mark.asyncio
@@ -59,6 +59,6 @@ async def test_find_method_with_pagination(mock_odoo_env: MagicMock) -> None:
     result = await find_method_implementations(mock_odoo_env, method_name, pagination)
 
     assert "method_name" in result
-    assert "models" in result
-    if isinstance(result["models"], dict):
-        assert "pagination" in result["models"]
+    assert "implementations" in result
+    if isinstance(result["implementations"], dict):
+        assert "pagination" in result["implementations"]

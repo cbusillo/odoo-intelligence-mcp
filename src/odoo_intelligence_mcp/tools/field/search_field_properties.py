@@ -75,6 +75,5 @@ result = {{"results": results}}
 """
 
     result = await execute_and_paginate_results(env, code, pagination)
-    if "error" in result:
-        result["property_type"] = property_type
+    result["property"] = property_type
     return result

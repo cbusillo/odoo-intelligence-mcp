@@ -39,12 +39,9 @@ class OtherModel(models.Model):
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
         result = await search_code("test_method")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
-    if "items" in result["matches"]:
-        assert len(result["matches"]["items"]) > 0
-        assert "file" in result["matches"]["items"][0]
-        assert "matches" in result["matches"]["items"][0]
+    assert "items" in result
+    assert isinstance(result["items"], list)
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -62,10 +59,9 @@ def compute_total(self):
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
         result = await search_code("total")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
-    if "items" in result["matches"]:
-        assert len(result["matches"]["items"]) > 0
+    assert "items" in result
+    assert isinstance(result["items"], list)
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -88,8 +84,8 @@ async def test_search_code_xml_files() -> None:
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=xml_content)):
         result = await search_code("test\\.model", "xml")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
+    assert "items" in result
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -103,10 +99,9 @@ async def test_search_code_with_pagination() -> None:
         pagination = PaginationParams(limit=10, offset=0)
         result = await search_code("test_method", pagination=pagination)
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
-    if "pagination" in result["matches"]:
-        assert result["matches"]["pagination"]["page_size"] == 10
+    assert "items" in result
+    assert "pagination" in result
+    assert result["pagination"]["page_size"] == 10
 
 
 @pytest.mark.asyncio
@@ -118,10 +113,9 @@ async def test_search_code_no_matches() -> None:
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
         result = await search_code("nonexistent_pattern")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
-    if "items" in result["matches"]:
-        assert result["matches"]["items"] == []
+    assert "items" in result
+    assert result["items"] == []
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -138,8 +132,8 @@ class TestModel(models.Model):
         # Search for uppercase TEST
         result = await search_code("TEST")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
+    assert "items" in result
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -160,8 +154,8 @@ def _onchange_partner(self):
         # Search for @api decorators
         result = await search_code(r"@api\.\w+")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
+    assert "items" in result
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -180,8 +174,8 @@ async def test_search_code_file_read_error() -> None:
         result = await search_code("test")
 
     # Should still return results from readable files
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
+    assert "items" in result
+    assert "pagination" in result
 
 
 @pytest.mark.asyncio
@@ -204,5 +198,5 @@ odoo.define('module.widget', function (require) {
     with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=js_content)):
         result = await search_code("Widget", "js")
 
-    assert "matches" in result
-    assert isinstance(result["matches"], dict)
+    assert "items" in result
+    assert "pagination" in result
