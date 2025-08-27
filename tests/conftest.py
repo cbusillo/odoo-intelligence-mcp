@@ -621,28 +621,24 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             }
 
         # Handle resolve dynamic fields queries
-        if "computed_fields = {}" in code and "related_fields = {}" in code and "dependency_graph = {}" in code:
+        if '"computed_fields": {}' in code and '"related_fields": {}' in code and '"runtime_fields": []' in code:
             # Check for invalid model
             if "invalid.model" in code:
                 return {"error": "Model invalid.model not found"}
 
-            model_name = (
-                "sale.order.line"
-                if "sale.order.line" in code
-                else "account.move.line"
-                if "account.move.line" in code
-                else "sale.order"
-                if "sale.order" in code
-                else "account.move"
-                if "account.move" in code
-                else "product.template"
-            )
-
+            # Extract model_name from code
+            import re
+            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+            model_name = model_match.group(1) if model_match else "sale.order"
+            
             return {
                 "model": model_name,
-                "computed_fields": {},
-                "related_fields": {},
-                "dependency_graph": {},
+                "computed_fields": create_paginated_response([]),
+                "related_fields": create_paginated_response([]),
+                "field_dependencies": {},
+                "runtime_fields": [],
+                "reverse_dependencies": {},
+                "dependency_graph": create_paginated_response([]),
                 "summary": {
                     "total_computed": 0,
                     "total_related": 0,
@@ -675,8 +671,28 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 "models_scanned": 100,
             }
 
+        # Handle search_field_properties queries first (more specific)
+        if "model_names = list(env.registry.models.keys())" in code and "field_data.get('compute')" in code:
+            # Extract property_type from code
+            import re
+            property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
+            property_type = property_match.group(1) if property_match else "computed"
+            
+            if property_type == "invalid_property":
+                return {"error": f"Invalid property type. Valid properties: computed, related, stored, required, readonly"}
+            
+            return {
+                "property": property_type,
+                "fields": create_paginated_response([
+                    {"model": "sale.order", "field": "amount_total", "type": "float"},
+                    {"model": "res.partner", "field": "display_name", "type": "char"}
+                ]),
+                "total_fields": 2,
+                "models_scanned": 100
+            }
+        
         # Handle find_method queries
-        if "model_names = list(env.registry.models.keys())" in code or "hasattr(model_class, method_name)" in code:
+        if "model_names = list(env.registry.models.keys())" in code and "hasattr(model_class, method_name)" in code:
             # Extract method_name from code
             import re
 

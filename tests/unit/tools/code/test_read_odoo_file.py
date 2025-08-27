@@ -20,10 +20,10 @@ line 5"""
         mock_instance = mock_docker.return_value
         mock_container = mock_instance.get_container.return_value
         
-        # Mock successful cat command
+        # Mock successful cat command (with demux=True returns tuple)
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/odoo/addons/sale/models/sale.py")
@@ -45,7 +45,7 @@ async def test_read_with_line_range() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/odoo/addons/test.py", start_line=10, end_line=20)
@@ -75,7 +75,7 @@ async def test_read_with_pattern_search() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/odoo/addons/test.py", pattern="total")
@@ -95,7 +95,7 @@ async def test_read_file_not_found() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 1
-        exec_result.output = b"cat: /nonexistent.py: No such file or directory"
+        exec_result.output = (None, b"cat: /nonexistent.py: No such file or directory")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/nonexistent.py")
@@ -115,7 +115,7 @@ async def test_read_with_invalid_regex() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/test.py", pattern="[invalid(regex")
@@ -135,7 +135,7 @@ async def test_read_with_context_lines() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/test.py", pattern="line 10", context_lines=2)
@@ -157,7 +157,7 @@ async def test_read_large_file_truncation() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         result = await read_odoo_file("/test.py")
@@ -191,7 +191,7 @@ async def test_read_with_line_range_validation() -> None:
         
         exec_result = MagicMock()
         exec_result.exit_code = 0
-        exec_result.output = test_content.encode()
+        exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
         # Test with end_line < start_line (should be corrected)
