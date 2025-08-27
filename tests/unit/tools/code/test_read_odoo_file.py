@@ -145,12 +145,11 @@ async def test_read_with_context_lines() -> None:
         assert len(result["matches"]) > 0
 
 
-@pytest.mark.skip(reason="Function doesn't implement truncation")
 @pytest.mark.asyncio
-async def test_read_large_file_truncation() -> None:
-    """Test that large files are truncated."""
-    # Create content with 3000 lines
-    test_content = "\n".join(f"line {i}" for i in range(1, 3001))
+async def test_read_large_file_no_line_numbers() -> None:
+    """Test that large files (>500 lines) are returned without line numbers."""
+    # Create content with 600 lines
+    test_content = "\n".join(f"line {i}" for i in range(1, 601))
     
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
@@ -164,30 +163,30 @@ async def test_read_large_file_truncation() -> None:
         result = await read_odoo_file("/test.py")
         
         assert result["success"] is True
-        assert result["total_lines"] == 3000
-        # Check that content is limited to 2000 lines
-        content_lines = result["content"].strip().split("\n")
-        assert len(content_lines) <= 2000
+        assert result["total_lines"] == 600
+        # Large files return raw content without line numbers
+        assert result["content"] == test_content
+        assert "   1:" not in result["content"]  # No line numbers
 
 
-@pytest.mark.skip(reason="Test expectations don't match implementation")
 @pytest.mark.asyncio
 async def test_read_docker_connection_error() -> None:
     """Test Docker connection error handling."""
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
-        mock_docker.side_effect = Exception("Docker connection failed")
+        mock_instance = mock_docker.return_value
+        mock_instance.get_container.return_value = {"error": "Docker connection failed"}
         
         result = await read_odoo_file("/test.py")
         
         assert result["success"] is False
         assert "error" in result
+        assert "Container error" in result["error"]
 
 
-@pytest.mark.skip(reason="Test expectations don't match implementation")
 @pytest.mark.asyncio
-async def test_read_with_line_range_validation() -> None:
-    """Test line range validation."""
-    test_content = "\n".join(f"line {i}" for i in range(1, 101))
+async def test_read_with_out_of_range_start_line() -> None:
+    """Test out of range start_line validation."""
+    test_content = "\n".join(f"line {i}" for i in range(1, 11))  # 10 lines
     
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
@@ -198,9 +197,9 @@ async def test_read_with_line_range_validation() -> None:
         exec_result.output = (test_content.encode(), b"")  # (stdout, stderr)
         mock_container.exec_run.return_value = exec_result
         
-        # Test with end_line < start_line (should be corrected)
-        result = await read_odoo_file("/test.py", start_line=20, end_line=10)
+        # Test with start_line > total lines
+        result = await read_odoo_file("/test.py", start_line=20, end_line=25)
         
-        assert result["success"] is True
-        # Should still return content despite invalid range
-        assert result["content"] != ""
+        assert result["success"] is False
+        assert "out of range" in result["error"]
+        assert "file has 10 lines" in result["error"]

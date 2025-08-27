@@ -702,6 +702,33 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 },
             }
 
+        # Handle search decorator queries
+        if "decorator = " in code and "inspect.getmembers(model_class, inspect.isfunction)" in code:
+            # Extract decorator type from code
+            import re
+            decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
+            decorator_type = decorator_match.group(1) if decorator_match else "depends"
+            
+            # Return empty results for invalid decorator types
+            if decorator_type not in ["depends", "constrains", "onchange", "model_create_multi"]:
+                return {"results": []}
+            
+            return {
+                "results": [
+                    {
+                        "model": "sale.order",
+                        "description": "Sales Order",
+                        "methods": [
+                            {
+                                "method": "_compute_depends",
+                                "depends_on": ["field1", "field2"],
+                                "signature": "(self)"
+                            }
+                        ]
+                    }
+                ]
+            }
+
         # Handle search field properties queries
         if "fields_by_property = []" in code and "'property': property_type" in code:
             # Check for invalid property

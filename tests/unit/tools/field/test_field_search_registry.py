@@ -7,7 +7,6 @@ from odoo_intelligence_mcp.core.utils import PaginationParams
 from odoo_intelligence_mcp.tools.field import search_field_properties, search_field_type
 from tests.mock_types import ConcreteModelMock as MockModel
 
-pytestmark = pytest.mark.skip(reason="Registry tests need refactoring for pagination")
 
 
 class TestFieldSearchRegistryIssue:
@@ -23,28 +22,35 @@ class TestFieldSearchRegistryIssue:
         """Test search_field_type with DockerRegistry that returns empty."""
         env = mock_env_docker_registry
 
-        # Call search_field_type
-        result = await search_field_type(env, "many2one", PaginationParams())
-
-        # Due to DockerRegistry returning empty iterator, we get no fields
-        assert result["field_type"] == "many2one"
-        assert result["fields"] == []
-        assert result["summary"]["total_models"] == 0
-        assert result["summary"]["total_fields"] == 0
+        # Mock execute_code to return empty results
+        with patch.object(env, 'execute_code', new_callable=AsyncMock) as mock_exec:
+            mock_exec.return_value = {"results": []}
+            
+            # Call search_field_type
+            result = await search_field_type(env, "many2one", PaginationParams())
+            
+            # Due to empty results, we get no fields but with pagination structure
+            assert "fields" in result
+            assert result["fields"]["items"] == []
+            assert result["fields"]["pagination"]["total_count"] == 0
 
     @pytest.mark.asyncio
     async def test_search_field_properties_with_docker_registry(self, mock_env_docker_registry: HostOdooEnvironment) -> None:
         """Test search_field_properties with DockerRegistry that returns empty."""
         env = mock_env_docker_registry
 
-        # Call search_field_properties
-        result = await search_field_properties(env, "computed", PaginationParams())
-
-        # Due to DockerRegistry returning empty iterator, we get no fields
-        assert result["property"] == "computed"
-        assert result["fields"] == []
-        assert result["summary"]["total_models"] == 0
-        assert result["summary"]["total_fields"] == 0
+        # Mock execute_code to return empty results
+        with patch.object(env, 'execute_code', new_callable=AsyncMock) as mock_exec:
+            mock_exec.return_value = {"results": []}
+            
+            # Call search_field_properties
+            result = await search_field_properties(env, "computed", PaginationParams())
+            
+            # Due to empty results, we get no fields but with pagination structure
+            assert result["property"] == "computed"
+            assert "fields" in result
+            assert result["fields"]["items"] == []
+            assert result["fields"]["pagination"]["total_count"] == 0
 
     @pytest.mark.asyncio
     async def test_field_search_with_mock_registry(self) -> None:
@@ -52,94 +58,108 @@ class TestFieldSearchRegistryIssue:
         # Create mock environment
         env = MagicMock()
 
-        # Create a MockRegistry instance
-        registry = MockRegistry()
-        # Note: MockRegistry.models is a ClassVar, so we need to set it on the class
-        MockRegistry.models = {"res.partner": MockModel, "sale.order": MockModel}  # type: ignore[assignment]
-        env.registry = registry
+        # Mock execute_code to simulate field search
+        async def mock_execute_search_many2one(*args, **kwargs):
+            return {
+                "results": [
+                    {
+                        "model": "res.partner",
+                        "description": "Contact",
+                        "fields": [
+                            {"field": "company_id", "string": "Company", "required": False, "comodel_name": "res.company"}
+                        ]
+                    },
+                    {
+                        "model": "sale.order",
+                        "description": "Sales Order",
+                        "fields": [
+                            {"field": "partner_id", "string": "Customer", "required": False, "comodel_name": "res.partner"}
+                        ]
+                    }
+                ]
+            }
 
-        # Mock model field access
-        partner_fields = {
-            "name": MagicMock(type="char", string="Name"),
-            "company_id": MagicMock(type="many2one", string="Company", comodel_name="res.company"),
-            "email": MagicMock(type="char", string="Email"),
-        }
-
-        sale_fields = {
-            "partner_id": MagicMock(type="many2one", string="Customer", comodel_name="res.partner"),
-            "amount_total": MagicMock(type="float", compute="_compute_amount", string="Total"),
-            "state": MagicMock(type="selection", string="Status"),
-        }
-
-        # Mock __getitem__ to return models with _fields
-        def get_model(name: str) -> MagicMock:
-            if name == "res.partner":
-                return MagicMock(_name="res.partner", _fields=partner_fields)
-            elif name == "sale.order":
-                return MagicMock(_name="sale.order", _fields=sale_fields)
-            return MagicMock(_fields={})
-
-        env.__getitem__.side_effect = get_model
+        env.execute_code = mock_execute_search_many2one
 
         # Test search_field_type
         result = await search_field_type(env, "many2one", PaginationParams())
 
-        # Should find 2 many2one fields
-        assert len(result["fields"]) == 2
-        field_names = [(f["model_name"], f["field_name"]) for f in result["fields"]]
-        assert ("res.partner", "company_id") in field_names
-        assert ("sale.order", "partner_id") in field_names
+        # Should find 2 many2one fields with pagination structure
+        assert "fields" in result
+        assert "items" in result["fields"]
+        # The items will be models with their fields, not flat field list
+        items = result["fields"]["items"]
+        assert len(items) == 2
+        model_names = [item["model"] for item in items]
+        assert "res.partner" in model_names
+        assert "sale.order" in model_names
 
-        # Reset for next test
-        env.__getitem__.side_effect = get_model
+        # Mock execute_code for computed field search
+        async def mock_execute_search_computed(*args, **kwargs):
+            return {
+                "results": [
+                    {
+                        "model": "sale.order",
+                        "description": "Sales Order",
+                        "fields": [
+                            {"field": "amount_total", "string": "Total", "compute": "_compute_amount"}
+                        ]
+                    }
+                ]
+            }
+        
+        env.execute_code = mock_execute_search_computed
 
         # Test search_field_properties for computed fields
         result = await search_field_properties(env, "computed", PaginationParams())
 
-        # Should find 1 computed field
-        assert len(result["fields"]) == 1
-        assert result["fields"][0]["model_name"] == "sale.order"
-        assert result["fields"][0]["field_name"] == "amount_total"
+        # Should find 1 computed field with pagination structure
+        assert "fields" in result
+        assert "items" in result["fields"]
+        items = result["fields"]["items"]
+        assert len(items) == 1
+        assert items[0]["model"] == "sale.order"
+        # Check that amount_total is in the fields list
+        field_names = [f["field"] for f in items[0]["fields"]]
+        assert "amount_total" in field_names
 
     @pytest.mark.asyncio
     async def test_field_search_with_host_env_and_execute_code(self) -> None:
-        """Test field search when HostOdooEnvironment has get_model_names."""
+        """Test field search when HostOdooEnvironment has execute_code."""
         env = HostOdooEnvironment("test", "test", "/test")
 
-        # Add get_model_names method
-        async def mock_get_model_names() -> list[str]:
-            return ["product.template", "product.product"]
-
-        env.get_model_names = mock_get_model_names
-
-        # Mock execute_code to return models with fields
+        # Mock execute_code to return required fields
         with patch.object(env, "execute_code", new_callable=AsyncMock) as mock_exec:
-            # First call for product.template
-            product_template_fields = {
-                "name": MagicMock(type="char", string="Name", required=True),
-                "list_price": MagicMock(type="float", string="Sales Price"),
-                "categ_id": MagicMock(type="many2one", string="Category"),
+            mock_exec.return_value = {
+                "results": [
+                    {
+                        "model": "product.template",
+                        "description": "Product Template",
+                        "fields": [
+                            {"field": "name", "string": "Name", "required": True}
+                        ]
+                    },
+                    {
+                        "model": "product.product",
+                        "description": "Product",
+                        "fields": [
+                            {"field": "product_tmpl_id", "string": "Product Template", "required": True}
+                        ]
+                    }
+                ]
             }
-
-            # Second call for product.product
-            product_product_fields = {
-                "barcode": MagicMock(type="char", string="Barcode"),
-                "product_tmpl_id": MagicMock(type="many2one", string="Product Template", required=True),
-            }
-
-            mock_exec.side_effect = [
-                MagicMock(_name="product.template", _fields=product_template_fields),
-                MagicMock(_name="product.product", _fields=product_product_fields),
-            ]
 
             # Test search for required fields
             result = await search_field_properties(env, "required", PaginationParams())
 
-            # Should find 2 required fields
-            assert len(result["fields"]) == 2
-            required_fields = [(f["model_name"], f["field_name"]) for f in result["fields"]]
-            assert ("product.template", "name") in required_fields
-            assert ("product.product", "product_tmpl_id") in required_fields
+            # Should find 2 required fields with pagination structure
+            assert "fields" in result
+            assert "items" in result["fields"]
+            items = result["fields"]["items"]
+            assert len(items) == 2
+            model_names = [item["model"] for item in items]
+            assert "product.template" in model_names
+            assert "product.product" in model_names
 
     def test_mock_registry_cleanup(self) -> None:
         """Test that we clean up MockRegistry.models after tests."""

@@ -11,8 +11,11 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
         pagination = PaginationParams()
     module_path = Path(module_name)
     if not module_path.exists():
-        # Get addon paths from the container
-        container_paths = await get_addon_paths_from_container()
+        try:
+            # Get addon paths from the container
+            container_paths = await get_addon_paths_from_container()
+        except Exception as e:
+            return {"error": str(e)}
 
         # Try to find the module in container paths
         # Note: This tool currently requires the module to exist on the host filesystem

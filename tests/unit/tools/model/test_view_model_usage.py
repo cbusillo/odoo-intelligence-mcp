@@ -61,9 +61,8 @@ async def test_view_model_usage_coverage(mock_odoo_env: MagicMock) -> None:
         assert "exposed_fields" in result["field_coverage"]
 
 
-@pytest.mark.skip(reason="Test needs refactoring for pagination")
 @pytest.mark.asyncio
-async def test_view_model_usage_buttons(mock_odoo_env: MagicMock) -> None:
+async def test_view_model_usage_view_types(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
     
     model_name = "account.move"
@@ -71,8 +70,8 @@ async def test_view_model_usage_buttons(mock_odoo_env: MagicMock) -> None:
     result = await get_view_model_usage(mock_odoo_env, model_name, PaginationParams())
 
     assert "model" in result
-    assert "buttons" in result
-    assert isinstance(result["buttons"], dict)
+    assert "view_types" in result
+    assert isinstance(result["view_types"], dict)
 
 
 @pytest.mark.asyncio
