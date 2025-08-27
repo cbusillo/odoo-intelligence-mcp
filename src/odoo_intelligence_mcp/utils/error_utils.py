@@ -85,12 +85,22 @@ def validate_model_name(model_name: str) -> None:
     if not isinstance(model_name, str):
         raise InvalidArgumentError("model_name", "string", model_name)
 
-    if not model_name:
-        raise InvalidArgumentError("model_name", "non-empty string", model_name)
+    if not model_name or model_name.strip() != model_name:
+        raise InvalidArgumentError("model_name", "non-empty string without leading/trailing spaces", model_name)
 
     # Basic validation for model name format
-    if not all(part.replace("_", "").isalnum() for part in model_name.split(".")):
-        raise InvalidArgumentError("model_name", "valid Odoo model name (e.g., 'res.partner', 'product.template')", model_name)
+    # Model names should be like 'res.partner' or 'product.template'
+    # Each part should start with a letter and contain only letters, numbers, and underscores
+    parts = model_name.split(".")
+    for part in parts:
+        if not part:  # Empty part (e.g., "res..partner")
+            raise InvalidArgumentError("model_name", "valid Odoo model name (e.g., 'res.partner', 'product.template')", model_name)
+        # Check first character is a letter
+        if not part[0].isalpha():
+            raise InvalidArgumentError("model_name", "valid Odoo model name (parts must start with a letter)", model_name)
+        # Check all characters are alphanumeric or underscore
+        if not all(c.isalnum() or c == "_" for c in part):
+            raise InvalidArgumentError("model_name", "valid Odoo model name (only letters, numbers, and underscores allowed)", model_name)
 
 
 def validate_field_name(field_name: str) -> None:
