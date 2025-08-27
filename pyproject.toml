@@ -108,6 +108,7 @@ ignore = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+timeout = 600
 addopts = [
     "-v",
     "--strict-markers",
