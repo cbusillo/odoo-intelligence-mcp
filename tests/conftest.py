@@ -587,7 +587,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             }
 
         # Handle field value analyzer queries
-        if "# Analyze field values" in code and '"analysis":' in code:
+        if "from collections import Counter" in code and "model_obj.search(domain, limit=sample_size)" in code:
             # Check for invalid model
             if "invalid.model" in code:
                 return {"error": "Model invalid.model not found"}
@@ -596,18 +596,14 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             if "nonexistent_field" in code:
                 return {"error": "Field nonexistent_field not found in res.partner"}
 
-            model_name = (
-                "sale.order"
-                if "sale.order" in code
-                else "product.product"
-                if "product.product" in code
-                else "res.partner"
-                if "res.partner" in code
-                else "product.template"
-            )
-
-            field_name = "state" if "state" in code else "email" if "email" in code else "barcode" if "barcode" in code else "name"
-
+            # Extract model and field from code
+            import re
+            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+            field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
+            
+            model_name = model_match.group(1) if model_match else "product.template"
+            field_name = field_match.group(1) if field_match else "name"
+            
             return {
                 "model": model_name,
                 "field": field_name,
