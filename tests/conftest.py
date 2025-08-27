@@ -88,6 +88,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             ),
             ("result = 10 + 45", {"success": True, "result": 55}),
             ("result = sum(range(1, 11))", {"success": True, "result": 55}),
+            ("result = lambda x: x + 1", {"success": True, "result": "<lambda>", "result_type": "function"}),
         ]
 
         # Check simple string patterns
@@ -552,17 +553,18 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             # Extract model_name and field_name from the code
             model_name = None
             field_name = None
-            
+
             # Look for model_name = 'xxx' pattern
             import re
+
             model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
             if model_match:
                 model_name = model_match.group(1)
-            
+
             field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
             if field_match:
                 field_name = field_match.group(1)
-            
+
             if not model_name:
                 model_name = "res.partner"
             if not field_name:
@@ -681,45 +683,43 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
         if "model_names = list(env.registry.models.keys())" in code or "hasattr(model_class, method_name)" in code:
             # Extract method_name from code
             import re
+
             method_match = re.search(r"method_name = ['\"]([^'\"]+)['\"]", code)
             method_name = method_match.group(1) if method_match else "create"
-            
+
             if method_name == "nonexistent_method":
-                return {
-                    "method_name": method_name,
-                    "models": [],
-                    "total_models_with_method": 0
-                }
-            
+                return {"method_name": method_name, "models": [], "total_models_with_method": 0}
+
             return {
                 "method_name": method_name,
                 "models": [
                     {
-                        "model": "sale.order", 
+                        "model": "sale.order",
                         "module": "odoo.addons.sale.models.sale_order",
                         "signature": "(self, vals)",
-                        "source_preview": "1: def create(self, vals):\n2:     # Implementation"
+                        "source_preview": "1: def create(self, vals):\n2:     # Implementation",
                     },
                     {
-                        "model": "res.partner", 
+                        "model": "res.partner",
                         "module": "odoo.addons.base.models.res_partner",
                         "signature": "(self, vals)",
-                        "source_preview": "1: def create(self, vals):\n2:     # Implementation"
-                    }
+                        "source_preview": "1: def create(self, vals):\n2:     # Implementation",
+                    },
                 ],
-                "total_models_with_method": 2
+                "total_models_with_method": 2,
             }
 
         # Handle search_decorators queries
         if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
             # Extract decorator from code
             import re
+
             decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
             decorator = decorator_match.group(1) if decorator_match else "depends"
-            
+
             if decorator == "invalid_decorator":
                 return {"decorator": decorator, "methods": [], "total_matches": 0}
-            
+
             return {
                 "decorator": decorator,
                 "methods": [
@@ -729,12 +729,12 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                             {
                                 "method": f"_compute_{decorator}",
                                 f"{decorator}_on" if decorator == "depends" else decorator: ["field1", "field2"],
-                                "signature": "(self)"
+                                "signature": "(self)",
                             }
-                        ]
+                        ],
                     }
                 ],
-                "total_matches": 1
+                "total_matches": 1,
             }
 
         # Handle view_model_usage queries
@@ -742,17 +742,30 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             # Check for invalid model
             if "invalid.model" in code:
                 return {"error": "Model invalid.model not found"}
-            
+
             # Extract model_name from code
             import re
+
             model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
             model_name = model_match.group(1) if model_match else "res.partner"
-            
+
             return {
                 "model": model_name,
                 "views": [
-                    {"name": f"{model_name}.form", "type": "form", "xml_id": f"{model_name.split('.')[0]}.view_form", "module": model_name.split('.')[0], "fields": ["name", "partner_id"]},
-                    {"name": f"{model_name}.tree", "type": "tree", "xml_id": f"{model_name.split('.')[0]}.view_tree", "module": model_name.split('.')[0], "fields": ["name", "state"]}
+                    {
+                        "name": f"{model_name}.form",
+                        "type": "form",
+                        "xml_id": f"{model_name.split('.')[0]}.view_form",
+                        "module": model_name.split(".")[0],
+                        "fields": ["name", "partner_id"],
+                    },
+                    {
+                        "name": f"{model_name}.tree",
+                        "type": "tree",
+                        "xml_id": f"{model_name.split('.')[0]}.view_tree",
+                        "module": model_name.split(".")[0],
+                        "fields": ["name", "state"],
+                    },
                 ],
                 "exposed_fields": ["name", "partner_id", "state"],
                 "view_types": {"form": 1, "tree": 1},
@@ -761,10 +774,10 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     "total_fields": 10,
                     "exposed_fields": 3,
                     "coverage_percentage": 30.0,
-                    "unexposed_fields": ["create_date", "write_date", "create_uid", "write_uid", "active", "company_id", "user_id"]
+                    "unexposed_fields": ["create_date", "write_date", "create_uid", "write_uid", "active", "company_id", "user_id"],
                 },
                 "buttons": [],
-                "actions": []
+                "actions": [],
             }
 
         # Handle inheritance chain queries
