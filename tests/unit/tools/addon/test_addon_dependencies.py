@@ -96,16 +96,37 @@ async def test_get_addon_dependencies_basic_only() -> None:
 }"""
 
     with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch("pathlib.Path.iterdir", return_value=[]),
-        patch("builtins.open", mock_open(read_data=mock_manifest_content)),
+        patch("odoo_intelligence_mcp.tools.addon.addon_dependencies.DockerClientManager") as mock_docker_manager_class,
+        patch("odoo_intelligence_mcp.tools.addon.addon_dependencies._get_addon_paths", return_value=["/opt/project/addons"]),
     ):
+        # Set up Docker manager mock
+        mock_docker_manager = MagicMock()
+        mock_docker_manager_class.return_value = mock_docker_manager
+
+        # Mock container
+        mock_container = MagicMock()
+        mock_docker_manager.get_container.return_value = mock_container
+
+        # Mock successful manifest read and empty dependent addons listing
+        def mock_exec_run(cmd: list[str]) -> MagicMock:
+            if cmd == ["cat", "/opt/project/addons/simple_addon/__manifest__.py"]:
+                mock_result = MagicMock()
+                mock_result.exit_code = 0
+                mock_result.output.decode.return_value = mock_manifest_content
+                return mock_result
+            else:  # ls command for dependent addons
+                mock_result = MagicMock()
+                mock_result.exit_code = 1  # No other addons found
+                return mock_result
+
+        mock_container.exec_run.side_effect = mock_exec_run
+
         result = await get_addon_dependencies(addon_name)
 
     assert result["addon"] == addon_name
     assert result["auto_install"] is False
     assert len(result["depends"]) == 1
     assert "base" in result["depends"]
-    assert len(result["depends_on_this"]) == 0  # No other addons depend on this
+    assert len(result["depends_on_this"]["items"]) == 0  # No other addons depend on this
     assert result["statistics"]["direct_dependencies"] == 1
     assert result["statistics"]["addons_depending_on_this"] == 0
