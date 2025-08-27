@@ -597,12 +597,13 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
 
             # Extract model and field from code
             import re
+
             model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
             field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
-            
+
             model_name = model_match.group(1) if model_match else "product.template"
             field_name = field_match.group(1) if field_match else "name"
-            
+
             # Return the correct structure that matches what the actual function returns
             return {
                 "model": model_name,
@@ -639,13 +640,14 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 },
             }
 
-        # Handle search_field_properties queries 
+        # Handle search_field_properties queries
         if "property_type = " in code and "model_names = list(env.registry.models.keys())" in code:
             # Extract property_type from code
             import re
+
             property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
             property_type = property_match.group(1) if property_match else "computed"
-            
+
             return {
                 "results": [
                     {
@@ -675,7 +677,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     },
                 ]
             }
-        
+
         # Handle resolve dynamic fields queries
         if '"computed_fields": {}' in code and '"related_fields": {}' in code and '"runtime_fields": []' in code:
             # Check for invalid model
@@ -684,9 +686,10 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
 
             # Extract model_name from code
             import re
+
             model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
             model_name = model_match.group(1) if model_match else "sale.order"
-            
+
             return {
                 "model": model_name,
                 "computed_fields": create_paginated_response([]),
@@ -706,25 +709,20 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
         if "decorator = " in code and "inspect.getmembers(model_class, inspect.isfunction)" in code:
             # Extract decorator type from code
             import re
+
             decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
             decorator_type = decorator_match.group(1) if decorator_match else "depends"
-            
+
             # Return empty results for invalid decorator types
             if decorator_type not in ["depends", "constrains", "onchange", "model_create_multi"]:
                 return {"results": []}
-            
+
             return {
                 "results": [
                     {
                         "model": "sale.order",
                         "description": "Sales Order",
-                        "methods": [
-                            {
-                                "method": "_compute_depends",
-                                "depends_on": ["field1", "field2"],
-                                "signature": "(self)"
-                            }
-                        ]
+                        "methods": [{"method": "_compute_depends", "depends_on": ["field1", "field2"], "signature": "(self)"}],
                     }
                 ]
             }
@@ -758,22 +756,25 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
         if "model_names = list(env.registry.models.keys())" in code and "field_data.get('compute')" in code:
             # Extract property_type from code
             import re
+
             property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
             property_type = property_match.group(1) if property_match else "computed"
-            
+
             if property_type == "invalid_property":
-                return {"error": f"Invalid property type. Valid properties: computed, related, stored, required, readonly"}
-            
+                return {"error": "Invalid property type. Valid properties: computed, related, stored, required, readonly"}
+
             return {
                 "property": property_type,
-                "fields": create_paginated_response([
-                    {"model": "sale.order", "field": "amount_total", "type": "float"},
-                    {"model": "res.partner", "field": "display_name", "type": "char"}
-                ]),
+                "fields": create_paginated_response(
+                    [
+                        {"model": "sale.order", "field": "amount_total", "type": "float"},
+                        {"model": "res.partner", "field": "display_name", "type": "char"},
+                    ]
+                ),
                 "total_fields": 2,
-                "models_scanned": 100
+                "models_scanned": 100,
             }
-        
+
         # Handle find_method queries
         if "model_names = list(env.registry.models.keys())" in code and "hasattr(model_class, method_name)" in code:
             # Extract method_name from code

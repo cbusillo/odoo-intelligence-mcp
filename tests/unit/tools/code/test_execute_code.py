@@ -16,6 +16,50 @@ async def test_execute_python_code_success(mock_odoo_env: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
+async def test_execute_code_docker_with_raw_output(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+    
+    env = HostOdooEnvironment("test", "test", "/test")
+    code = "print('hello docker')"
+    
+    # Mock execute_code to return Docker-style raw output
+    mock_exec = AsyncMock()
+    mock_exec.return_value = {"output": "hello docker\n", "raw": True}
+    env.execute_code = mock_exec
+    
+    result = await execute_code(env, code)
+    
+    assert result["success"] is True
+    assert result["output"] == "hello docker\n"
+
+
+@pytest.mark.asyncio  
+async def test_execute_code_docker_with_recordset_result(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+    
+    env = HostOdooEnvironment("test", "test", "/test")
+    code = "result = env['res.partner'].search([])"
+    
+    # Mock execute_code to return Docker-style recordset result
+    mock_exec = AsyncMock()
+    mock_exec.return_value = {
+        "result_type": "recordset",
+        "model": "res.partner",
+        "count": 3,
+        "ids": [1, 2, 3],
+        "display_names": ["Partner 1", "Partner 2", "Partner 3"]
+    }
+    env.execute_code = mock_exec
+    
+    result = await execute_code(env, code)
+    
+    assert result["success"] is True
+    assert result["result_type"] == "recordset"
+    assert result["model"] == "res.partner"
+    assert result["count"] == 3
+
+
+@pytest.mark.asyncio
 async def test_execute_python_code_syntax_error(mock_odoo_env: MagicMock) -> None:
     code = "print('hello world'"
 
@@ -194,6 +238,24 @@ async def test_execute_python_code_empty_code(mock_odoo_env: MagicMock) -> None:
 
     assert result["success"] is True
     assert result["message"] == "Code executed successfully. Assign to 'result' variable to see output."
+
+
+@pytest.mark.asyncio
+async def test_execute_code_docker_already_formatted_response(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+    
+    env = HostOdooEnvironment("test", "test", "/test")
+    code = "result = {'test': 'value'}"
+    
+    # Mock execute_code to return already formatted response  
+    mock_exec = AsyncMock()
+    mock_exec.return_value = {"success": True, "result": {"test": "value"}}
+    env.execute_code = mock_exec
+    
+    result = await execute_code(env, code)
+    
+    assert result["success"] is True
+    assert result["result"] == {"test": "value"}
 
 
 @pytest.mark.asyncio

@@ -52,12 +52,12 @@ def create_docker_manager_with_get_container(mock_manager_class: MagicMock) -> M
 
     mock_instance = MagicMock()
     mock_instance.get_container.return_value = mock_container
-    
+
     # Make handle_container_operation use the same container
     def mock_handle_operation(container_name: str, operation: str, func: Any) -> dict[str, Any]:
         inner_result = func(mock_container)
         return {"success": True, "operation": operation, "container": container_name, "data": inner_result}
-    
+
     mock_instance.handle_container_operation.side_effect = mock_handle_operation
 
     mock_manager_class.return_value = mock_instance
