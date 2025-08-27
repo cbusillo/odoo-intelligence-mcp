@@ -85,8 +85,11 @@ def validate_model_name(model_name: str) -> None:
     if not isinstance(model_name, str):
         raise InvalidArgumentError("model_name", "string", model_name)
 
-    if not model_name or model_name.strip() != model_name:
-        raise InvalidArgumentError("model_name", "non-empty string without leading/trailing spaces", model_name)
+    if not model_name:
+        raise InvalidArgumentError("model_name", "non-empty string", model_name)
+    
+    if model_name.strip() != model_name:
+        raise InvalidArgumentError("model_name", "string without leading/trailing spaces", model_name)
 
     # Basic validation for model name format
     # Model names should be like 'res.partner' or 'product.template'
