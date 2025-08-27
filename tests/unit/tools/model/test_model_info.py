@@ -150,7 +150,7 @@ async def test_get_model_info_validates_model_name(mock_odoo_env: MagicMock) -> 
 async def test_get_model_info_empty_model_name(mock_odoo_env: MagicMock) -> None:
     result = await get_model_info(mock_odoo_env, "")
     assert "error" in result
-    assert "Model name cannot be empty" in result["error"]
+    assert "non-empty string" in result["error"]
     assert result["error_type"] == "InvalidArgumentError"
 
 
