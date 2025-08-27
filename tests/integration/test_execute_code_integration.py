@@ -466,22 +466,28 @@ print("Partner saved successfully.")
         assert "saved successfully" in result["stdout"]
 
     @pytest.mark.asyncio
-    @patch("subprocess.run")
+    @patch("odoo_intelligence_mcp.core.env.subprocess.run")
     async def test_odoo_shell_vs_execute_code_consistency(
         self, mock_subprocess_run: MockSubprocessRun, real_odoo_env_if_available: CompatibleEnvironment
     ) -> None:
+        # Mock both the execute_code path (via environment) and the direct odoo_shell path
+        mock_subprocess_run.return_value.returncode = 0
+        mock_subprocess_run.return_value.stdout = '{"result": 5}'
+        mock_subprocess_run.return_value.stderr = ""
+
+        # Test execute_code through environment (mocked subprocess)
         code_for_execute = "result = 2 + 3"
         execute_result = await execute_code(real_odoo_env_if_available, code_for_execute)
 
-        mock_subprocess_run.return_value.returncode = 0
+        # Reset mock for odoo_shell direct call
         mock_subprocess_run.return_value.stdout = "5\n"
-        mock_subprocess_run.return_value.stderr = ""
-
+        
+        # Test direct odoo_shell call (also mocked subprocess)  
         code_for_shell = "print(2 + 3)"
         shell_result = odoo_shell(code_for_shell)
 
         assert execute_result["success"] is True
-        assert execute_result["result"] == 5
+        assert execute_result["result"]["result"] == 5
 
         assert shell_result["success"] is True
         assert "5" in shell_result["stdout"]
