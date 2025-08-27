@@ -210,21 +210,24 @@ class HostOdooEnvironment:
         return model_name in model_names
 
     def ensure_container_running(self) -> None:
-        check_cmd = ["docker", "ps", "--filter", f"name={self.container_name}", "--format", "{{.Names}}"]
-        result = subprocess.run(check_cmd, capture_output=True, text=True)
+        try:
+            check_cmd = ["docker", "ps", "--filter", f"name={self.container_name}", "--format", "{{.Names}}"]
+            result = subprocess.run(check_cmd, capture_output=True, text=True)
 
-        if self.container_name not in result.stdout:
-            logger.info(f"Container {self.container_name} is not running. Starting it...")
-            start_cmd = ["docker", "start", self.container_name]
-            start_result = subprocess.run(start_cmd, capture_output=True, text=True)
+            if self.container_name not in result.stdout:
+                logger.info(f"Container {self.container_name} is not running. Starting it...")
+                start_cmd = ["docker", "start", self.container_name]
+                start_result = subprocess.run(start_cmd, capture_output=True, text=True)
 
-            if start_result.returncode == 0:
-                logger.info(f"Successfully started container {self.container_name}")
-                import time
+                if start_result.returncode == 0:
+                    logger.info(f"Successfully started container {self.container_name}")
+                    import time
 
-                time.sleep(2)  # Give container time to fully start
-            else:
-                logger.warning(f"Failed to start container {self.container_name}: {start_result.stderr}")
+                    time.sleep(2)  # Give container time to fully start
+                else:
+                    logger.warning(f"Failed to start container {self.container_name}: {start_result.stderr}")
+        except FileNotFoundError as e:
+            raise DockerConnectionError(self.container_name, f"Docker command not found: {e}") from e
 
     async def execute_code(self, code: str) -> dict[str, object] | str | int | float | bool | None:
         self.ensure_container_running()

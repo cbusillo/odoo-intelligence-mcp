@@ -21,8 +21,8 @@ class FieldAnalyzer(BaseService):
     def get_service_name(self) -> str:
         return "FieldAnalyzer"
 
-    def get_comprehensive_field_analysis(self, model_name: str, field_name: str, analyze_values: bool = False) -> dict[str, object]:
-        self._validate_field_exists(model_name, field_name)
+    async def get_comprehensive_field_analysis(self, model_name: str, field_name: str, analyze_values: bool = False) -> dict[str, object]:
+        await self._validate_field_exists(model_name, field_name)
 
         cache_key = f"field_analysis:{model_name}:{field_name}:{analyze_values}"
         cached = self._get_cached(cache_key)
@@ -30,22 +30,18 @@ class FieldAnalyzer(BaseService):
             return cached
 
         try:
-            field_info = self._get_field_info(model_name, field_name)
+            field_info = await self._get_field_info(model_name, field_name)
 
             analysis = {
                 "model_name": model_name,
                 "field_name": field_name,
                 "field_info": field_info,
-                "usages": self._safe_execute("get field usages", lambda: get_field_usages(self.env, model_name, field_name)),
-                "dependencies": self._safe_execute(
-                    "get field dependencies", lambda: get_field_dependencies(self.env, model_name, field_name)
-                ),
+                "usages": await get_field_usages(self.env, model_name, field_name),
+                "dependencies": await get_field_dependencies(self.env, model_name, field_name),
             }
 
             if analyze_values and field_info.get("store", False):
-                analysis["value_analysis"] = self._safe_execute(
-                    "analyze field values", lambda: analyze_field_values(self.env, model_name, field_name)
-                )
+                analysis["value_analysis"] = await analyze_field_values(self.env, model_name, field_name)
 
             analysis["quality_assessment"] = self._assess_field_quality(analysis)
 
@@ -56,8 +52,8 @@ class FieldAnalyzer(BaseService):
             error_msg = f"Failed to analyze field '{field_name}' on model '{model_name}': {e!s}"
             raise ServiceExecutionError(error_msg) from e
 
-    def _get_field_info(self, model_name: str, field_name: str) -> dict[str, object]:
-        model_info = self._safe_execute("get model info", lambda: get_model_info(self.env, model_name))
+    async def _get_field_info(self, model_name: str, field_name: str) -> dict[str, object]:
+        model_info = await get_model_info(self.env, model_name)
 
         for field in model_info.get("fields", []):
             if field["name"] == field_name:
@@ -65,12 +61,12 @@ class FieldAnalyzer(BaseService):
 
         return {}
 
-    def analyze_field_impact(self, model_name: str, field_name: str) -> dict[str, object]:
-        self._validate_field_exists(model_name, field_name)
+    async def analyze_field_impact(self, model_name: str, field_name: str) -> dict[str, object]:
+        await self._validate_field_exists(model_name, field_name)
 
-        dependencies = self._safe_execute("get dependencies", lambda: get_field_dependencies(self.env, model_name, field_name))
+        dependencies = await get_field_dependencies(self.env, model_name, field_name)
 
-        usages = self._safe_execute("get usages", lambda: get_field_usages(self.env, model_name, field_name))
+        usages = await get_field_usages(self.env, model_name, field_name)
 
         return {
             "model_name": model_name,
