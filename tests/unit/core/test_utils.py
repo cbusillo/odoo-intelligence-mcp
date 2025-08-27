@@ -1,6 +1,4 @@
-import json
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -159,7 +157,7 @@ class TestPaginatedResponse:
         items = ["a", "b", "c"]
         response = PaginatedResponse(items, total_count=10, page=2, page_size=5)
         result = response.to_dict()
-        
+
         assert result == {
             "items": ["a", "b", "c"],
             "pagination": {
@@ -170,23 +168,23 @@ class TestPaginatedResponse:
                 "has_next_page": False,
                 "has_previous_page": True,
                 "filter_applied": None,
-            }
+            },
         }
 
     def test_to_dict_with_filter(self) -> None:
         items = ["a"]
         response = PaginatedResponse(items, total_count=1, filter_applied="test")
         result = response.to_dict()
-        
+
         assert result["pagination"]["filter_applied"] == "test"
 
     def test_total_pages_calculation(self) -> None:
         response = PaginatedResponse([], total_count=25, page_size=10)
         assert response.total_pages == 3
-        
+
         response = PaginatedResponse([], total_count=20, page_size=10)
         assert response.total_pages == 2
-        
+
         response = PaginatedResponse([], total_count=0, page_size=10)
         assert response.total_pages == 0
 
@@ -195,17 +193,17 @@ class TestPaginatedResponse:
         response = PaginatedResponse([], total_count=30, page=1, page_size=10)
         assert response.has_next_page is True
         assert response.has_previous_page is False
-        
+
         # Middle page
         response = PaginatedResponse([], total_count=30, page=2, page_size=10)
         assert response.has_next_page is True
         assert response.has_previous_page is True
-        
+
         # Last page
         response = PaginatedResponse([], total_count=30, page=3, page_size=10)
         assert response.has_next_page is False
         assert response.has_previous_page is True
-        
+
         # Single page
         response = PaginatedResponse([], total_count=5, page=1, page_size=10)
         assert response.has_next_page is False
@@ -253,17 +251,17 @@ class TestPaginationParams:
     def test_get_offset(self) -> None:
         params = PaginationParams(page=1, page_size=10)
         assert params.offset == 0
-        
+
         params = PaginationParams(page=2, page_size=10)
         assert params.offset == 10
-        
+
         params = PaginationParams(page=5, page_size=20)
         assert params.offset == 80
 
 
 def test_paginate_list() -> None:
     items = list(range(1, 26))  # 1-25
-    
+
     # First page
     params = PaginationParams(page=1, page_size=10)
     result = paginate_list(items, params)
@@ -271,21 +269,21 @@ def test_paginate_list() -> None:
     assert result.total_count == 25
     assert result.has_next_page is True
     assert result.has_previous_page is False
-    
+
     # Second page
     params = PaginationParams(page=2, page_size=10)
     result = paginate_list(items, params)
     assert result.items == [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     assert result.has_next_page is True
     assert result.has_previous_page is True
-    
+
     # Last page
     params = PaginationParams(page=3, page_size=10)
     result = paginate_list(items, params)
     assert result.items == [21, 22, 23, 24, 25]
     assert result.has_next_page is False
     assert result.has_previous_page is True
-    
+
     # Page beyond data
     params = PaginationParams(page=5, page_size=10)
     result = paginate_list(items, params)
@@ -308,10 +306,10 @@ def test_paginate_dict_list() -> None:
         {"id": 4, "name": "David"},
         {"id": 5, "name": "Eve"},
     ]
-    
+
     params = PaginationParams(page=1, page_size=2)
     result = paginate_dict_list(items, params)
-    
+
     assert result.items == [
         {"id": 1, "name": "Alice"},
         {"id": 2, "name": "Bob"},
@@ -326,7 +324,7 @@ def test_paginate_dict_list_with_filter() -> None:
     items = [{"id": i, "name": f"test{i}"} for i in range(1, 6)]
     params = PaginationParams(page=1, page_size=10, filter_text="test")
     result = paginate_dict_list(items, params)
-    
+
     # All items should match because they all contain "test"
     assert len(result.items) == 5
     assert result.filter_applied == "test"
@@ -343,7 +341,7 @@ def test_validate_response_size_large_string() -> None:
     # Create a large string (>100KB, which is >25K tokens)
     large_string = "x" * 200000
     response = {"data": large_string}
-    
+
     with pytest.raises(ResponseSizeError) as exc_info:
         validate_response_size(response)
     assert exc_info.value.estimated_tokens > 25000
@@ -354,7 +352,7 @@ def test_validate_response_size_large_list() -> None:
     # Create a large list
     large_list = ["item"] * 50000
     response = {"data": large_list}
-    
+
     with pytest.raises(ResponseSizeError) as exc_info:
         validate_response_size(response)
     assert exc_info.value.estimated_tokens > 25000
@@ -364,11 +362,11 @@ def test_validate_response_size_with_custom_limit() -> None:
     # Test with custom max_tokens
     medium_string = "x" * 1000
     response = {"data": medium_string}
-    
+
     # Should pass with default limit
     result = validate_response_size(response)
     assert result == response
-    
+
     # Should fail with very small limit
     with pytest.raises(ResponseSizeError):
         validate_response_size(response, max_tokens=10)
@@ -390,9 +388,9 @@ def test_check_response_size_large() -> None:
 def test_check_response_size_with_custom_limit() -> None:
     medium_string = "x" * 1000
     response = {"data": medium_string}
-    
+
     # Should pass with default limit
     assert check_response_size(response) is True
-    
+
     # Should fail with very small limit
     assert check_response_size(response, max_tokens=10) is False

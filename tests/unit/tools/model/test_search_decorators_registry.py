@@ -8,7 +8,7 @@ from odoo_intelligence_mcp.tools.model import search_decorators
 @pytest.mark.asyncio
 async def test_search_decorators_depends(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     decorator_type = "depends"
 
     result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
@@ -23,7 +23,7 @@ async def test_search_decorators_depends(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_search_decorators_constrains(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     decorator_type = "constrains"
 
     result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
@@ -36,7 +36,7 @@ async def test_search_decorators_constrains(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_search_decorators_onchange(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     decorator_type = "onchange"
 
     result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
@@ -49,7 +49,7 @@ async def test_search_decorators_onchange(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_search_decorators_model_create_multi(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     decorator_type = "model_create_multi"
 
     result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())
@@ -62,7 +62,7 @@ async def test_search_decorators_model_create_multi(mock_odoo_env: MagicMock) ->
 @pytest.mark.asyncio
 async def test_search_decorators_invalid(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     decorator_type = "invalid_decorator"
 
     result = await search_decorators(mock_odoo_env, decorator_type, PaginationParams())

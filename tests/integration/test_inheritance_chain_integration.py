@@ -143,7 +143,7 @@ class TestInheritanceChainIntegration:
     async def test_analyze_inheritance_chain_nonexistent_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         with pytest.raises(Exception) as exc_info:
             await analyze_inheritance_chain(real_odoo_env_if_available, "nonexistent.model")
-        
+
         assert "not found" in str(exc_info.value)
 
     @pytest.mark.integration
@@ -245,7 +245,7 @@ class TestInheritanceChainIntegration:
         else:
             # Without pagination, the count should match exactly
             assert summary["total_inherited_fields"] == len(inherited_fields)
-        
+
         inheriting_models = result["inheriting_models"]
         if isinstance(inheriting_models, dict) and "items" in inheriting_models:
             # With pagination, check that the summary total is reasonable (>= items returned)

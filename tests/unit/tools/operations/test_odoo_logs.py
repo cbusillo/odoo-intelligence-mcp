@@ -4,11 +4,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_logs import odoo_logs
-from tests.helpers.docker_test_helpers import (
+from ....helpers.docker_test_helpers import (
     create_docker_manager_with_get_container,
-    create_mock_handle_operation_with_error_handling,
     get_expected_container_names,
-    setup_docker_manager_mock,
 )
 
 
@@ -77,7 +75,7 @@ async def test_odoo_logs_container_not_found() -> None:
 async def test_odoo_logs_decode_error_handling() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_logs.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
-        
+
         # Mock handle_container_operation to simulate decode error
         def mock_handle(container_name: str, operation: str, func: Any) -> dict[str, Any]:
             mock_container = MagicMock()
@@ -89,7 +87,7 @@ async def test_odoo_logs_decode_error_handling() -> None:
                 return {"success": True, "operation": operation, "container": container_name, "data": inner_result}
             except UnicodeDecodeError as e:
                 return {"success": False, "error": str(e), "error_type": "UnicodeDecodeError", "container": container_name}
-        
+
         mock_instance.handle_container_operation.side_effect = mock_handle
         mock_manager.return_value = mock_instance
 
@@ -104,14 +102,14 @@ async def test_odoo_logs_decode_error_handling() -> None:
 async def test_odoo_logs_empty_logs() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_logs.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
-        
+
         def mock_handle(container_name: str, operation: str, func: Any) -> dict[str, Any]:
             mock_container = MagicMock()
             mock_container.logs.return_value = b""
             mock_container.status = "running"
             inner_result = func(mock_container)
             return {"success": True, "operation": operation, "container": container_name, "data": inner_result}
-        
+
         mock_instance.handle_container_operation.side_effect = mock_handle
         mock_manager.return_value = mock_instance
 
@@ -125,7 +123,7 @@ async def test_odoo_logs_empty_logs() -> None:
 async def test_odoo_logs_multiline_with_timestamps() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_logs.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
-        
+
         def mock_handle(container_name: str, operation: str, func: Any) -> dict[str, Any]:
             mock_container = MagicMock()
             log_content = b"""2024-01-01 12:00:00,123 INFO odoo.modules.loading: Loading module 'sale'
@@ -135,7 +133,7 @@ async def test_odoo_logs_multiline_with_timestamps() -> None:
             mock_container.status = "running"
             inner_result = func(mock_container)
             return {"success": True, "operation": operation, "container": container_name, "data": inner_result}
-        
+
         mock_instance.handle_container_operation.side_effect = mock_handle
         mock_manager.return_value = mock_instance
 
@@ -152,7 +150,7 @@ async def test_odoo_logs_multiline_with_timestamps() -> None:
 async def test_odoo_logs_large_number_of_lines() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_logs.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
-        
+
         def mock_handle(container_name: str, operation: str, func: Any) -> dict[str, Any]:
             mock_container = MagicMock()
             # Generate 1000 log lines
@@ -161,7 +159,7 @@ async def test_odoo_logs_large_number_of_lines() -> None:
             mock_container.status = "running"
             inner_result = func(mock_container)
             return {"success": True, "operation": operation, "container": container_name, "data": inner_result}
-        
+
         mock_instance.handle_container_operation.side_effect = mock_handle
         mock_manager.return_value = mock_instance
 

@@ -1,6 +1,6 @@
 """Simple tests for addon dependencies analysis."""
 
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

@@ -5,8 +5,6 @@ import pytest
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry
 from odoo_intelligence_mcp.core.utils import PaginationParams
 from odoo_intelligence_mcp.tools.field import search_field_properties, search_field_type
-from tests.mock_types import ConcreteModelMock as MockModel
-
 
 
 class TestFieldSearchRegistryIssue:
@@ -23,12 +21,12 @@ class TestFieldSearchRegistryIssue:
         env = mock_env_docker_registry
 
         # Mock execute_code to return empty results
-        with patch.object(env, 'execute_code', new_callable=AsyncMock) as mock_exec:
+        with patch.object(env, "execute_code", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = {"results": []}
-            
+
             # Call search_field_type
             result = await search_field_type(env, "many2one", PaginationParams())
-            
+
             # Due to empty results, we get no fields but with pagination structure
             assert "fields" in result
             assert result["fields"]["items"] == []
@@ -40,12 +38,12 @@ class TestFieldSearchRegistryIssue:
         env = mock_env_docker_registry
 
         # Mock execute_code to return empty results
-        with patch.object(env, 'execute_code', new_callable=AsyncMock) as mock_exec:
+        with patch.object(env, "execute_code", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = {"results": []}
-            
+
             # Call search_field_properties
             result = await search_field_properties(env, "computed", PaginationParams())
-            
+
             # Due to empty results, we get no fields but with pagination structure
             assert result["property"] == "computed"
             assert "fields" in result
@@ -65,17 +63,13 @@ class TestFieldSearchRegistryIssue:
                     {
                         "model": "res.partner",
                         "description": "Contact",
-                        "fields": [
-                            {"field": "company_id", "string": "Company", "required": False, "comodel_name": "res.company"}
-                        ]
+                        "fields": [{"field": "company_id", "string": "Company", "required": False, "comodel_name": "res.company"}],
                     },
                     {
                         "model": "sale.order",
                         "description": "Sales Order",
-                        "fields": [
-                            {"field": "partner_id", "string": "Customer", "required": False, "comodel_name": "res.partner"}
-                        ]
-                    }
+                        "fields": [{"field": "partner_id", "string": "Customer", "required": False, "comodel_name": "res.partner"}],
+                    },
                 ]
             }
 
@@ -101,13 +95,11 @@ class TestFieldSearchRegistryIssue:
                     {
                         "model": "sale.order",
                         "description": "Sales Order",
-                        "fields": [
-                            {"field": "amount_total", "string": "Total", "compute": "_compute_amount"}
-                        ]
+                        "fields": [{"field": "amount_total", "string": "Total", "compute": "_compute_amount"}],
                     }
                 ]
             }
-        
+
         env.execute_code = mock_execute_search_computed
 
         # Test search_field_properties for computed fields
@@ -135,17 +127,13 @@ class TestFieldSearchRegistryIssue:
                     {
                         "model": "product.template",
                         "description": "Product Template",
-                        "fields": [
-                            {"field": "name", "string": "Name", "required": True}
-                        ]
+                        "fields": [{"field": "name", "string": "Name", "required": True}],
                     },
                     {
                         "model": "product.product",
                         "description": "Product",
-                        "fields": [
-                            {"field": "product_tmpl_id", "string": "Product Template", "required": True}
-                        ]
-                    }
+                        "fields": [{"field": "product_tmpl_id", "string": "Product Template", "required": True}],
+                    },
                 ]
             }
 

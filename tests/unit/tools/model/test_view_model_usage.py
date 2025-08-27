@@ -8,7 +8,7 @@ from odoo_intelligence_mcp.tools.model.view_model_usage import get_view_model_us
 @pytest.mark.asyncio
 async def test_view_model_usage_basic(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     model_name = "sale.order"
 
     result = await get_view_model_usage(mock_odoo_env, model_name, PaginationParams())
@@ -23,7 +23,7 @@ async def test_view_model_usage_basic(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_view_model_usage_with_views(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     model_name = "product.template"
 
     result = await get_view_model_usage(mock_odoo_env, model_name, PaginationParams())
@@ -37,7 +37,7 @@ async def test_view_model_usage_with_views(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_view_model_usage_invalid_model(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     model_name = "invalid.model"
 
     result = await get_view_model_usage(mock_odoo_env, model_name, PaginationParams())
@@ -49,7 +49,7 @@ async def test_view_model_usage_invalid_model(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_view_model_usage_coverage(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     model_name = "res.partner"
 
     result = await get_view_model_usage(mock_odoo_env, model_name, PaginationParams())
@@ -64,7 +64,7 @@ async def test_view_model_usage_coverage(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_view_model_usage_view_types(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     model_name = "account.move"
 
     result = await get_view_model_usage(mock_odoo_env, model_name, PaginationParams())

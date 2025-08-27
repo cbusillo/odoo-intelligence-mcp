@@ -65,7 +65,7 @@ async def test_search_models_wildcard_pattern(mock_odoo_env: MagicMock) -> None:
 
     assert "pattern" in result
     assert "partial_matches" in result
-    
+
     matches = result.get("partial_matches", [])
     assert isinstance(matches, list)
     assert len(matches) > 0
@@ -74,7 +74,7 @@ async def test_search_models_wildcard_pattern(mock_odoo_env: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_search_models_with_pagination(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     pattern = "account"
     pagination = PaginationParams(page=1, page_size=10)
 

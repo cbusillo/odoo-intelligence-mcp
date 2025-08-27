@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_restart import odoo_restart
-from tests.helpers.docker_test_helpers import (
+from ....helpers.docker_test_helpers import (
     create_mock_handle_operation_success,
     get_expected_container_names,
 )

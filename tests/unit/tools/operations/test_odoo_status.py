@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_status import odoo_status
-from tests.helpers.docker_test_helpers import get_expected_container_names
+from ....helpers.docker_test_helpers import get_expected_container_names
 
 
 # noinspection DuplicatedCode

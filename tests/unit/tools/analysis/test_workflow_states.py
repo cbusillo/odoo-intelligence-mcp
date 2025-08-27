@@ -98,7 +98,7 @@ async def test_analyze_workflow_states_complex_workflow(mock_odoo_env: MockOdooE
 @pytest.mark.asyncio
 async def test_analyze_workflow_states_with_pagination(mock_odoo_env: MockOdooEnvironment) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
-    
+
     model_name = "sale.order"
     pagination = PaginationParams(page=1, page_size=5)
 
