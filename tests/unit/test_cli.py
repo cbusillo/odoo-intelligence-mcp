@@ -74,8 +74,9 @@ class TestCLIFunctions:
         actual_calls = [call(pattern) for pattern in expected_patterns]
         mock_path_instance.glob.assert_has_calls(actual_calls)
 
-        assert mock_file.unlink.call_count == 2
-        mock_rmtree.assert_called_once_with(mock_dir)
+        assert mock_file.unlink.call_count == 3  # mock_file appears in patterns 1, 4, and 5
+        assert mock_rmtree.call_count == 2  # mock_dir appears in patterns 2 and 4
+        mock_rmtree.assert_any_call(mock_dir)
 
     @patch("odoo_intelligence_mcp.cli.Path")
     @patch("odoo_intelligence_mcp.cli.shutil.rmtree")
