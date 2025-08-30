@@ -21,7 +21,9 @@ class FieldAnalyzer(BaseService):
     def get_service_name(self) -> str:
         return "FieldAnalyzer"
 
-    async def get_comprehensive_field_analysis(self, model_name: str, field_name: str, analyze_values: bool = False) -> dict[str, object]:
+    async def get_comprehensive_field_analysis(
+        self, model_name: str, field_name: str, analyze_values: bool = False
+    ) -> dict[str, object]:
         await self._validate_field_exists(model_name, field_name)
 
         cache_key = f"field_analysis:{model_name}:{field_name}:{analyze_values}"

@@ -197,8 +197,72 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
         json_str = json.dumps(data, default=str)
         estimated_tokens = len(json_str) // 4
 
+        # Add size warning for large responses
+        if estimated_tokens > 15000:  # 15K token warning threshold
+            if "meta" not in data:
+                data["meta"] = {}
+            data["meta"]["size_warning"] = {
+                "estimated_tokens": estimated_tokens,
+                "message": "Large response detected. Consider using pagination, filtering, or limit parameters.",
+                "recommendations": [
+                    "Use pagination.page_size to limit results",
+                    "Apply filter_text to narrow results",
+                    "Use specific limit parameters where available",
+                ],
+            }
+
         if estimated_tokens > max_tokens:
-            raise ResponseSizeError(estimated_tokens, max_tokens)
+            # Instead of failing, truncate the response
+
+            # Check for paginated responses (may be nested)
+            items_path = None
+            if "items" in data:
+                items_path = ["items"]
+            elif "implementations" in data and isinstance(data["implementations"], dict) and "items" in data["implementations"]:
+                items_path = ["implementations", "items"]
+            elif "computed_fields" in data and isinstance(data["computed_fields"], dict) and "items" in data["computed_fields"]:
+                items_path = ["computed_fields", "items"]
+
+            if items_path:
+                # Navigate to the items list
+                items_container = data
+                for key in items_path[:-1]:
+                    items_container = items_container[key]
+                items_key = items_path[-1]
+
+                # For paginated responses, reduce items
+                original_count = len(items_container[items_key])
+                target_ratio = max_tokens / estimated_tokens
+                keep_items = max(1, int(original_count * target_ratio * 0.8))  # 80% to ensure under limit
+
+                items_container[items_key] = items_container[items_key][:keep_items]
+                data["truncated"] = True
+                data["truncation_info"] = {
+                    "original_items": original_count,
+                    "kept_items": keep_items,
+                    "reason": f"Response exceeded {max_tokens} token limit",
+                }
+            elif isinstance(data, dict):
+                # For non-paginated responses, add truncation warning
+                data["truncated"] = True
+                data["truncation_info"] = {
+                    "estimated_tokens": estimated_tokens,
+                    "max_tokens": max_tokens,
+                    "message": "Response truncated due to size. Use pagination or filtering to get complete data.",
+                }
+
+                # Try to intelligently truncate large fields
+                for key, value in list(data.items()):
+                    if isinstance(value, list) and len(value) > 10:
+                        data[key] = value[:10]
+                        if "truncated_fields" not in data:
+                            data["truncated_fields"] = []
+                        data["truncated_fields"].append(key)
+                    elif isinstance(value, str) and len(value) > 1000:
+                        data[key] = value[:1000] + "... (truncated)"
+                        if "truncated_fields" not in data:
+                            data["truncated_fields"] = []
+                        data["truncated_fields"].append(key)
 
         return data
     except (TypeError, ValueError):
@@ -207,22 +271,22 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
 
 def add_pagination_to_schema(base_schema: dict[str, Any]) -> dict[str, Any]:
     pagination_properties = {
-        "page": {"type": "integer", "description": "Page number (1-based, default: 1)", "minimum": 1, "default": 1},
+        "page": {"type": "integer", "description": "Page number", "minimum": 1, "default": 1},
         "page_size": {
             "type": "integer",
-            "description": "Number of items per page (default: 100, max: 1000)",
+            "description": "Items per page",
             "minimum": 1,
             "maximum": 1000,
             "default": 100,
         },
         "limit": {
             "type": "integer",
-            "description": "Alternative to page_size - maximum number of items to return",
+            "description": "Max items",
             "minimum": 1,
             "maximum": 1000,
         },
-        "offset": {"type": "integer", "description": "Alternative to page - number of items to skip", "minimum": 0},
-        "filter": {"type": "string", "description": "Filter text to search within results"},
+        "offset": {"type": "integer", "description": "Skip items", "minimum": 0},
+        "filter": {"type": "string", "description": "Filter results"},
     }
 
     enhanced_schema = base_schema.copy()

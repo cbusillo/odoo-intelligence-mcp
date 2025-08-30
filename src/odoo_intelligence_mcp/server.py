@@ -272,13 +272,13 @@ async def handle_list_tools() -> list[Tool]:
     return [
         Tool(
             name="model_info",
-            description="Get comprehensive information about an Odoo model including fields, methods, and inheritance",
+            description="Get Odoo model info: fields, methods, inheritance",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "model_name": {
                         "type": "string",
-                        "description": "Name of the Odoo model (e.g., 'product.template', 'res.partner')",
+                        "description": "Model name",
                     }
                 },
                 "required": ["model_name"],
@@ -286,14 +286,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_models",
-            description="Search for Odoo models by name pattern with exact, partial, and description matches",
+            description="Search Odoo models by pattern",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "pattern": {
                             "type": "string",
-                            "description": "Search pattern to match against model names and descriptions",
+                            "description": "Search pattern",
                         }
                     },
                     "required": ["pattern"],
@@ -302,14 +302,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="model_relationships",
-            description="Analyze all relationships (M2O, O2M, M2M) for an Odoo model",
+            description="Analyze model relationships (M2O, O2M, M2M)",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model to analyze relationships for",
+                            "description": "Model name",
                         }
                     },
                     "required": ["model_name"],
@@ -318,18 +318,18 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="field_usages",
-            description="Find where a specific field is used across views, methods, and domains",
+            description="Find field usage in views, methods, domains",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model",
+                            "description": "Model name",
                         },
                         "field_name": {
                             "type": "string",
-                            "description": "Name of the field to analyze usage for",
+                            "description": "Field name",
                         },
                     },
                     "required": ["model_name", "field_name"],
@@ -338,14 +338,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="performance_analysis",
-            description="Identify potential performance issues like N+1 queries and missing indexes",
+            description="Identify performance issues (N+1, missing indexes)",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model to analyze for performance issues",
+                            "description": "Model name",
                         }
                     },
                     "required": ["model_name"],
@@ -354,16 +354,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="pattern_analysis",
-            description="Analyze common Odoo patterns across the codebase "
-            "(computed_fields, related_fields, api_decorators, custom_methods, state_machines)",
+            description="Analyze Odoo patterns (computed/related fields, decorators, states)",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "pattern_type": {
                             "type": "string",
-                            "description": "Type of pattern to analyze. Options: computed_fields, related_fields, "
-                            "api_decorators, custom_methods, state_machines, all (default: all)",
                             "enum": [
                                 "computed_fields",
                                 "related_fields",
@@ -372,7 +369,6 @@ async def handle_list_tools() -> list[Tool]:
                                 "state_machines",
                                 "all",
                             ],
-                            "default": "all",
                         }
                     },
                     "required": [],
@@ -381,15 +377,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="inheritance_chain",
-            description="Analyze the complete inheritance chain of a model including MRO, "
-            "inherits relationships, and inherited fields",
+            description="Analyze model inheritance chain and MRO",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model to analyze inheritance for",
+                            "description": "Model name",
                         }
                     },
                     "required": ["model_name"],
@@ -398,14 +393,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="addon_dependencies",
-            description="Get addon manifest information and dependencies, including which addons depend on this one",
+            description="Get addon manifest and dependencies",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "addon_name": {
                             "type": "string",
-                            "description": "Name of the Odoo addon to analyze dependencies for",
+                            "description": "Addon name",
                         }
                     },
                     "required": ["addon_name"],
@@ -414,19 +409,18 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_code",
-            description="Search for regex patterns in code files across addon directories",
+            description="Search code with regex patterns",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "pattern": {
                             "type": "string",
-                            "description": "Regular expression pattern to search for in file contents",
+                            "description": "Regex pattern",
                         },
                         "file_type": {
                             "type": "string",
-                            "description": "File extension to search in (e.g., 'py', 'xml', 'js'). Defaults to 'py'",
-                            "default": "py",
+                            "description": "File extension",
                         },
                     },
                     "required": ["pattern"],
@@ -435,18 +429,18 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="find_files",
-            description="Find files by name pattern in Odoo addon directories",
+            description="Find files by name pattern",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "pattern": {
                             "type": "string",
-                            "description": "File name pattern (supports wildcards like *.py, test_*.xml, *invoice*)",
+                            "description": "File pattern",
                         },
                         "file_type": {
                             "type": "string",
-                            "description": "Optional file extension filter (e.g., 'py', 'xml', 'js')",
+                            "description": "File extension filter",
                         },
                     },
                     "required": ["pattern"],
@@ -455,33 +449,29 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="read_odoo_file",
-            description="Read a file from Odoo source (core, enterprise, or custom addons) with flexible options",
+            description="Read Odoo source files",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": (
-                            "Path to file. Examples: 'sale/views/sale_views.xml', "
-                            "'/odoo/addons/sale/views/sale_views.xml', 'addons/product_connect/models/motor.py'"
-                        ),
+                        "description": "File path",
                     },
                     "start_line": {
                         "type": "integer",
-                        "description": "Line number to start reading from (1-based)",
+                        "description": "Start line",
                     },
                     "end_line": {
                         "type": "integer",
-                        "description": "Line number to stop reading at (inclusive)",
+                        "description": "End line",
                     },
                     "pattern": {
                         "type": "string",
-                        "description": "Regex pattern to search for and show context around",
+                        "description": "Search pattern",
                     },
                     "context_lines": {
                         "type": "integer",
-                        "description": "Number of lines to show before/after pattern matches (default 5)",
-                        "default": 5,
+                        "description": "Context lines",
                     },
                 },
                 "required": ["file_path"],
@@ -489,15 +479,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="module_structure",
-            description="Analyze module directory structure including models, views, controllers, "
-            "wizards, reports, and static files",
+            description="Analyze module structure",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "module_name": {
                             "type": "string",
-                            "description": "Name of the Odoo module to analyze structure for",
+                            "description": "Module name",
                         }
                     },
                     "required": ["module_name"],
@@ -506,14 +495,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="find_method",
-            description="Find all models that implement a specific method",
+            description="Find models with specific method",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "method_name": {
                             "type": "string",
-                            "description": "Name of the method to search for across all models",
+                            "description": "Method name",
                         }
                     },
                     "required": ["method_name"],
@@ -522,14 +511,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_decorators",
-            description="Find methods by decorator type (depends, constrains, onchange, model_create_multi)",
+            description="Find methods by decorator",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "decorator": {
                             "type": "string",
-                            "description": "Decorator type to search for",
                             "enum": ["depends", "constrains", "onchange", "model_create_multi"],
                         }
                     },
@@ -539,14 +527,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="view_model_usage",
-            description="Show which views use a model, field coverage statistics, buttons, actions, and unexposed fields",
+            description="Show model usage in views",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model to analyze view usage for",
+                            "description": "Model name",
                         }
                     },
                     "required": ["model_name"],
@@ -555,14 +543,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="workflow_states",
-            description="Analyze state fields, transitions, button actions, and automated state changes in a model",
+            description="Analyze workflow states and transitions",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model to analyze workflow states for",
+                            "description": "Model name",
                         }
                     },
                     "required": ["model_name"],
@@ -571,13 +559,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="execute_code",
-            description="Execute arbitrary Python code in the Odoo environment context for testing and exploration",
+            description="Execute Python in Odoo environment",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "code": {
                         "type": "string",
-                        "description": "Python code to execute. Has access to 'env' variable.",
+                        "description": "Python code",
                     }
                 },
                 "required": ["code"],
@@ -585,26 +573,26 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="test_runner",
-            description="Run specific Odoo tests with granular control over module, class, and method selection",
+            description="Run Odoo tests",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "module": {
                             "type": "string",
-                            "description": "Module name to test (e.g., 'product_connect')",
+                            "description": "Module name",
                         },
                         "test_class": {
                             "type": "string",
-                            "description": "Specific test class to run (optional)",
+                            "description": "Test class",
                         },
                         "test_method": {
                             "type": "string",
-                            "description": "Specific test method to run (optional)",
+                            "description": "Test method",
                         },
                         "test_tags": {
                             "type": "string",
-                            "description": "Comma-separated test tags to filter by (optional)",
+                            "description": "Test tags",
                         },
                     },
                     "required": ["module"],
@@ -613,26 +601,26 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="field_value_analyzer",
-            description="Analyze actual field values in the database to understand data patterns, distributions, and quality",
+            description="Analyze field values and data patterns",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "model": {
                         "type": "string",
-                        "description": "Model name (e.g., 'product.template')",
+                        "description": "Model name",
                     },
                     "field": {
                         "type": "string",
-                        "description": "Field name to analyze",
+                        "description": "Field name",
                     },
                     "domain": {
                         "type": "array",
-                        "description": "Optional domain to filter records (default: [])",
+                        "description": "Filter domain",
                         "items": {"type": "array"},
                     },
                     "sample_size": {
                         "type": "integer",
-                        "description": "Maximum number of records to analyze (default: 1000)",
+                        "description": "Sample size",
                     },
                 },
                 "required": ["model", "field"],
@@ -640,26 +628,25 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="permission_checker",
-            description="Debug access rights and record rules to understand why a user can or cannot access specific records",
+            description="Debug access rights and permissions",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "user": {
                         "type": "string",
-                        "description": "User login or ID to check permissions for",
+                        "description": "User login/ID",
                     },
                     "model": {
                         "type": "string",
-                        "description": "Model name to check access on",
+                        "description": "Model name",
                     },
                     "operation": {
                         "type": "string",
-                        "description": "Operation to check",
                         "enum": ["read", "write", "create", "unlink"],
                     },
                     "record_id": {
                         "type": "integer",
-                        "description": "Specific record ID to check (optional)",
+                        "description": "Record ID",
                     },
                 },
                 "required": ["user", "model", "operation"],
@@ -667,14 +654,14 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="resolve_dynamic_fields",
-            description="Analyze computed and related fields with cross-model dependencies and runtime field resolution patterns",
+            description="Analyze dynamic field dependencies",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model to analyze dynamic fields for",
+                            "description": "Model name",
                         }
                     },
                     "required": ["model_name"],
@@ -683,18 +670,18 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="field_dependencies",
-            description="Show dependency graph for a specific field - what it depends on and what depends on it",
+            description="Show field dependency graph",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the Odoo model",
+                            "description": "Model name",
                         },
                         "field_name": {
                             "type": "string",
-                            "description": "Name of the field to analyze dependencies for",
+                            "description": "Field name",
                         },
                     },
                     "required": ["model_name", "field_name"],
@@ -703,14 +690,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_field_properties",
-            description="Search for fields by specific properties (computed, related, stored, required, readonly)",
+            description="Search fields by properties",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "property": {
                             "type": "string",
-                            "description": "Field property to search for. Options: computed, related, stored, required, readonly",
                             "enum": ["computed", "related", "stored", "required", "readonly"],
                         }
                     },
@@ -720,14 +706,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_field_type",
-            description="Find all models with fields of a specific type (e.g., many2one, char, selection, date, boolean)",
+            description="Find fields by type",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "field_type": {
                             "type": "string",
-                            "description": "Field type to search for",
                             "enum": [
                                 "many2one",
                                 "one2many",
@@ -751,18 +736,17 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="odoo_update_module",
-            description="Update Odoo module(s) using the script-runner container",
+            description="Update Odoo modules",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "modules": {
                         "type": "string",
-                        "description": "Module name or comma-separated list of modules to update",
+                        "description": "Module names",
                     },
                     "force_install": {
                         "type": "boolean",
-                        "description": "Force install if module is not installed (default: false)",
-                        "default": False,
+                        "description": "Force install",
                     },
                 },
                 "required": ["modules"],
@@ -770,29 +754,28 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="odoo_shell",
-            description="Execute Python code in Odoo shell environment",
+            description="Run Odoo shell commands",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "code": {
                         "type": "string",
-                        "description": "Python code to execute in Odoo shell",
+                        "description": "Python code",
                     },
-                    "timeout": {"type": "integer", "description": "Timeout in seconds (default: 30)", "default": 30},
+                    "timeout": {"type": "integer"},
                 },
                 "required": ["code"],
             },
         ),
         Tool(
             name="odoo_status",
-            description="Check Odoo container status and health",
+            description="Check container status",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "verbose": {
                         "type": "boolean",
-                        "description": "Show detailed container information (optional)",
-                        "default": False,
+                        "description": "Show details",
                     }
                 },
                 "required": [],
@@ -800,27 +783,26 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="odoo_restart",
-            description="Restart Odoo containers (useful after code changes)",
+            description="Restart containers",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "services": {
                         "type": "string",
-                        "description": "Specific services to restart (default: web-1,shell-1,script-runner-1)",
-                        "default": "web-1,shell-1,script-runner-1",
+                        "description": "Services",
                     }
                 },
             },
         ),
         Tool(
             name="odoo_install_module",
-            description="Install new Odoo module(s)",
+            description="Install Odoo modules",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "modules": {
                         "type": "string",
-                        "description": "Module name or comma-separated list of modules to install",
+                        "description": "Module names",
                     }
                 },
                 "required": ["modules"],
@@ -828,15 +810,15 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="odoo_logs",
-            description="Get recent Odoo container logs",
+            description="Get container logs",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "container": {
                         "type": "string",
-                        "description": "Container name (defaults to web container from env)",
+                        "description": "Container name",
                     },
-                    "lines": {"type": "integer", "description": "Number of lines to retrieve (default: 100)", "default": 100},
+                    "lines": {"type": "integer"},
                 },
             },
         ),
@@ -845,9 +827,8 @@ async def handle_list_tools() -> list[Tool]:
 
 @app.call_tool()
 async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> list[TextContent]:
-    if not arguments:
-        # noinspection Annotator
-        return [TextContent(type="text", text=json.dumps({"error": "No arguments provided"}))]
+    if arguments is None:
+        arguments = {}  # Default to empty dict for tools with all optional parameters
 
     handler = TOOL_HANDLERS.get(name)
     if not handler:

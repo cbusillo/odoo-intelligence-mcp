@@ -24,7 +24,7 @@ class ModelIterator:
         self, model_name: str, field_filter: Callable[[str, Field], bool] | None = None
     ) -> Iterator[tuple[str, Field]]:
         if model_name not in self.env:
-            return
+            return  # Early return in generator function produces empty iterator
 
         model = self.env[model_name]
         # noinspection PyProtectedMember

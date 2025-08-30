@@ -9,7 +9,10 @@ class ResponseBuilder:
         response: dict[str, Any] = {"success": True}
         if data is not None:
             response["data"] = data
-        response.update(kwargs)
+        elif kwargs:
+            response["data"] = kwargs
+        else:
+            response.update(kwargs)
         return response
 
     @staticmethod

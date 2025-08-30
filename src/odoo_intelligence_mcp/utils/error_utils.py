@@ -87,7 +87,7 @@ def validate_model_name(model_name: str) -> None:
 
     if not model_name:
         raise InvalidArgumentError("model_name", "non-empty string", model_name)
-    
+
     if model_name.strip() != model_name:
         raise InvalidArgumentError("model_name", "string without leading/trailing spaces", model_name)
 
@@ -103,7 +103,9 @@ def validate_model_name(model_name: str) -> None:
             raise InvalidArgumentError("model_name", "valid Odoo model name (parts must start with a letter)", model_name)
         # Check all characters are alphanumeric or underscore
         if not all(c.isalnum() or c == "_" for c in part):
-            raise InvalidArgumentError("model_name", "valid Odoo model name (only letters, numbers, and underscores allowed)", model_name)
+            raise InvalidArgumentError(
+                "model_name", "valid Odoo model name (only letters, numbers, and underscores allowed)", model_name
+            )
 
 
 def validate_field_name(field_name: str) -> None:

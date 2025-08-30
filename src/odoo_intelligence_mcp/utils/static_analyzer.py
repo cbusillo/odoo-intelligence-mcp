@@ -10,7 +10,7 @@ class OdooStaticAnalyzer:
     def __init__(self, addon_paths: list[str] | None = None) -> None:
         if addon_paths is None:
             config = load_env_config()
-            self.addon_paths = config["addons_path"].split(",")
+            self.addon_paths = config.addons_path.split(",")
         else:
             self.addon_paths = addon_paths
         self._model_cache: dict[str, dict[str, Any]] = {}

@@ -1,3 +1,4 @@
+import subprocess
 from typing import Any
 
 import docker
@@ -9,10 +10,17 @@ class DockerClientManager:
     def __init__(self) -> None:
         self.client = docker.from_env()
 
-    def get_container(self, container_name: str) -> Container | dict[str, Any]:
+    def get_container(self, container_name: str, auto_start: bool = False) -> Container | dict[str, Any]:
         try:
             return self.client.containers.get(container_name)
         except NotFound:
+            if auto_start:
+                success = self._auto_start_container(container_name)
+                if success:
+                    try:
+                        return self.client.containers.get(container_name)
+                    except NotFound:
+                        pass
             return DockerClientManager._create_error_response(f"Container '{container_name}' not found", "NotFound", container_name)
         except APIError as e:
             return DockerClientManager._create_error_response(f"Docker API error: {e}", "APIError", container_name)
@@ -55,3 +63,40 @@ class DockerClientManager:
         if data is not None:
             response["data"] = data
         return response
+
+    def _auto_start_container(self, container_name: str) -> bool:
+        try:
+            # First try docker start (for existing stopped containers)
+            start_result = subprocess.run(["docker", "start", container_name], capture_output=True, text=True, timeout=10)
+
+            if start_result.returncode == 0:
+                return True
+
+            # If container doesn't exist, try docker compose
+            if "No such container" in start_result.stderr or "not found" in start_result.stderr:
+                # Extract service name from container name (e.g., "odoo-shell-1" -> "shell")
+                if "-" in container_name:
+                    parts = container_name.split("-")
+                    if len(parts) >= 3:  # e.g., ["odoo", "shell", "1"]
+                        service_name = parts[-2]  # Get "shell" from "odoo-shell-1"
+
+                        # Try to find the compose file directory
+                        compose_dirs = ["../odoo-ai", ".", ".."]
+                        for compose_dir in compose_dirs:
+                            try:
+                                compose_result = subprocess.run(
+                                    ["docker", "compose", "up", "-d", service_name],
+                                    cwd=compose_dir,
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                )
+                                if compose_result.returncode == 0:
+                                    return True
+                            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                                continue
+
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        return False

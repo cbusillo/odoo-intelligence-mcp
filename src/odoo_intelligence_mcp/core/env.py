@@ -8,12 +8,49 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
 from typing import ClassVar
 
-from dotenv import load_dotenv
+from pydantic import Field as PydanticField
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ..type_defs.odoo_types import Field, Model, Registry
 from ..utils.error_utils import CodeExecutionError, DockerConnectionError
 
 logger = logging.getLogger(__name__)
+
+
+class EnvConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="ODOO_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    container_prefix: str = PydanticField(default="odoo", alias="ODOO_CONTAINER_PREFIX")
+    db_name: str = PydanticField(default="odoo", alias="ODOO_DB_NAME")
+    db_host: str = PydanticField(default="database", alias="ODOO_DB_HOST")
+    db_port: str = PydanticField(default="5432", alias="ODOO_DB_PORT")
+    addons_path: str = PydanticField(default="/opt/project/addons,/odoo/addons,/volumes/enterprise", alias="ODOO_ADDONS_PATH")
+
+    @property
+    def container_name(self) -> str:
+        return f"{self.container_prefix}-script-runner-1"
+
+    @property
+    def script_runner_container(self) -> str:
+        return f"{self.container_prefix}-script-runner-1"
+
+    @property
+    def web_container(self) -> str:
+        return f"{self.container_prefix}-web-1"
+
+    @property
+    def shell_container(self) -> str:
+        return f"{self.container_prefix}-shell-1"
+
+    @property
+    def database(self) -> str:
+        return self.db_name
 
 
 class MockRegistry:
@@ -77,57 +114,54 @@ result = list(env.registry.models.keys())
         return False
 
 
-def load_env_config() -> dict[str, str]:
+def load_env_config() -> EnvConfig:
     # Detect if we're running in test mode
     is_testing = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
 
+    # Find the .env file to use
+    env_file_path = None
+
     if is_testing:
-        # For testing: Load target project's .env file (../odoo-ai/.env)
+        # For testing: Look for target project's .env file (../odoo-ai/.env)
         developer_dir = Path(__file__).parent.parent.parent.parent.parent  # Go up to Developer/ directory
         target_env_path = developer_dir / "odoo-ai" / ".env"
         if target_env_path.exists():
-            load_dotenv(target_env_path, override=True)
-            logger.info("Loaded target project .env from %s (test mode)", target_env_path)
-        else:
-            logger.debug("Target project .env file not found at %s (test mode)", target_env_path)
+            env_file_path = target_env_path
+            logger.info("Using target project .env from %s (test mode)", target_env_path)
 
-    # Look for local .env file in project root (where pyproject.toml is)
-    current_path = Path(__file__).parent
-    while current_path != current_path.parent:
-        env_path = current_path / ".env"
-        pyproject_path = current_path / "pyproject.toml"
-        if pyproject_path.exists():
-            # Found project root
-            if env_path.exists():
-                load_dotenv(env_path, override=not is_testing)  # Don't override test env vars
-                logger.info("Loaded local .env from %s", env_path)
-            else:
-                logger.debug("Local .env file not found at %s (optional)", env_path)
-            break
-        current_path = current_path.parent
+    if not env_file_path:
+        # Look for local .env file in project root (where pyproject.toml is)
+        current_path = Path(__file__).parent
+        while current_path != current_path.parent:
+            pyproject_path = current_path / "pyproject.toml"
+            if pyproject_path.exists():
+                # Found project root
+                env_path = current_path / ".env"
+                if env_path.exists():
+                    env_file_path = env_path
+                    logger.info("Using local .env from %s", env_path)
+                break
+            current_path = current_path.parent
 
-    container_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
-    return {
-        "container_name": f"{container_prefix}-script-runner-1",  # Primary container for all operations
-        "script_runner_container": f"{container_prefix}-script-runner-1",
-        "web_container": f"{container_prefix}-web-1",
-        "shell_container": f"{container_prefix}-shell-1",  # Available if needed for specific operations
-        "container_prefix": container_prefix,
-        "database": os.getenv("ODOO_DB_NAME", "odoo"),
-        "addons_path": os.getenv("ODOO_ADDONS_PATH", "/opt/project/addons,/odoo/addons,/volumes/enterprise"),
-    }
+    # Pydantic BaseSettings will automatically load from env vars and .env file
+    if env_file_path:
+        return EnvConfig(_env_file=env_file_path)
+    else:
+        return EnvConfig()
 
 
 # noinspection PyMethodMayBeStatic
 class HostOdooEnvironmentManager:
     def __init__(self, container_name: str | None = None, database: str | None = None) -> None:
         config = load_env_config()
-        self.container_name = container_name or config["container_name"]
-        self.database = database or config["database"]
-        self.addons_path = config["addons_path"]
+        self.container_name = container_name or config.container_name
+        self.database = database or config.database
+        self.addons_path = config.addons_path
+        self.db_host = config.db_host
+        self.db_port = config.db_port
 
     async def get_environment(self) -> "HostOdooEnvironment":
-        return HostOdooEnvironment(self.container_name, self.database, self.addons_path)
+        return HostOdooEnvironment(self.container_name, self.database, self.addons_path, self.db_host, self.db_port)
 
     def invalidate_environment_cache(self) -> None:
         logger.info("Cache invalidation called (no-op for Docker exec)")
@@ -135,10 +169,22 @@ class HostOdooEnvironmentManager:
 
 # noinspection PyMethodMayBeStatic
 class HostOdooEnvironment:
-    def __init__(self, container_name: str, database: str, addons_path: str) -> None:
-        self.container_name = container_name
+    def __init__(self, container_name: str, database: str, addons_path: str, db_host: str, db_port: str) -> None:
+        # Sanitize container name to prevent command injection
+        import re
+
+        # Remove dangerous shell characters
+        safe_name = container_name.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()
+        # Only allow alphanumeric, underscore, dash, and dot
+        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
+        if not safe_pattern.match(safe_name):
+            # If still not safe, use a default
+            safe_name = "odoo-script-runner-1"
+        self.container_name = safe_name
         self.database = database
         self.addons_path = addons_path
+        self.db_host = db_host
+        self.db_port = db_port
         self._registry: Registry | None = None
 
     def __getitem__(self, model_name: str) -> "ModelProxy":
@@ -211,21 +257,124 @@ class HostOdooEnvironment:
 
     def ensure_container_running(self) -> None:
         try:
-            check_cmd = ["docker", "ps", "--filter", f"name={self.container_name}", "--format", "{{.Names}}"]
-            result = subprocess.run(check_cmd, capture_output=True, text=True)
+            # Check container status with health information
+            check_cmd = ["docker", "inspect", self.container_name, "--format", "{{.State.Status}}"]
+            result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
 
-            if self.container_name not in result.stdout:
-                logger.info(f"Container {self.container_name} is not running. Starting it...")
+            if result.returncode != 0:
+                logger.info(f"Container {self.container_name} not found: {result.stderr}")
+                # Container doesn't exist, try to create it with docker compose
+                config = load_env_config()
+                service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
+                logger.info(f"Attempting to create container {self.container_name} via docker compose service '{service_name}'...")
+                
+                # Get the project directory from the config's .env file path
+                project_dir = None
+                if hasattr(config, '_env_file') and config._env_file:
+                    project_dir = str(Path(config._env_file).parent)
+                else:
+                    # Fallback: try to find compose files relative to this package
+                    developer_dir = Path(__file__).parent.parent.parent.parent.parent
+                    potential_project_dir = developer_dir / "odoo-ai"
+                    if (potential_project_dir / "docker-compose.yml").exists():
+                        project_dir = str(potential_project_dir)
+                
+                if not project_dir:
+                    raise DockerConnectionError(self.container_name, "Cannot determine project directory for docker compose")
+                
+                # Start all essential services: database, script-runner, shell, and the requested service
+                # This ensures all dependencies and related services are available
+                essential_services = ["database", "script-runner", "shell", service_name]
+                # Remove duplicates while preserving order
+                services_to_start = list(dict.fromkeys(essential_services))
+                compose_cmd = ["docker", "compose", "up", "-d"] + services_to_start
+                compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
+                
+                if compose_result.returncode == 0:
+                    logger.info(f"Successfully created and started container {self.container_name} via compose")
+                    import time
+                    time.sleep(5)  # Give container time to fully start
+                else:
+                    logger.error(f"Failed to start container via compose: {compose_result.stderr}")
+                    raise DockerConnectionError(self.container_name, f"Failed to create container: {compose_result.stderr}")
+                return
+
+            status = result.stdout.strip()
+
+            # Even if main container is running, check all essential dependencies
+            if status == "running":
+                config = load_env_config()
+                essential_containers = [
+                    f"{config.container_prefix}-database-1",
+                    f"{config.container_prefix}-script-runner-1",
+                    f"{config.container_prefix}-shell-1"
+                ]
+                
+                containers_to_start = []
+                for container in essential_containers:
+                    check_cmd = ["docker", "inspect", container, "--format", "{{.State.Status}}"]
+                    result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
+                    if result.returncode != 0 or result.stdout.strip() != "running":
+                        # Extract service name from container name
+                        service = container.replace(f"{config.container_prefix}-", "").replace("-1", "")
+                        containers_to_start.append(service)
+                
+                if containers_to_start:
+                    logger.info(f"Essential containers not running: {containers_to_start}. Starting them...")
+                    # Get the project directory from the config's .env file path
+                    project_dir = None
+                    if hasattr(config, '_env_file') and config._env_file:
+                        project_dir = str(Path(config._env_file).parent)
+                    else:
+                        # Fallback: try to find compose files relative to this package
+                        developer_dir = Path(__file__).parent.parent.parent.parent.parent
+                        potential_project_dir = developer_dir / "odoo-ai"
+                        if (potential_project_dir / "docker-compose.yml").exists():
+                            project_dir = str(potential_project_dir)
+                    
+                    if project_dir:
+                        compose_cmd = ["docker", "compose", "up", "-d"] + containers_to_start
+                        compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
+                        if compose_result.returncode == 0:
+                            logger.info(f"Successfully started containers: {containers_to_start}")
+                            import time
+                            time.sleep(5)  # Give containers time to fully start
+                        else:
+                            logger.warning(f"Failed to start containers: {compose_result.stderr}")
+
+            if status != "running":
+                logger.info(f"Container {self.container_name} is {status}. Starting it...")
                 start_cmd = ["docker", "start", self.container_name]
-                start_result = subprocess.run(start_cmd, capture_output=True, text=True)
+                start_result = subprocess.run(start_cmd, capture_output=True, text=True, timeout=10)
 
                 if start_result.returncode == 0:
                     logger.info(f"Successfully started container {self.container_name}")
                     import time
 
-                    time.sleep(2)  # Give container time to fully start
+                    time.sleep(3)  # Give container more time to fully start
+
+                    # Verify container is healthy after start
+                    health_check_cmd = ["docker", "inspect", self.container_name, "--format", "{{.State.Health.Status}}"]
+                    health_result = subprocess.run(health_check_cmd, capture_output=True, text=True, timeout=5)
+                    if "unhealthy" in health_result.stdout:
+                        logger.warning(f"Container {self.container_name} is unhealthy, attempting restart...")
+                        restart_cmd = ["docker", "restart", self.container_name]
+                        subprocess.run(restart_cmd, capture_output=True, text=True, timeout=15)
+                        time.sleep(5)  # Wait for restart
+                # If docker start failed, try docker compose up
+                elif "No such container" in start_result.stderr or "not found" in start_result.stderr:
+                    logger.info(f"Container {self.container_name} doesn't exist. Attempting to create with docker compose...")
+                    service_name = self.container_name.replace(f"{self.config.container_prefix}-", "").replace("-1", "")
+                    compose_cmd = ["docker", "compose", "up", "-d", service_name]
+                    compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=30)
+                    if compose_result.returncode == 0:
+                        logger.info(f"Successfully created and started container {self.container_name} via compose")
+                    else:
+                        logger.warning(f"Failed to start container via compose: {compose_result.stderr}")
                 else:
                     logger.warning(f"Failed to start container {self.container_name}: {start_result.stderr}")
+        except subprocess.TimeoutExpired as e:
+            raise DockerConnectionError(self.container_name, f"Docker command timed out: {e}") from e
         except FileNotFoundError as e:
             raise DockerConnectionError(self.container_name, f"Docker command not found: {e}") from e
 
@@ -280,14 +429,28 @@ class HostOdooEnvironment:
             "shell",
             "--database",
             self.database,
+            "--db_host",
+            self.db_host,
+            "--db_port",
+            self.db_port,
             "--addons-path",
             self.addons_path,
             "--no-http",
         ]
 
         try:
-            process = subprocess.run(docker_cmd, input=wrapped_code, text=True, capture_output=True, timeout=30)  # noqa: ASYNC221
+            # Increase timeout and add memory limit handling
+            process = subprocess.run(docker_cmd, input=wrapped_code, text=True, capture_output=True, timeout=60)  # noqa: ASYNC221
 
+            if process.returncode == 137:  # Container killed due to OOM
+                error_msg = "Container killed (likely OOM). Consider reducing data size or increasing memory limits."
+                # Attempt to restart container
+                restart_cmd = ["docker", "restart", self.container_name]
+                subprocess.run(restart_cmd, capture_output=True, text=True, timeout=15)
+                import time
+
+                time.sleep(5)
+                raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
             if process.returncode != 0:
                 error_msg = f"Command failed with return code {process.returncode}: {process.stderr}"
                 raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
