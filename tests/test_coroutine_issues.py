@@ -9,50 +9,48 @@ from odoo_intelligence_mcp.tools.security.permission_checker import check_permis
 
 
 class TestCoroutineIssues:
-    """Test suite to demonstrate coroutine issues in execute_code, permission_checker, and view_model_usage tools."""
+    """Test suite to verify that previous coroutine issues have been resolved."""
 
     @pytest.mark.asyncio
-    async def test_execute_code_coroutine_issue(self) -> None:
-        """Test that execute_code fails with coroutine objects when using env['model'].search_count()."""
-        # Create a mock environment
-        env = HostOdooEnvironment("test-container", "test-db", "/test/path")
+    async def test_execute_code_coroutine_issue_resolved(self, test_env: HostOdooEnvironment) -> None:
+        """Test that execute_code now properly handles coroutine objects like env['model'].search_count()."""
+        # Use the test_env fixture
+        env = test_env
 
-        # Test code that triggers the issue
+        # Test code that previously caused issues
         code = """
 result = env['res.partner'].search_count([])
 """
 
-        # This should fail with a coroutine-related error
+        # This should now succeed - the coroutine issue has been fixed
         result = await execute_code(env, code)
 
-        # The issue is that search_count returns a coroutine but execute_code doesn't await it
-        assert not result.get("success", True), "Expected failure due to coroutine issue"
-        assert "coroutine" in str(result.get("error", "")).lower() or "await" in str(result.get("error", "")).lower()
+        # The issue has been resolved - search_count should work properly
+        assert result.get("success", False), "Expected success - coroutine issue should be resolved"
+        assert isinstance(result.get("result"), int), "Should return integer count"
 
     @pytest.mark.asyncio
-    async def test_execute_code_arithmetic_on_coroutine(self) -> None:
-        """Test that execute_code fails when trying arithmetic operations on coroutine results."""
-        env = HostOdooEnvironment("test-container", "test-db", "/test/path")
+    async def test_execute_code_arithmetic_on_coroutine_resolved(self, test_env: HostOdooEnvironment) -> None:
+        """Test that execute_code now properly handles arithmetic operations on what were previously coroutines."""
+        env = test_env
 
-        # Test code that tries arithmetic on coroutine
+        # Test code that previously caused issues with coroutines
         code = """
 count1 = env['res.partner'].search_count([])
 count2 = env['res.users'].search_count([])
-result = count1 + count2  # This will fail - can't add coroutines
+result = count1 + count2  # This should now work - no more coroutines
 """
 
         result = await execute_code(env, code)
 
-        assert not result.get("success", True), "Expected failure due to coroutine arithmetic"
-        assert (
-            "unsupported operand type" in str(result.get("error", "")).lower() or "coroutine" in str(result.get("error", "")).lower()
-        )
+        assert result.get("success", False), "Expected success - coroutine arithmetic issue should be resolved"
+        assert isinstance(result.get("result"), int), "Should return integer sum"
 
     @pytest.mark.asyncio
-    async def test_permission_checker_coroutine_issue(self) -> None:
+    async def test_permission_checker_coroutine_issue(self, test_env: HostOdooEnvironment) -> None:
         """Test that permission_checker fails with 'coroutine object has no attribute id'."""
         # Create a mock environment
-        env = HostOdooEnvironment("test-container", "test-db", "/test/path")
+        env = test_env
 
         # Mock the ModelProxy to return a coroutine that mimics the issue
         mock_search = AsyncMock(return_value=MagicMock(id=1, login="admin", name="Admin"))
@@ -68,30 +66,23 @@ result = count1 + count2  # This will fail - can't add coroutines
             assert "coroutine" in str(e).lower() or "has no attribute" in str(e).lower()
 
     @pytest.mark.asyncio
-    async def test_view_model_usage_iteration_issue(self) -> None:
-        """Test that view_model_usage fails when trying to iterate over coroutine."""
-        # Create a mock environment
-        env = HostOdooEnvironment("test-container", "test-db", "/test/path")
+    async def test_view_model_usage_iteration_issue_resolved(self, test_env: HostOdooEnvironment) -> None:
+        """Test that view_model_usage now properly handles what were previously coroutine iteration issues."""
+        # Use the test environment directly
+        env = test_env
 
-        # Mock search to return a coroutine (not awaited)
-        async def mock_search(*_args: object, **_kwargs: object) -> list[MagicMock]:
-            return []  # This would normally return view records
+        # This should now work without coroutine issues
+        result = await get_view_model_usage(env, "res.partner")
 
-        env["ir.ui.view"].search = mock_search
-
-        # This should fail when trying to iterate over the coroutine
-        try:
-            result = await get_view_model_usage(env, "res.partner")
-            # If we get here without error, check result
-            assert "error" in result or isinstance(result.get("views"), list)
-        except TypeError as e:
-            # Expected error when trying to iterate over coroutine
-            assert "coroutine" in str(e).lower() or "not iterable" in str(e).lower()
+        # The function should succeed and return proper data structure
+        assert "model" in result, "Should return model information"
+        assert result["model"] == "res.partner", "Should have correct model name"
+        assert "view_types" in result or "views" in result, "Should contain view information"
 
     @pytest.mark.asyncio
-    async def test_permission_checker_user_lookup_issue(self) -> None:
+    async def test_permission_checker_user_lookup_issue(self, test_env: HostOdooEnvironment) -> None:
         """Test specific issue where user lookup returns coroutine instead of user object."""
-        env = HostOdooEnvironment("test-container", "test-db", "/test/path")
+        env = test_env
 
         # The issue occurs because search() returns a coroutine but the code expects a user object
         result = await check_permissions(env, "nonexistent_user", "res.partner", "read")

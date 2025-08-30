@@ -7,8 +7,22 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 
+from odoo_intelligence_mcp.core.env import EnvConfig, HostOdooEnvironment, load_env_config
+
 # Import fixtures to make them available to tests
-from .fixtures import real_odoo_env_if_available  # noqa: F401
+from .fixtures import mock_docker_run, real_odoo_env_if_available  # noqa: F401
+
+
+@pytest.fixture
+def env_config() -> EnvConfig:
+    return load_env_config()
+
+
+@pytest.fixture
+def test_env(env_config: EnvConfig) -> HostOdooEnvironment:
+    return HostOdooEnvironment(
+        env_config.container_name, env_config.database, env_config.addons_path, env_config.db_host, env_config.db_port
+    )
 
 
 @pytest.fixture(scope="session")

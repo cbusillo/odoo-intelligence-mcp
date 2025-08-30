@@ -5,7 +5,6 @@ import pytest
 from odoo_intelligence_mcp.core.utils import (
     PaginatedResponse,
     PaginationParams,
-    ResponseSizeError,
     check_response_size,
     get_optional_bool,
     get_optional_int,
@@ -342,20 +341,23 @@ def test_validate_response_size_large_string() -> None:
     large_string = "x" * 200000
     response = {"data": large_string}
 
-    with pytest.raises(ResponseSizeError) as exc_info:
-        validate_response_size(response)
-    assert exc_info.value.estimated_tokens > 25000
-    assert exc_info.value.max_tokens == 25000
+    # The new implementation doesn't raise error but adds warning/truncation info
+    result = validate_response_size(response)
+    assert "meta" in result
+    assert "size_warning" in result["meta"]
+    assert result["meta"]["size_warning"]["estimated_tokens"] > 25000
 
 
 def test_validate_response_size_large_list() -> None:
     # Create a large list
     large_list = ["item"] * 50000
-    response = {"data": large_list}
+    response = {"items": large_list}  # Use "items" key for truncation logic
 
-    with pytest.raises(ResponseSizeError) as exc_info:
-        validate_response_size(response)
-    assert exc_info.value.estimated_tokens > 25000
+    # The new implementation truncates the list instead of raising error
+    result = validate_response_size(response)
+    assert "truncated" in result
+    assert result["truncated"] is True
+    assert len(result["items"]) < len(large_list)
 
 
 def test_validate_response_size_with_custom_limit() -> None:
@@ -367,9 +369,11 @@ def test_validate_response_size_with_custom_limit() -> None:
     result = validate_response_size(response)
     assert result == response
 
-    # Should fail with very small limit
-    with pytest.raises(ResponseSizeError):
-        validate_response_size(response, max_tokens=10)
+    # With very small limit, should truncate the response
+    result = validate_response_size(response, max_tokens=10)
+    assert "truncated" in result
+    assert result["truncated"] is True
+    assert "truncation_info" in result
 
 
 def test_check_response_size_small() -> None:

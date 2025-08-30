@@ -120,7 +120,7 @@ async def test_handle_tool_with_all_docker_scenarios() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-@pytest.mark.skipif(not container_running(load_env_config()["container_name"]), reason="Requires running Odoo container")
+@pytest.mark.skipif(not container_running(load_env_config().container_name), reason="Requires running Odoo container")
 async def test_real_model_info_if_available() -> None:
     # This test runs against real Odoo if available
     result = await handle_call_tool("model_info", {"model_name": "res.partner"})

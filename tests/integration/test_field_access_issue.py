@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.field.field_dependencies import get_field_dependencies
@@ -6,7 +7,7 @@ from odoo_intelligence_mcp.tools.field.field_value_analyzer import analyze_field
 
 
 class TestFieldAccessIntegration:
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def odoo_env(self) -> HostOdooEnvironment:
         manager = HostOdooEnvironmentManager()
         return await manager.get_environment()

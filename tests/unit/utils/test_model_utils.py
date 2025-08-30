@@ -75,7 +75,7 @@ class TestModelIterator:
             "partner_id": mock_field2,
             "amount": mock_field3,
         }
-        mock_env.__getitem__.return_value = mock_model
+        mock_env.__getitem__.side_effect = lambda x: mock_model if x == "sale.order" else MagicMock(_name=x)
 
         fields = list(iterator.iter_model_fields("sale.order"))
         assert len(fields) == 3
@@ -94,7 +94,7 @@ class TestModelIterator:
             "partner_id": mock_field2,
             "amount": mock_field3,
         }
-        mock_env.__getitem__.return_value = mock_model
+        mock_env.__getitem__.side_effect = lambda x: mock_model if x == "sale.order" else MagicMock(_name=x)
 
         def field_filter(name: str, field: Any) -> bool:
             return field.type == "many2one"

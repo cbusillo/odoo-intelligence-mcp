@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_restart import odoo_restart
+
 from ....helpers.docker_test_helpers import (
     create_mock_handle_operation_success,
     get_expected_container_names,
@@ -36,9 +37,9 @@ async def test_odoo_restart_default_services() -> None:
         result = await odoo_restart()
 
         assert result["success"] is True
-        assert result["services"] == expected_services
-        assert len(result["results"]) == 3
-        assert all(r["success"] for r in result["results"].values())
+        assert result["data"]["services"] == expected_services
+        assert len(result["data"]["results"]) == 3
+        assert all(r["success"] for r in result["data"]["results"].values())
 
 
 @pytest.mark.asyncio
@@ -53,8 +54,8 @@ async def test_odoo_restart_specific_services() -> None:
         result = await odoo_restart(services="web-1")
 
         assert result["success"] is True
-        assert result["services"] == expected_services
-        assert len(result["results"]) == 1
+        assert result["data"]["services"] == expected_services
+        assert len(result["data"]["results"]) == 1
 
 
 @pytest.mark.asyncio
@@ -149,6 +150,6 @@ async def test_odoo_restart_service_name_sanitization() -> None:
 
         containers = get_expected_container_names()
         expected_services = [containers["web"], containers["shell"]]
-        assert result["services"] == expected_services
+        assert result["data"]["services"] == expected_services
         assert containers["web"] in called_services
         assert containers["shell"] in called_services

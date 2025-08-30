@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry
+from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry, load_env_config
 from tests.mock_types import ConcreteModelMock as MockModel
 
 
@@ -55,7 +55,8 @@ class TestHostOdooEnvironmentRegistry:
 
     @pytest.fixture
     def host_env(self) -> HostOdooEnvironment:
-        return HostOdooEnvironment("test-container", "test-db", "/test/path")
+        config = load_env_config()
+        return HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
     @pytest.mark.asyncio
     async def test_registry_returns_iterable_object(self, host_env: HostOdooEnvironment) -> None:
@@ -125,7 +126,8 @@ class TestRegistryIntegrationPatterns:
     @pytest.mark.asyncio
     async def test_find_method_pattern(self) -> None:
         """Test the registry iteration pattern used in find_method tool."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
         env._registry = MockRegistry()
         env._registry._models = {
             "sale.order": MagicMock(_name="sale.order"),
@@ -155,7 +157,8 @@ class TestRegistryIntegrationPatterns:
     @pytest.mark.asyncio
     async def test_search_decorators_pattern(self) -> None:
         """Test the registry iteration pattern used in search_decorators tool."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
         env._registry = MockRegistry()
         env._registry._models = {"product.template": MockModel, "stock.move": MockModel}
 
@@ -171,7 +174,8 @@ class TestRegistryIntegrationPatterns:
     @pytest.mark.asyncio
     async def test_search_field_type_pattern(self) -> None:
         """Test the registry iteration pattern used in search_field_type tool."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
         env._registry = MockRegistry()
         env._registry._models = {"res.partner": MockModel, "res.company": MockModel, "hr.employee": MockModel}
 
@@ -204,7 +208,8 @@ class TestRegistryIntegrationPatterns:
     @pytest.mark.asyncio
     async def test_search_field_properties_pattern(self) -> None:
         """Test the registry iteration pattern used in search_field_properties tool."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
         env._registry = MockRegistry()
         env._registry._models = {"sale.order.line": MockModel, "account.move.line": MockModel}
 
@@ -263,7 +268,8 @@ class TestRegistryEdgeCases:
     @pytest.mark.asyncio
     async def test_registry_lazy_loading(self) -> None:
         """Test that registry can be lazily loaded."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
         # Initially, registry is None
         assert env._registry is None
@@ -280,7 +286,8 @@ class TestRegistryStandardModels:
     @pytest.mark.asyncio
     async def test_registry_contains_standard_models(self) -> None:
         """Test that registry contains standard Odoo models when properly initialized."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
         # Simulate a properly initialized registry with standard models
         standard_models = [

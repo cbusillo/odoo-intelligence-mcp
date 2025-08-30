@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_status import odoo_status
+
 from ....helpers.docker_test_helpers import get_expected_container_names
 
 
@@ -24,16 +25,16 @@ async def test_odoo_status_all_running() -> None:
 
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None  # Docker is available
-        mock_instance.get_container.side_effect = lambda container_name: mock_containers.get(container_name)
+        mock_instance.get_container.side_effect = lambda container_name, auto_start=False: mock_containers.get(container_name)
         mock_manager.return_value = mock_instance
 
         result = await odoo_status()
 
         assert result["success"] is True
-        assert result["overall_status"] == "healthy"
-        assert result["total_containers"] == 3
-        assert result["running_containers"] == 3
-        assert all(c["running"] for c in result["containers"].values())
+        assert result["data"]["overall_status"] == "healthy"
+        assert result["data"]["total_containers"] == 3
+        assert result["data"]["running_containers"] == 3
+        assert all(c["running"] for c in result["data"]["containers"].values())
 
 
 # noinspection DuplicatedCode
@@ -54,14 +55,14 @@ async def test_odoo_status_with_verbose() -> None:
         # noinspection DuplicatedCode
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None
-        mock_instance.get_container.return_value = container
+        mock_instance.get_container.side_effect = lambda container_name, auto_start=False: container
         mock_manager.return_value = mock_instance
 
         result = await odoo_status(verbose=True)
 
         assert result["success"] is True
         # Check verbose fields are present
-        container_info = next(iter(result["containers"].values()))
+        container_info = next(iter(result["data"]["containers"].values()))
         assert "state" in container_info
         assert "id" in container_info
         assert "image" in container_info
@@ -86,17 +87,17 @@ async def test_odoo_status_some_stopped() -> None:
 
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None
-        mock_instance.get_container.side_effect = lambda container_name: mock_containers.get(container_name)
+        mock_instance.get_container.side_effect = lambda container_name, auto_start=False: mock_containers.get(container_name)
         mock_manager.return_value = mock_instance
 
         result = await odoo_status()
 
         assert result["success"] is True
-        assert result["overall_status"] == "unhealthy"
-        assert result["running_containers"] == 2
+        assert result["data"]["overall_status"] == "unhealthy"
+        assert result["data"]["running_containers"] == 2
         containers = get_expected_container_names()
-        assert not result["containers"][containers["web"]]["running"]
-        assert result["containers"][containers["shell"]]["running"]
+        assert not result["data"]["containers"][containers["web"]]["running"]
+        assert result["data"]["containers"][containers["shell"]]["running"]
 
 
 @pytest.mark.asyncio
@@ -110,10 +111,10 @@ async def test_odoo_status_container_not_found() -> None:
         result = await odoo_status()
 
         assert result["success"] is True
-        assert result["overall_status"] == "unhealthy"
-        assert result["running_containers"] == 0
+        assert result["data"]["overall_status"] == "unhealthy"
+        assert result["data"]["running_containers"] == 0
         # All containers should show as not found
-        for container_info in result["containers"].values():
+        for container_info in result["data"]["containers"].values():
             assert container_info["status"] == "not_found"
             assert not container_info["running"]
 
@@ -152,12 +153,12 @@ async def test_odoo_status_verbose_image_error_handling() -> None:
         # noinspection DuplicatedCode
         mock_instance = MagicMock()
         mock_instance.client.ping.return_value = None
-        mock_instance.get_container.return_value = container
+        mock_instance.get_container.side_effect = lambda container_name, auto_start=False: container
         mock_manager.return_value = mock_instance
 
         result = await odoo_status(verbose=True)
 
         assert result["success"] is True
         # Should fall back to Config.Image
-        container_info = next(iter(result["containers"].values()))
+        container_info = next(iter(result["data"]["containers"].values()))
         assert container_info["image"] == "odoo-fallback-image"

@@ -73,10 +73,10 @@ def get_expected_container_names() -> dict[str, str]:
     """Get expected container names from environment configuration."""
     config = get_test_config()
     return {
-        "web": config["web_container"],
-        "shell": config["shell_container"],
-        "script_runner": config["script_runner_container"],
-        "container_name": config["container_name"],
+        "web": config.web_container,
+        "shell": config.shell_container,
+        "script_runner": config.script_runner_container,
+        "container_name": config.container_name,
     }
 
 

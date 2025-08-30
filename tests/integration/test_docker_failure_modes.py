@@ -4,24 +4,24 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
-from odoo_intelligence_mcp.utils.error_utils import DockerConnectionError, CodeExecutionError
+from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager, load_env_config
+from odoo_intelligence_mcp.utils.error_utils import CodeExecutionError, DockerConnectionError
 
 
 class TestDockerFailureModes:
     @pytest.mark.asyncio
-    async def test_container_not_running(self) -> None:
+    async def test_container_not_running(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Error: No such container: odoo-script-runner-1")
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = 1 + 1")
 
             assert "container" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_container_start_timeout(self) -> None:
+    async def test_container_start_timeout(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
 
             def side_effect(*args, **kwargs):
@@ -31,44 +31,45 @@ class TestDockerFailureModes:
 
             mock_run.side_effect = side_effect
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = 1")
-            
+
             assert "timeout" in str(exc_info.value).lower() or "timed out" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_docker_daemon_not_running(self) -> None:
+    async def test_docker_daemon_not_running(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
 
             def side_effect(*args, **kwargs):
-                if "ps" in str(args[0]):
+                # Raise FileNotFoundError for any docker command
+                if args and "docker" in str(args[0]):
                     raise FileNotFoundError("docker command not found")
                 return MagicMock(returncode=0, stdout="", stderr="")
 
             mock_run.side_effect = side_effect
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = 1")
 
             assert "docker" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_network_connectivity_issue(self) -> None:
+    async def test_network_connectivity_issue(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=125, stdout="", stderr="docker: Error response from daemon: network not found"
             )
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = 1")
 
             assert "network" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_odoo_shell_crash(self) -> None:
+    async def test_odoo_shell_crash(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
@@ -76,40 +77,41 @@ class TestDockerFailureModes:
                 stderr="",
             )
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             result = await env.execute_code("result = env['res.partner'].search([])")
 
             assert "error" in result or "Traceback" in str(result)
 
     @pytest.mark.asyncio
-    async def test_partial_output_recovery(self) -> None:
+    async def test_partial_output_recovery(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0, stdout='{"result": 42, "partial": true', stderr="Warning: Output truncated"
             )
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             result = await env.execute_code("result = 42")
 
             assert isinstance(result, (dict, str))
 
     @pytest.mark.asyncio
-    async def test_concurrent_container_access(self) -> None:
+    async def test_concurrent_container_access(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             call_count = 0
 
             def side_effect(*args, **kwargs):
                 nonlocal call_count
                 call_count += 1
-                if "ps" in str(args[0]):
-                    return MagicMock(returncode=0, stdout="odoo\n", stderr="")
-                if "exec" in str(args[0]) and call_count <= 8:
+                # Handle docker inspect commands for container status check
+                if "inspect" in str(args[0]):
+                    return MagicMock(returncode=0, stdout="running\n", stderr="")
+                if "exec" in str(args[0]) and call_count <= 12:  # Allow more calls
                     return MagicMock(returncode=0, stdout='{"result": ' + str(call_count) + "}", stderr="")
                 raise subprocess.TimeoutExpired(args[0], 5)
 
             mock_run.side_effect = side_effect
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
 
             tasks = [env.execute_code(f"result = {i}") for i in range(3)]
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -140,24 +142,24 @@ class TestDockerFailureModes:
                 await env.execute_code("result = 1")
 
     @pytest.mark.asyncio
-    async def test_memory_exhaustion(self) -> None:
+    async def test_memory_exhaustion(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=137, stdout="", stderr="Killed")
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = list(range(10**9))")
 
             assert "137" in str(exc_info.value) or "killed" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_permission_denied(self) -> None:
+    async def test_permission_denied(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=126, stdout="", stderr="docker: permission denied while trying to connect to the Docker daemon"
             )
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = 1")
 
@@ -168,29 +170,37 @@ class TestDockerFailureModes:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=125, stdout="", stderr="Error: Invalid container name")
 
-            env = HostOdooEnvironment("invalid/name", "odoo", "/test")
+            config = load_env_config()
+            # Testing with invalid container name
+            env = HostOdooEnvironment(
+                "invalid/name",  # Intentionally invalid
+                config.database,
+                config.addons_path,
+                config.db_host,
+                config.db_port,
+            )
             with pytest.raises(DockerConnectionError):
                 await env.execute_code("result = 1")
 
     @pytest.mark.asyncio
-    async def test_database_lock_timeout(self) -> None:
+    async def test_database_lock_timeout(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0, stdout='{"error": "OperationalError: could not obtain lock on row"}', stderr=""
             )
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             with pytest.raises(CodeExecutionError) as exc_info:
                 await env.execute_code("result = env['res.partner'].create({'name': 'Test'})")
 
             assert "lock" in str(exc_info.value).lower() or "operational" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_corrupted_json_response(self) -> None:
+    async def test_corrupted_json_response(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout='{"result": "test", "data": {corrupted json here}', stderr="")
 
-            env = HostOdooEnvironment("odoo", "odoo", "/test")
+            env = test_env
             result = await env.execute_code("result = 'test'")
 
             assert result is not None

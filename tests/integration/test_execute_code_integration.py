@@ -323,10 +323,10 @@ class TestOdooShellIntegration:
             "docker",
             "exec",
             "-i",
-            config["container_name"],
+            config.container_name,
             "/odoo/odoo-bin",
             "shell",
-            f"--database={config['database']}",
+            f"--database={config.database}",
         ]
         assert args == expected_args
 
@@ -412,9 +412,7 @@ print(f"Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
         config = load_env_config()
 
-        mock_subprocess_run.side_effect = subprocess.TimeoutExpired(
-            cmd=["docker", "exec", "-i", config["container_name"]], timeout=5
-        )
+        mock_subprocess_run.side_effect = subprocess.TimeoutExpired(cmd=["docker", "exec", "-i", config.container_name], timeout=5)
 
         code = "import time; time.sleep(10)"
         result = odoo_shell(code, timeout=5)
@@ -481,8 +479,8 @@ print("Partner saved successfully.")
 
         # Reset mock for odoo_shell direct call
         mock_subprocess_run.return_value.stdout = "5\n"
-        
-        # Test direct odoo_shell call (also mocked subprocess)  
+
+        # Test direct odoo_shell call (also mocked subprocess)
         code_for_shell = "print(2 + 3)"
         shell_result = odoo_shell(code_for_shell)
 

@@ -1,6 +1,4 @@
-from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,78 +8,49 @@ from odoo_intelligence_mcp.tools.code.search_code import search_code
 
 @pytest.mark.asyncio
 async def test_search_code_basic_pattern() -> None:
-    mock_files = [
-        Path("/addons/test_module/models/test_model.py"),
-        Path("/addons/test_module/models/other_model.py"),
-        Path("/addons/test_module/views/test_view.xml"),
-    ]
+    # Mock environment with search results
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(
+        return_value=[
+            {
+                "file": "/addons/test_module/models/test_model.py",
+                "line": 5,
+                "match": "    def test_method(self):",
+                "context": "    def test_method(self):",
+            }
+        ]
+    )
 
-    file_contents = {
-        "/addons/test_module/models/test_model.py": """
-class TestModel(models.Model):
-    _name = 'test.model'
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    def test_method(self):
-        return True
-""",
-        "/addons/test_module/models/other_model.py": """
-class OtherModel(models.Model):
-    _name = 'other.model'
-
-    def other_method(self):
-        return False
-""",
-    }
-
-    def mock_open_file(filename: str, *_args: Any, **_kwargs: Any) -> MagicMock:
-        return mock_open(read_data=file_contents.get(str(filename), ""))()
-
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
         result = await search_code("test_method")
 
     assert "items" in result
-    assert isinstance(result["items"], list)
     assert "pagination" in result
-
-
-@pytest.mark.asyncio
-async def test_search_code_multiple_matches() -> None:
-    mock_files = [Path("/addons/module/models/model.py")]
-
-    file_content = """
-def compute_total(self):
-    total = 0
-    for line in self.lines:
-        total += line.price
-    self.total = total
-"""
-
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
-        result = await search_code("total")
-
-    assert "items" in result
-    assert isinstance(result["items"], list)
-    assert "pagination" in result
+    assert len(result["items"]) == 1
+    assert result["items"][0]["line"] == 5
+    assert "test_method" in result["items"][0]["match"]
 
 
 @pytest.mark.asyncio
 async def test_search_code_xml_files() -> None:
-    mock_files = [Path("/addons/module/views/view.xml")]
+    # Mock environment with XML search results
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(
+        return_value=[
+            {
+                "file": "/addons/module/views/view.xml",
+                "line": 5,
+                "match": '        <field name="model">test.model</field>',
+                "context": '        <field name="model">test.model</field>',
+            }
+        ]
+    )
 
-    xml_content = """<?xml version="1.0"?>
-<odoo>
-    <record id="view_test" model="ir.ui.view">
-        <field name="name">test.view</field>
-        <field name="model">test.model</field>
-        <field name="arch" type="xml">
-            <form string="Test Form">
-                <field name="name"/>
-            </form>
-        </field>
-    </record>
-</odoo>"""
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=xml_content)):
         result = await search_code("test\\.model", "xml")
 
     assert "items" in result
@@ -90,12 +59,24 @@ async def test_search_code_xml_files() -> None:
 
 @pytest.mark.asyncio
 async def test_search_code_with_pagination() -> None:
-    # Create many mock files
-    mock_files = [Path(f"/addons/module/models/model_{i}.py") for i in range(30)]
+    # Create many mock results
+    mock_results = []
+    for i in range(30):
+        mock_results.append(
+            {
+                "file": f"/addons/module/models/model_{i}.py",
+                "line": 10,
+                "match": "def test_method(self):",
+                "context": "def test_method(self):",
+            }
+        )
 
-    file_content = "def test_method(self):\n    pass"
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(return_value=mock_results)
 
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+
         pagination = PaginationParams(limit=10, offset=0)
         result = await search_code("test_method", pagination=pagination)
 
@@ -106,97 +87,65 @@ async def test_search_code_with_pagination() -> None:
 
 @pytest.mark.asyncio
 async def test_search_code_no_matches() -> None:
-    mock_files = [Path("/addons/module/models/model.py")]
+    # Mock environment with no results
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(return_value=[])
 
-    file_content = "class MyModel(models.Model):\n    _name = 'my.model'"
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
         result = await search_code("nonexistent_pattern")
 
     assert "items" in result
-    assert result["items"] == []
-    assert "pagination" in result
+    assert len(result["items"]) == 0
+    assert result["pagination"]["total_count"] == 0
 
 
 @pytest.mark.asyncio
-async def test_search_code_case_sensitive_regex() -> None:
-    mock_files = [Path("/addons/module/models/model.py")]
+async def test_search_code_invalid_regex() -> None:
+    # Invalid regex should be caught before execution
+    result = await search_code("[invalid(regex")
 
-    file_content = """
-class TestModel(models.Model):
-    test_field = fields.Char()
-    TEST_CONSTANT = 'value'
-"""
-
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
-        # Search for uppercase TEST
-        result = await search_code("TEST")
-
-    assert "items" in result
-    assert "pagination" in result
-
-
-@pytest.mark.asyncio
-async def test_search_code_complex_regex() -> None:
-    mock_files = [Path("/addons/module/models/model.py")]
-
-    file_content = """
-@api.depends('line_ids.price')
-def _compute_total(self):
-    pass
-
-@api.onchange('partner_id')
-def _onchange_partner(self):
-    pass
-"""
-
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=file_content)):
-        # Search for @api decorators
-        result = await search_code(r"@api\.\w+")
-
-    assert "items" in result
-    assert "pagination" in result
+    assert "error" in result
+    assert "Invalid regex pattern" in result["error"]
 
 
 @pytest.mark.asyncio
 async def test_search_code_file_read_error() -> None:
-    mock_files = [
-        Path("/addons/module/models/readable.py"),
-        Path("/addons/module/models/unreadable.py"),
-    ]
+    # Mock environment that returns an error
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(return_value={"error": "Failed to read file", "error_type": "IOError"})
 
-    def mock_open_file(filename: str, *_args: Any, **_kwargs: Any) -> MagicMock:
-        if "unreadable" in str(filename):
-            raise PermissionError("Access denied")
-        return mock_open(read_data="def test(): pass")()
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", side_effect=mock_open_file):
-        result = await search_code("test")
+        result = await search_code("test_pattern")
 
-    # Should still return results from readable files
-    assert "items" in result
-    assert "pagination" in result
+    assert "error" in result
+    assert "Failed to read file" in result["error"]
 
 
 @pytest.mark.asyncio
 async def test_search_code_javascript_files() -> None:
-    mock_files = [Path("/addons/module/static/src/js/widget.js")]
+    # Mock environment with JS search results
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(
+        return_value=[
+            {
+                "file": "/addons/module/static/src/js/widget.js",
+                "line": 15,
+                "match": "    testFunction: function() {",
+                "context": "    testFunction: function() {",
+            }
+        ]
+    )
 
-    js_content = """
-odoo.define('module.widget', function (require) {
-    'use strict';
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    const Widget = require('web.Widget');
-
-    return Widget.extend({
-        start: function () {
-            console.log('Widget started');
-        }
-    });
-});"""
-
-    with patch("pathlib.Path.rglob", return_value=mock_files), patch("builtins.open", mock_open(read_data=js_content)):
-        result = await search_code("Widget", "js")
+        result = await search_code("testFunction", "js")
 
     assert "items" in result
-    assert "pagination" in result
+    assert len(result["items"]) == 1
+    assert result["items"][0]["file"].endswith(".js")
+    assert "testFunction" in result["items"][0]["match"]

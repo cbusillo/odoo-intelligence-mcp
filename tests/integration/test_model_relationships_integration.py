@@ -1,19 +1,14 @@
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.model.model_relationships import get_model_relationships
+from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestModelRelationshipsIntegration:
-    @pytest.fixture
-    async def odoo_env(self) -> HostOdooEnvironment:
-        manager = HostOdooEnvironmentManager()
-        return await manager.get_environment()
-
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_relationships_res_partner(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_relationships(odoo_env, "res.partner")
+    async def test_get_model_relationships_res_partner(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_relationships(real_odoo_env_if_available, "res.partner")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
@@ -34,8 +29,8 @@ class TestModelRelationshipsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_relationships_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_relationships(odoo_env, "product.template")
+    async def test_get_model_relationships_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_relationships(real_odoo_env_if_available, "product.template")
 
         assert "error" not in result
         assert result["model"] == "product.template"
@@ -52,17 +47,17 @@ class TestModelRelationshipsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_relationships_nonexistent(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await get_model_relationships(odoo_env, "nonexistent.model")
+    async def test_get_model_relationships_nonexistent(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await get_model_relationships(real_odoo_env_if_available, "nonexistent.model")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_relationships_motor_models(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_model_relationships_motor_models(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test motor.product.template if it exists
-        result = await get_model_relationships(odoo_env, "motor.product.template")
+        result = await get_model_relationships(real_odoo_env_if_available, "motor.product.template")
 
         if "error" not in result:
             assert result["model"] == "motor.product.template"
@@ -71,9 +66,9 @@ class TestModelRelationshipsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_get_model_relationships_transient_model(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_get_model_relationships_transient_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a wizard/transient model
-        result = await get_model_relationships(odoo_env, "base.module.upgrade")
+        result = await get_model_relationships(real_odoo_env_if_available, "base.module.upgrade")
 
         if "error" not in result:
             assert result["model"] == "base.module.upgrade"

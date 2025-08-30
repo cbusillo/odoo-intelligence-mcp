@@ -73,9 +73,7 @@ class TestToolContracts:
                         result = await handle_call_tool(tool.name, {"field_type": "many2one"})
                     elif tool.name == "addon_dependencies":
                         result = await handle_call_tool(tool.name, {"addon_name": "sale"})
-                    elif tool.name == "inheritance_chain":
-                        result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
-                    elif tool.name == "performance_analysis":
+                    elif tool.name == "inheritance_chain" or tool.name == "performance_analysis":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
                     elif tool.name == "pattern_analysis":
                         result = await handle_call_tool(tool.name, {})
@@ -363,17 +361,25 @@ class TestToolPerformanceContracts:
     async def test_tool_memory_efficiency(self) -> None:
         mock_env = AsyncMock()
 
-        large_items = [{"id": i, "data": f"item_{i}" * 100} for i in range(10000)]
+        large_items = [
+            {
+                "name": f"test.model.{i}",
+                "description": f"Test Model {i}",
+                "table": f"test_model_{i}",
+                "transient": False,
+                "abstract": False,
+                "data": f"item_{i}" * 100,
+            }
+            for i in range(10000)
+        ]
         mock_env.execute_code.return_value = {
-            "items": large_items,
-            "pagination": {
-                "page": 1,
-                "page_size": 100,
-                "total_count": 10000,
-                "total_pages": 100,
-                "has_next_page": True,
-                "has_previous_page": False,
-            },
+            "result": {
+                "exact_matches": [],
+                "partial_matches": large_items,
+                "description_matches": [],
+                "total_models": 10000,
+                "pattern": "test",
+            }
         }
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
@@ -381,7 +387,7 @@ class TestToolPerformanceContracts:
 
             content = json.loads(result[0].text)
 
-            if "items" in content:
-                assert len(content["items"]) <= 100
-            if "pagination" in content:
-                assert content["pagination"]["page_size"] <= 100
+            if "matches" in content and "items" in content["matches"]:
+                assert len(content["matches"]["items"]) <= 100
+            if "matches" in content and "pagination" in content["matches"]:
+                assert content["matches"]["pagination"]["page_size"] <= 100

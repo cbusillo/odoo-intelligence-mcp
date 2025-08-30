@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from odoo_intelligence_mcp.core.env import load_env_config
 from odoo_intelligence_mcp.tools.code.execute_code import execute_code
 
 
@@ -19,7 +20,8 @@ async def test_execute_python_code_success(mock_odoo_env: MagicMock) -> None:
 async def test_execute_code_docker_with_raw_output(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 
-    env = HostOdooEnvironment("test", "test", "/test")
+    config = load_env_config()
+    env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
     code = "print('hello docker')"
 
     # Mock execute_code to return Docker-style raw output
@@ -37,7 +39,8 @@ async def test_execute_code_docker_with_raw_output(mock_odoo_env: MagicMock) -> 
 async def test_execute_code_docker_with_recordset_result(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 
-    env = HostOdooEnvironment("test", "test", "/test")
+    config = load_env_config()
+    env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
     code = "result = env['res.partner'].search([])"
 
     # Mock execute_code to return Docker-style recordset result
@@ -244,7 +247,8 @@ async def test_execute_python_code_empty_code(mock_odoo_env: MagicMock) -> None:
 async def test_execute_code_docker_already_formatted_response(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 
-    env = HostOdooEnvironment("test", "test", "/test")
+    config = load_env_config()
+    env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
     code = "result = {'test': 'value'}"
 
     # Mock execute_code to return already formatted response

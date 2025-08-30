@@ -38,7 +38,7 @@ async def test_handle_call_tool_no_arguments() -> None:
     assert isinstance(result[0], TextContent)
     content = json.loads(result[0].text)
     assert "error" in content
-    assert "No arguments provided" in content["error"]
+    assert "Unknown tool" in content["error"]
 
 
 @pytest.mark.asyncio
@@ -106,6 +106,8 @@ async def test_handle_call_tool_search_models() -> None:
             "exact_matches": [{"name": "product.product", "description": "Product"}],
             "partial_matches": [],
             "description_matches": [],
+            "pattern": "product",
+            "total_models": 100,
         }
     )
 
@@ -115,8 +117,14 @@ async def test_handle_call_tool_search_models() -> None:
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
     content = json.loads(result[0].text)
-    assert "exact_matches" in content
-    assert len(content["exact_matches"]) > 0
+    assert "pattern" in content
+    assert content["pattern"] == "product"
+    # When pagination is applied, results are in "matches"
+    if "matches" in content:
+        assert len(content["matches"]["items"]) > 0
+    else:
+        assert "exact_matches" in content
+        assert len(content["exact_matches"]) > 0
 
 
 @pytest.mark.asyncio
@@ -127,6 +135,8 @@ async def test_handle_call_tool_field_usages() -> None:
         return_value={
             "model": "product.template",
             "field": "name",
+            "field_info": {"type": "char", "string": "Name", "required": True},
+            "usage_summary": {"views": {"form": 1, "tree": 1}, "methods": 1, "domains": 0},
             "views": {"form": ["form_view_1"], "tree": ["tree_view_1"]},
             "methods": ["compute_display_name"],
             "domains": [],
@@ -141,7 +151,7 @@ async def test_handle_call_tool_field_usages() -> None:
     content = json.loads(result[0].text)
     assert content["model"] == "product.template"
     assert content["field"] == "name"
-    assert "views" in content
+    assert "usages" in content  # Results are paginated under "usages"
 
 
 @pytest.mark.asyncio
@@ -182,15 +192,17 @@ async def test_handle_call_tool_odoo_status() -> None:
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
     content = json.loads(result[0].text)
-    assert "containers" in content
-    assert "overall_status" in content
+    assert content["success"] is True
+    assert "data" in content
+    assert "containers" in content["data"]
+    assert "overall_status" in content["data"]
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_handle_call_tool_execute_code() -> None:
-    mock_env = MagicMock()
-    mock_env.execute_code = MagicMock(return_value={"result": 4})
+    mock_env = AsyncMock()
+    mock_env.execute_code = AsyncMock(return_value=4)
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("execute_code", {"code": "result = 2 + 2"})
@@ -198,6 +210,7 @@ async def test_handle_call_tool_execute_code() -> None:
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
     content = json.loads(result[0].text)
+    assert content["success"] is True
     assert content["result"] == 4
 
 

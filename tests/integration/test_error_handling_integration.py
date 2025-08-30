@@ -60,7 +60,7 @@ async def test_handle_call_tool_docker_connection_error() -> None:
         from odoo_intelligence_mcp.core.env import load_env_config
 
         config = load_env_config()
-        container_name = config["container_name"]
+        container_name = config.container_name
         mock_get_env.side_effect = DockerConnectionError(container_name, "Container not running")
 
         result = await handle_call_tool("model_info", {"model_name": "res.partner"})
@@ -72,7 +72,7 @@ async def test_handle_call_tool_docker_connection_error() -> None:
     from odoo_intelligence_mcp.core.env import load_env_config
 
     config = load_env_config()
-    container_name = config["container_name"]
+    container_name = config.container_name
 
     assert container_name in content["error"]
     assert "Container not running" in content["error"]

@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry
+from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry, load_env_config
 from odoo_intelligence_mcp.core.utils import PaginationParams
 from odoo_intelligence_mcp.tools.field import search_field_properties, search_field_type
 
@@ -13,7 +13,8 @@ class TestFieldSearchRegistryIssue:
     @pytest.fixture
     def mock_env_docker_registry(self) -> HostOdooEnvironment:
         """Create environment with DockerRegistry that returns empty iterator."""
-        return HostOdooEnvironment("test-container", "test-db", "/test/path")
+        config = load_env_config()
+        return HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
     @pytest.mark.asyncio
     async def test_search_field_type_with_docker_registry(self, mock_env_docker_registry: HostOdooEnvironment) -> None:
@@ -118,7 +119,8 @@ class TestFieldSearchRegistryIssue:
     @pytest.mark.asyncio
     async def test_field_search_with_host_env_and_execute_code(self) -> None:
         """Test field search when HostOdooEnvironment has execute_code."""
-        env = HostOdooEnvironment("test", "test", "/test")
+        config = load_env_config()
+        env = HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
         # Mock execute_code to return required fields
         with patch.object(env, "execute_code", new_callable=AsyncMock) as mock_exec:

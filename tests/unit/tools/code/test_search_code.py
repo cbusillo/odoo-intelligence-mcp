@@ -1,7 +1,6 @@
 """Simple test for search_code function."""
 
-from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -13,24 +12,22 @@ async def test_search_code_basic() -> None:
     """Test basic search functionality."""
     pattern = "test_pattern"
 
-    # Mock files that contain the pattern
-    mock_files = [
-        Path("/volumes/addons/test_module/models/test_model.py"),
-    ]
+    # Mock the environment manager and execute_code
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(
+        return_value=[
+            {
+                "file": "/odoo/addons/test_module/models/test_model.py",
+                "line": 5,
+                "match": "    def test_pattern_method(self):",
+                "context": "    def test_pattern_method(self):",
+            }
+        ]
+    )
 
-    file_content = """
-class TestModel(models.Model):
-    _name = 'test.model'
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    def test_pattern_method(self):
-        return True
-"""
-
-    with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch("pathlib.Path.rglob", return_value=mock_files),
-        patch("pathlib.Path.read_text", return_value=file_content),
-    ):
         result = await search_code(pattern)
 
         # Check result structure
@@ -51,23 +48,13 @@ async def test_search_code_no_matches() -> None:
     """Test search with no matches."""
     pattern = "nonexistent_pattern_xyz123"
 
-    mock_files = [
-        Path("/volumes/addons/test_module/models/test_model.py"),
-    ]
+    # Mock empty results
+    mock_env = MagicMock()
+    mock_env.execute_code = AsyncMock(return_value=[])
 
-    file_content = """
-class TestModel(models.Model):
-    _name = 'test.model'
+    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
+        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
 
-    def some_method(self):
-        return True
-"""
-
-    with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch("pathlib.Path.rglob", return_value=mock_files),
-        patch("pathlib.Path.read_text", return_value=file_content),
-    ):
         result = await search_code(pattern)
 
         assert "items" in result

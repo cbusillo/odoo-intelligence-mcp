@@ -1,10 +1,9 @@
-import os
 import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager
+from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager, load_env_config
 from odoo_intelligence_mcp.tools.operations.container_restart import odoo_restart
 from odoo_intelligence_mcp.tools.operations.container_status import odoo_status
 from odoo_intelligence_mcp.tools.operations.module_update import odoo_update_module
@@ -15,13 +14,12 @@ from odoo_intelligence_mcp.utils.error_utils import DockerConnectionError
 @pytest.mark.integration
 @pytest.mark.docker
 async def test_host_odoo_environment_manager_init() -> None:
+    config = load_env_config()
     env_manager = HostOdooEnvironmentManager()
 
-    # Get expected values from environment or defaults
-    expected_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
-    expected_container = f"{expected_prefix}-script-runner-1"
-    expected_db = os.getenv("ODOO_DB_NAME", "odoo")
-    expected_addons = os.getenv("ODOO_ADDONS_PATH", "/opt/project/addons,/odoo/addons,/volumes/enterprise")
+    expected_container = config.container_name
+    expected_db = config.database
+    expected_addons = config.addons_path
 
     assert env_manager.container_name == expected_container
     assert env_manager.database == expected_db
@@ -35,33 +33,45 @@ async def test_host_odoo_environment_execute_code() -> None:
     env_manager = HostOdooEnvironmentManager()
 
     with patch("subprocess.run") as mock_run:
-        # Mock responses for container check (not found), start (success), and execute (success)
-        mock_results = [
-            # Container check - not found
-            MagicMock(returncode=0, stdout="", stderr=""),
-            # Container start - success
-            MagicMock(returncode=0, stdout="odoo-script-runner-1\n", stderr=""),
-            # Code execution - success
-            MagicMock(returncode=0, stdout='{"result": 123}', stderr=""),
-        ]
-        mock_run.side_effect = mock_results
+        # Mock responses for container operations
+        def side_effect(*args, **kwargs):
+            cmd = args[0] if args else []
+            # Handle docker inspect for status check
+            if "inspect" in cmd and "--format" in cmd and "State.Status" in str(cmd):
+                return MagicMock(returncode=0, stdout="running\n", stderr="")
+            # Handle docker inspect for health check
+            if "inspect" in cmd and "--format" in cmd and "State.Health.Status" in str(cmd):
+                return MagicMock(returncode=0, stdout="healthy\n", stderr="")
+            # Handle docker exec for code execution
+            if "exec" in cmd:
+                return MagicMock(returncode=0, stdout='{"result": 123}', stderr="")
+            # Default response
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = side_effect
 
         env = await env_manager.get_environment()
         result = await env.execute_code("result = 123")
 
         assert result == {"result": 123}
 
-        # Verify subprocess was called 3 times (check, start, execute)
-        assert mock_run.call_count == 3
+        # Verify subprocess was called (at least for status check and execute)
+        assert mock_run.call_count >= 2
 
-        # Check the final call was the code execution
-        final_call_args = mock_run.call_args_list[-1][0][0]
-        assert "docker" in final_call_args
-        assert "exec" in final_call_args
-        assert "-i" in final_call_args
-        assert env_manager.container_name in final_call_args
-        assert "/odoo/odoo-bin" in final_call_args
-        assert "shell" in final_call_args
+        # Find the exec call in the call list
+        exec_call = None
+        for call in mock_run.call_args_list:
+            if call[0] and "exec" in call[0][0]:
+                exec_call = call[0][0]
+                break
+
+        assert exec_call is not None
+        assert "docker" in exec_call
+        assert "exec" in exec_call
+        assert "-i" in exec_call
+        assert env_manager.container_name in exec_call
+        assert "/odoo/odoo-bin" in exec_call
+        assert "shell" in exec_call
 
 
 @pytest.mark.asyncio
@@ -106,17 +116,18 @@ async def test_docker_container_status_check() -> None:
 
         result = await odoo_status()
 
-        # Get expected values from environment or defaults
-        expected_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
-        expected_web_container = f"{expected_prefix}-web-1"
+        # Get expected values from config
+        config = load_env_config()
+        expected_web_container = config.web_container
 
         print(f"Result: {result}")
         print(f"Expected container: {expected_web_container}")
 
-        assert result["overall_status"] == "healthy"
-        assert "containers" in result
-        assert expected_web_container in result["containers"]
-        assert result["containers"][expected_web_container]["status"] == "running"
+        assert result["success"] is True
+        assert result["data"]["overall_status"] == "healthy"
+        assert "containers" in result["data"]
+        assert expected_web_container in result["data"]["containers"]
+        assert result["data"]["containers"][expected_web_container]["status"] == "running"
 
         # Verify get_container was called for each container
         assert mock_docker_manager.get_container.call_count >= 3  # web, shell, script-runner
@@ -126,18 +137,19 @@ async def test_docker_container_status_check() -> None:
 @pytest.mark.integration
 @pytest.mark.docker
 async def test_docker_container_restart() -> None:
-    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager") as mock_docker_manager_class:
+    with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager") as mock_docker_manager_class:
         # Mock Docker client manager
         mock_docker_manager = MagicMock()
         mock_docker_manager_class.return_value = mock_docker_manager
 
-        # Mock successful container restart operation
+        # Mock successful container restart operation - returns dict with success flag
         mock_docker_manager.handle_container_operation.return_value = {"success": True, "status": "running"}
 
         result = await odoo_restart(services="web-1")
-
+        
         assert result["success"] is True
-        assert "services" in result
+        assert "data" in result
+        assert "services" in result["data"]
 
 
 @pytest.mark.asyncio
@@ -213,7 +225,8 @@ async def test_environment_with_actual_docker_check() -> None:
 
     # If we get here, Docker is available
     # Try to check our specific containers
-    expected_prefix = os.getenv("ODOO_CONTAINER_PREFIX", "odoo")
+    config = load_env_config()
+    expected_prefix = config.container_prefix
     result = subprocess.run(
         ["docker", "ps", "--filter", f"name={expected_prefix}", "--format", "{{.Names}}"], capture_output=True, text=True
     )
@@ -248,4 +261,4 @@ result = {"partner_count": env['res.partner'].search_count([])}
         # Verify the command structure
         call_args = mock_run.call_args
         assert call_args[1]["input"] is not None  # Code was passed via stdin
-        assert call_args[1]["timeout"] == 30  # Default timeout
+        assert call_args[1]["timeout"] == 60  # Default timeout increased for stability

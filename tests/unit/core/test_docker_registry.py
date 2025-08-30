@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import DockerRegistry, HostOdooEnvironment
+from odoo_intelligence_mcp.core.env import DockerRegistry, HostOdooEnvironment, load_env_config
 
 
 class TestDockerRegistryIteration:
@@ -12,7 +12,8 @@ class TestDockerRegistryIteration:
     @pytest.fixture
     def host_env(self) -> HostOdooEnvironment:
         """Create a HostOdooEnvironment instance."""
-        return HostOdooEnvironment("test-container", "test-db", "/test/path")
+        config = load_env_config()
+        return HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
     def test_docker_registry_returns_empty_iterator(self, host_env: HostOdooEnvironment) -> None:
         """Test that DockerRegistry.__iter__ always returns empty iterator."""

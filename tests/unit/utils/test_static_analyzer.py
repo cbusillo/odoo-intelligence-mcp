@@ -56,37 +56,43 @@ class SaleOrder(models.Model):
 
     @patch("odoo_intelligence_mcp.utils.static_analyzer.load_env_config")
     def test_init_with_env_config(self, mock_load_env: Mock) -> None:
-        mock_load_env.return_value = {"addons_path": "/env/addons,/env/enterprise"}
+        from unittest.mock import MagicMock
+
+        mock_config = MagicMock()
+        mock_config.addons_path = "/env/addons,/env/enterprise"
+        mock_load_env.return_value = mock_config
         analyzer = OdooStaticAnalyzer()
         assert analyzer.addon_paths == ["/env/addons", "/env/enterprise"]
 
-    @patch("pathlib.Path.exists")
-    @patch("pathlib.Path.is_dir")
-    @patch("pathlib.Path.iterdir")
-    @patch("pathlib.Path.glob")
-    @patch("pathlib.Path.read_text")
+    @patch("odoo_intelligence_mcp.utils.static_analyzer.Path")
     def test_find_model_file_success(
         self,
-        mock_read_text: Mock,
-        mock_glob: Mock,
-        mock_iterdir: Mock,
-        mock_is_dir: Mock,
-        mock_exists: Mock,
+        mock_path_class: Mock,
         analyzer: OdooStaticAnalyzer,
         mock_file_content: str,
     ) -> None:
-        mock_exists.return_value = True
-        mock_is_dir.return_value = True
-
-        mock_addon_dir = MagicMock()
-        mock_addon_dir.is_dir.return_value = True
-        mock_addon_dir.__truediv__.return_value = MagicMock(exists=Mock(return_value=True))
-        mock_iterdir.return_value = [mock_addon_dir]
-
+        # Create mock file that will be returned
         mock_py_file = MagicMock(spec=Path)
         mock_py_file.name = "sale.py"
         mock_py_file.read_text.return_value = mock_file_content
-        mock_glob.return_value = [mock_py_file]
+
+        # Create mock models directory
+        mock_models_dir = MagicMock()
+        mock_models_dir.exists.return_value = True
+        mock_models_dir.glob.return_value = [mock_py_file]
+
+        # Create mock addon directory
+        mock_addon_dir = MagicMock()
+        mock_addon_dir.is_dir.return_value = True
+        mock_addon_dir.__truediv__.return_value = mock_models_dir
+
+        # Create mock base path
+        mock_base_path = MagicMock()
+        mock_base_path.exists.return_value = True
+        mock_base_path.iterdir.return_value = [mock_addon_dir]
+
+        # Configure Path to return our mock base path
+        mock_path_class.return_value = mock_base_path
 
         result = analyzer.find_model_file("sale.order")
         assert result == mock_py_file
@@ -196,19 +202,19 @@ def _compute_value(self):
         assert len(info["decorators"]["depends"]) == 1
 
     def test_analyze_decorator_name(self, analyzer: OdooStaticAnalyzer) -> None:
-        tree = ast.parse("@simple_decorator")
+        tree = ast.parse("@simple_decorator\ndef func(): pass")
         decorator_node = tree.body[0].decorator_list[0]
         result = analyzer._analyze_decorator(decorator_node, "")
         assert result == {"name": "simple_decorator"}
 
     def test_analyze_decorator_attribute(self, analyzer: OdooStaticAnalyzer) -> None:
-        tree = ast.parse("@api.depends")
+        tree = ast.parse("@api.depends\ndef func(): pass")
         decorator_node = tree.body[0].decorator_list[0]
         result = analyzer._analyze_decorator(decorator_node, "")
         assert result == {"name": "api.depends"}
 
     def test_analyze_decorator_call(self, analyzer: OdooStaticAnalyzer) -> None:
-        tree = ast.parse('@api.depends("field1", "field2")')
+        tree = ast.parse('@api.depends("field1", "field2")\ndef func(): pass')
         decorator_node = tree.body[0].decorator_list[0]
         result = analyzer._analyze_decorator(decorator_node, "")
         assert result == {"name": "api.depends", "args": ["field1", "field2"]}
@@ -331,23 +337,21 @@ def _compute_value(self):
 
     @patch("pathlib.Path.exists")
     @patch("pathlib.Path.rglob")
-    @patch("pathlib.Path.read_text")
-    def test_search_decorators_in_files(
-        self, mock_read_text: Mock, mock_rglob: Mock, mock_exists: Mock, analyzer: OdooStaticAnalyzer
-    ) -> None:
+    def test_search_decorators_in_files(self, mock_rglob: Mock, mock_exists: Mock) -> None:
+        # Create analyzer with single addon path to avoid duplicates
+        analyzer = OdooStaticAnalyzer(addon_paths=["/test/addons"])
         mock_exists.return_value = True
 
         mock_file = MagicMock(spec=Path)
         mock_file.__str__.return_value = "/test/sale.py"
-        mock_rglob.return_value = [mock_file]
-
-        mock_read_text.return_value = """
+        mock_file.read_text.return_value = """
 _name = "sale.order"
 
 @api.depends("line_ids")
 def _compute_total(self):
     pass
 """
+        mock_rglob.return_value = [mock_file]
 
         results = analyzer.search_decorators_in_files("depends")
         assert len(results) == 1

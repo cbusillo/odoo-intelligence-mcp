@@ -1,19 +1,28 @@
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.analysis.performance_analysis import analyze_performance
+from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
+
+
+def extract_issues_from_result(result: dict) -> list:
+    """Extract issues list from either paginated or non-paginated format"""
+    if "performance_issues" not in result:
+        return []
+
+    issues_data = result["performance_issues"]
+    if isinstance(issues_data, dict) and "items" in issues_data:
+        return issues_data["items"]
+    elif isinstance(issues_data, list):
+        return issues_data
+    else:
+        return []
 
 
 class TestPerformanceAnalysisIntegration:
-    @pytest.fixture
-    async def odoo_env(self) -> HostOdooEnvironment:
-        manager = HostOdooEnvironmentManager()
-        return await manager.get_environment()
-
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_res_partner(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_performance(odoo_env, "res.partner")
+    async def test_analyze_performance_res_partner(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_performance(real_odoo_env_if_available, "res.partner")
 
         assert "error" not in result
         assert result["model"] == "res.partner"
@@ -26,11 +35,14 @@ class TestPerformanceAnalysisIntegration:
         assert any("index" in rec.lower() for rec in result["recommendations"])
         assert any("prefetch" in rec.lower() for rec in result["recommendations"])
 
+        # Extract issues from paginated response
+        issues = extract_issues_from_result(result)
+
         # Issue count should match length of issues
-        assert result["issue_count"] == len(result["performance_issues"])
+        assert result["issue_count"] >= len(issues)
 
         # Check issue structure if any exist
-        for issue in result["performance_issues"]:
+        for issue in issues:
             assert "type" in issue
             assert "description" in issue
             assert "severity" in issue
@@ -38,15 +50,18 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_performance(odoo_env, "product.template")
+    async def test_analyze_performance_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_performance(real_odoo_env_if_available, "product.template")
 
         assert "error" not in result
         assert result["model"] == "product.template"
-        assert isinstance(result["performance_issues"], list)
+
+        # Extract issues from paginated response
+        issues = extract_issues_from_result(result)
+        assert isinstance(issues, list)
 
         # Product template might have relational field issues
-        n_plus_1_issues = [issue for issue in result["performance_issues"] if issue["type"] == "potential_n_plus_1"]
+        n_plus_1_issues = [issue for issue in issues if issue["type"] == "potential_n_plus_1"]
 
         # Check structure of N+1 issues if present
         for issue in n_plus_1_issues:
@@ -57,14 +72,17 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_sale_order(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_performance(odoo_env, "sale.order")
+    async def test_analyze_performance_sale_order(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_performance(real_odoo_env_if_available, "sale.order")
 
         assert "error" not in result
         assert result["model"] == "sale.order"
 
+        # Extract issues from paginated response
+        issues = extract_issues_from_result(result)
+
         # Sale order commonly has computed fields
-        compute_issues = [issue for issue in result["performance_issues"] if issue["type"] == "expensive_compute"]
+        compute_issues = [issue for issue in issues if issue["type"] == "expensive_compute"]
 
         # Check structure of compute issues if present
         for issue in compute_issues:
@@ -75,30 +93,35 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_motor_product_template(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_performance(odoo_env, "motor.product.template")
+    async def test_analyze_performance_motor_product_template(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_performance(real_odoo_env_if_available, "motor.product.template")
 
         assert "error" not in result
         assert result["model"] == "motor.product.template"
-        assert isinstance(result["performance_issues"], list)
+
+        # Extract issues from paginated response
+        issues = extract_issues_from_result(result)
+        assert isinstance(issues, list)
 
         # Custom models might have various issues
-        if result["performance_issues"]:
+        if issues:
             # Issues should be sorted by severity
-            severities = [issue["severity"] for issue in result["performance_issues"]]
+            severities = [issue["severity"] for issue in issues]
             severity_order = {"high": 0, "medium": 1, "low": 2}
             sorted_severities = sorted(severities, key=lambda x: severity_order.get(x, 3))
             assert severities == sorted_severities
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_missing_index_detection(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_analyze_performance_missing_index_detection(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a model that commonly has unindexed fields
-        result = await analyze_performance(odoo_env, "stock.picking")
+        result = await analyze_performance(real_odoo_env_if_available, "stock.picking")
 
         assert "error" not in result
 
-        missing_index_issues = [issue for issue in result["performance_issues"] if issue["type"] == "missing_index"]
+        # Extract issues from paginated response
+        issues = extract_issues_from_result(result)
+        missing_index_issues = [issue for issue in issues if issue["type"] == "missing_index"]
 
         # Check structure of missing index issues
         for issue in missing_index_issues:
@@ -110,13 +133,15 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_method_analysis(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_analyze_performance_method_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with a model that likely has compute methods
-        result = await analyze_performance(odoo_env, "account.move")
+        result = await analyze_performance(real_odoo_env_if_available, "account.move")
 
         assert "error" not in result
 
-        method_issues = [issue for issue in result["performance_issues"] if issue["type"] == "potential_heavy_method"]
+        # Extract issues from paginated response
+        issues = extract_issues_from_result(result)
+        method_issues = [issue for issue in issues if issue["type"] == "potential_heavy_method"]
 
         # Check structure of method issues if present
         for issue in method_issues:
@@ -127,21 +152,24 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_comprehensive_analysis(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_analyze_performance_comprehensive_analysis(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test with multiple models to ensure comprehensive coverage
         models_to_test = ["res.partner", "product.template", "sale.order", "account.move"]
 
         for model_name in models_to_test:
-            result = await analyze_performance(odoo_env, model_name)
+            result = await analyze_performance(real_odoo_env_if_available, model_name)
 
             assert "error" not in result
             assert result["model"] == model_name
-            assert isinstance(result["performance_issues"], list)
+
+            # Extract issues from paginated response
+            issues = extract_issues_from_result(result)
+            assert isinstance(issues, list)
             assert isinstance(result["issue_count"], int)
-            assert result["issue_count"] == len(result["performance_issues"])
+            assert result["issue_count"] >= len(issues)
 
             # All issue types should have required fields
-            for issue in result["performance_issues"]:
+            for issue in issues:
                 assert "type" in issue
                 assert "description" in issue
                 assert "severity" in issue
@@ -150,28 +178,30 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_nonexistent_model(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await analyze_performance(odoo_env, "nonexistent.model")
+    async def test_analyze_performance_nonexistent_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await analyze_performance(real_odoo_env_if_available, "nonexistent.model")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_all_issue_types(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_analyze_performance_all_issue_types(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Try to find models that exhibit all types of issues
         models_with_complex_structure = ["sale.order", "account.move", "mrp.production", "stock.picking"]
 
         all_issue_types = set()
 
         for model_name in models_with_complex_structure:
-            result = await analyze_performance(odoo_env, model_name)
+            result = await analyze_performance(real_odoo_env_if_available, model_name)
 
             # Skip if model doesn't exist in this Odoo instance
             if "error" in result:
                 continue
 
-            for issue in result["performance_issues"]:
+            # Extract issues from paginated response
+            issues = extract_issues_from_result(result)
+            for issue in issues:
                 all_issue_types.add(issue["type"])
 
         # We should find at least some of the issue types
@@ -182,14 +212,16 @@ class TestPerformanceAnalysisIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_analyze_performance_field_type_coverage(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_analyze_performance_field_type_coverage(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Test that we properly detect issues across different field types
-        result = await analyze_performance(odoo_env, "product.template")
+        result = await analyze_performance(real_odoo_env_if_available, "product.template")
 
         if "error" not in result:
             field_types_with_issues = set()
 
-            for issue in result["performance_issues"]:
+            # Extract issues from paginated response
+            issues = extract_issues_from_result(result)
+            for issue in issues:
                 if "field_type" in issue:
                     field_types_with_issues.add(issue["field_type"])
 

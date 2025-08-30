@@ -181,11 +181,16 @@ async def real_odoo_env_if_available() -> HostOdooEnvironment | None:
     # Use the existing environment manager which loads config from env.py
     manager = HostOdooEnvironmentManager()
 
-    # Check if the container is running using the configured container name
-    if not container_running(manager.container_name):
-        pytest.skip(f"Odoo container {manager.container_name} not running")
+    # Trust the MCP server's auto-start functionality instead of pre-checking
+    # The ensure_container_running() method will handle starting containers as needed
 
-    return await manager.get_environment()
+    # Add timeout to prevent hanging during auto-start
+    try:
+        import asyncio
+
+        return await asyncio.wait_for(manager.get_environment(), timeout=30.0)
+    except TimeoutError:
+        pytest.skip(f"Timeout connecting to Odoo container {manager.container_name}")
 
 
 @pytest.fixture
@@ -193,7 +198,7 @@ def docker_error_responses() -> dict[str, dict[str, Any]]:
     from odoo_intelligence_mcp.core.env import load_env_config
 
     config = load_env_config()
-    container_name = config["container_name"]  # Use primary container
+    container_name = config.container_name  # Use primary container
 
     return {
         "container_not_found": {"returncode": 125, "stderr": f"Error: No such container: {container_name}"},
@@ -225,7 +230,7 @@ class MockDockerRun:
             config = load_env_config()
             result.returncode = 125
             result.stdout = ""
-            result.stderr = f"Error: No such container: {config['shell_container']}"
+            result.stderr = f"Error: No such container: {config.shell_container}"
         elif self.scenario == "docker_not_running":
             raise FileNotFoundError("docker command not found")
         else:

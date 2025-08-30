@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry
+from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry, load_env_config
 
 
 class TestMockRegistry:
@@ -25,7 +25,8 @@ class TestMockRegistry:
 class TestHostOdooEnvironment:
     @pytest.fixture
     def env(self) -> HostOdooEnvironment:
-        return HostOdooEnvironment("test-container", "test-db", "/test/path")
+        config = load_env_config()
+        return HostOdooEnvironment(config.container_name, config.database, config.addons_path, config.db_host, config.db_port)
 
     def test_registry_should_be_iterable(self, env: HostOdooEnvironment) -> None:
         # The registry property should return an iterable object

@@ -111,7 +111,7 @@ from tests.helpers import (
     assert_handles_docker_failure
 )
 
-async def test_tool_with_docker_failure():
+async def test_tool_with_docker_failure() -> None:
     await assert_handles_docker_failure(
         tool_function,
         required_arg="value"
@@ -121,7 +121,7 @@ async def test_tool_with_docker_failure():
 ### Testing Error Scenarios
 
 ```python
-async def test_handles_model_not_found():
+async def test_handles_model_not_found() -> None:
     mock_env = AsyncMock()
     mock_env.execute_code = AsyncMock(
         side_effect=ModelNotFoundError("Model not found")
@@ -137,7 +137,7 @@ async def test_handles_model_not_found():
 ```python
 from tests.helpers import assert_paginated_response
 
-async def test_paginated_response():
+async def test_paginated_response() -> None:
     result = await tool_function(env, pattern="test", page=2, page_size=10)
     assert_paginated_response(result)
     assert result["pagination"]["page"] == 2
@@ -173,13 +173,14 @@ Security tests verify protection against:
 
 ### 1. Test Naming
 ```python
-def test_<component>_<scenario>_<expected_outcome>():
-    # Example: test_model_info_invalid_name_returns_error
+# Test name should be descriptive: test_<component>_<scenario>_<expected_outcome>
+def test_model_info_invalid_name_returns_error() -> None:
+    ...
 ```
 
 ### 2. Arrange-Act-Assert Pattern
 ```python
-async def test_example():
+async def test_example() -> None:
     # Arrange
     mock_env = create_mock_environment()
     

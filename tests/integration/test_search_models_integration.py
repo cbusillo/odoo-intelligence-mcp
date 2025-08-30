@@ -1,19 +1,14 @@
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 from odoo_intelligence_mcp.tools.model.search_models import search_models
+from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestSearchModelsIntegration:
-    @pytest.fixture
-    async def odoo_env(self) -> HostOdooEnvironment:
-        manager = HostOdooEnvironmentManager()
-        return await manager.get_environment()
-
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_product_pattern(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await search_models(odoo_env, "product")
+    async def test_search_models_product_pattern(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await search_models(real_odoo_env_if_available, "product")
 
         assert "error" not in result
         assert "exact_matches" in result
@@ -32,8 +27,8 @@ class TestSearchModelsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_exact_match(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await search_models(odoo_env, "res.partner")
+    async def test_search_models_exact_match(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await search_models(real_odoo_env_if_available, "res.partner")
 
         assert "error" not in result
         assert len(result["exact_matches"]) == 1
@@ -43,9 +38,9 @@ class TestSearchModelsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_case_insensitive(self, odoo_env: HostOdooEnvironment) -> None:
-        result_lower = await search_models(odoo_env, "partner")
-        result_upper = await search_models(odoo_env, "PARTNER")
+    async def test_search_models_case_insensitive(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result_lower = await search_models(real_odoo_env_if_available, "partner")
+        result_upper = await search_models(real_odoo_env_if_available, "PARTNER")
 
         # Should find same models regardless of case
         lower_names = {m["name"] for m in result_lower["partial_matches"]}
@@ -55,8 +50,8 @@ class TestSearchModelsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_motor_models(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await search_models(odoo_env, "motor")
+    async def test_search_models_motor_models(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await search_models(real_odoo_env_if_available, "motor")
 
         assert "error" not in result
 
@@ -77,8 +72,8 @@ class TestSearchModelsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_no_results(self, odoo_env: HostOdooEnvironment) -> None:
-        result = await search_models(odoo_env, "xyz123nonexistent")
+    async def test_search_models_no_results(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
+        result = await search_models(real_odoo_env_if_available, "xyz123nonexistent")
 
         assert "error" not in result
         assert len(result["exact_matches"]) == 0
@@ -88,9 +83,9 @@ class TestSearchModelsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_transient_models(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_search_models_transient_models(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Search for wizard models which are typically transient
-        result = await search_models(odoo_env, "wizard")
+        result = await search_models(real_odoo_env_if_available, "wizard")
 
         assert "error" not in result
 
@@ -103,9 +98,9 @@ class TestSearchModelsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_search_models_description_search(self, odoo_env: HostOdooEnvironment) -> None:
+    async def test_search_models_description_search(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
         # Search for "user" which should match in descriptions
-        result = await search_models(odoo_env, "user")
+        result = await search_models(real_odoo_env_if_available, "user")
 
         assert "error" not in result
 
