@@ -108,11 +108,17 @@ else:
         if isinstance(raw_result, dict) and "error" in raw_result:
             return raw_result
 
-        # Apply pagination to performance_issues list
-        paginated_result = raw_result.copy()
+        # Extract the actual result data from execute_code response
+        if "result" in raw_result and isinstance(raw_result["result"], dict):
+            data = raw_result["result"]
+        else:
+            data = raw_result
 
-        if "performance_issues" in raw_result and isinstance(raw_result["performance_issues"], list):
-            issues_list = raw_result["performance_issues"]
+        # Apply pagination to performance_issues list
+        paginated_result = data.copy()
+
+        if "performance_issues" in data and isinstance(data["performance_issues"], list):
+            issues_list = data["performance_issues"]
             assert isinstance(issues_list, list)  # Type assertion for PyCharm
             paginated_issues = paginate_dict_list(issues_list, pagination, ["field", "type", "description"])
             paginated_result["performance_issues"] = paginated_issues.to_dict()

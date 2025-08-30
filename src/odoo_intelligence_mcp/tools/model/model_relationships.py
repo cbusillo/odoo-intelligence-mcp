@@ -9,7 +9,9 @@ async def get_model_relationships(
 ) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
-    code = f"""
+
+    try:
+        code = f"""
 model_name = {model_name!r}
 if model_name not in env:
     result = {{"error": f"Model {{model_name}} not found"}}
@@ -97,63 +99,85 @@ else:
     }}
 """
 
-    result = await env.execute_code(code)
+        result = await env.execute_code(code)
 
-    if "error" in result:
-        return result
+        if "error" in result:
+            return result
 
-    # Combine all relationships for pagination
-    all_relationships = []
+        # Extract the actual result data from execute_code response
+        if "result" in result and isinstance(result["result"], dict):
+            data = result["result"]
+        else:
+            data = result
 
-    # Add direct relationships
-    many2one_fields = result.get("many2one_fields", [])
-    assert isinstance(many2one_fields, list)  # Type assertion for PyCharm
-    for rel in many2one_fields:
-        rel["relationship_type"] = "many2one"
-        rel["direction"] = "outgoing"
-        all_relationships.append(rel)
+        # Combine all relationships for pagination
+        all_relationships = []
 
-    one2many_fields = result.get("one2many_fields", [])
-    assert isinstance(one2many_fields, list)  # Type assertion for PyCharm
-    for rel in one2many_fields:
-        rel["relationship_type"] = "one2many"
-        rel["direction"] = "outgoing"
-        all_relationships.append(rel)
+        # Add direct relationships
+        many2one_fields = data.get("many2one_fields", [])
+        assert isinstance(many2one_fields, list)  # Type assertion for PyCharm
+        for rel in many2one_fields:
+            rel["relationship_type"] = "many2one"
+            rel["direction"] = "outgoing"
+            all_relationships.append(rel)
 
-    many2many_fields = result.get("many2many_fields", [])
-    assert isinstance(many2many_fields, list)  # Type assertion for PyCharm
-    for rel in many2many_fields:
-        rel["relationship_type"] = "many2many"
-        rel["direction"] = "outgoing"
-        all_relationships.append(rel)
+        one2many_fields = data.get("one2many_fields", [])
+        assert isinstance(one2many_fields, list)  # Type assertion for PyCharm
+        for rel in one2many_fields:
+            rel["relationship_type"] = "one2many"
+            rel["direction"] = "outgoing"
+            all_relationships.append(rel)
 
-    # Add reverse relationships
-    reverse_many2one = result.get("reverse_many2one", [])
-    assert isinstance(reverse_many2one, list)  # Type assertion for PyCharm
-    for rel in reverse_many2one:
-        rel["relationship_type"] = "many2one"
-        rel["direction"] = "incoming"
-        all_relationships.append(rel)
+        many2many_fields = data.get("many2many_fields", [])
+        assert isinstance(many2many_fields, list)  # Type assertion for PyCharm
+        for rel in many2many_fields:
+            rel["relationship_type"] = "many2many"
+            rel["direction"] = "outgoing"
+            all_relationships.append(rel)
 
-    reverse_one2many = result.get("reverse_one2many", [])
-    assert isinstance(reverse_one2many, list)  # Type assertion for PyCharm
-    for rel in reverse_one2many:
-        rel["relationship_type"] = "one2many"
-        rel["direction"] = "incoming"
-        all_relationships.append(rel)
+        # Add reverse relationships
+        reverse_many2one = data.get("reverse_many2one", [])
+        assert isinstance(reverse_many2one, list)  # Type assertion for PyCharm
+        for rel in reverse_many2one:
+            rel["relationship_type"] = "many2one"
+            rel["direction"] = "incoming"
+            all_relationships.append(rel)
 
-    reverse_many2many = result.get("reverse_many2many", [])
-    assert isinstance(reverse_many2many, list)  # Type assertion for PyCharm
-    for rel in reverse_many2many:
-        rel["relationship_type"] = "many2many"
-        rel["direction"] = "incoming"
-        all_relationships.append(rel)
+        reverse_one2many = data.get("reverse_one2many", [])
+        assert isinstance(reverse_one2many, list)  # Type assertion for PyCharm
+        for rel in reverse_one2many:
+            rel["relationship_type"] = "one2many"
+            rel["direction"] = "incoming"
+            all_relationships.append(rel)
 
-    # Apply pagination
-    paginated_result = paginate_dict_list(all_relationships, pagination, ["field_name", "string", "target_model", "source_model"])
+        reverse_many2many = data.get("reverse_many2many", [])
+        assert isinstance(reverse_many2many, list)  # Type assertion for PyCharm
+        for rel in reverse_many2many:
+            rel["relationship_type"] = "many2many"
+            rel["direction"] = "incoming"
+            all_relationships.append(rel)
 
-    return {
-        "model": result["model"],
-        "relationship_summary": result["relationship_summary"],
-        "relationships": paginated_result.to_dict(),
-    }
+        # Apply pagination
+        paginated_result = paginate_dict_list(
+            all_relationships, pagination, ["field_name", "string", "target_model", "source_model"]
+        )
+
+        return {
+            "model": data["model"],
+            "relationship_summary": data["relationship_summary"],
+            "relationships": paginated_result.to_dict(),
+            # Include original fields for backward compatibility
+            "many2one_fields": data.get("many2one_fields", []),
+            "one2many_fields": data.get("one2many_fields", []),
+            "many2many_fields": data.get("many2many_fields", []),
+            "reverse_many2one": data.get("reverse_many2one", []),
+            "reverse_one2many": data.get("reverse_one2many", []),
+            "reverse_many2many": data.get("reverse_many2many", []),
+        }
+
+    except Exception as e:
+        return {
+            "error": f"Model {model_name} not found",
+            "error_type": type(e).__name__,
+            "model": model_name,
+        }

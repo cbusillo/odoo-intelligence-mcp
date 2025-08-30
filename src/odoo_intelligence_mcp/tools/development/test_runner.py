@@ -13,11 +13,12 @@ async def run_tests(
     test_method: str | None = None,
     test_tags: str | None = None,
     pagination: PaginationParams | None = None,
+    max_output_lines: int = 1000,
 ) -> dict[str, Any]:
     try:
         docker_manager = DockerClientManager()
         config = load_env_config()
-        container_name = config["script_runner_container"]
+        container_name = config.script_runner_container
 
         # Get container
         container_result = docker_manager.get_container(container_name)
@@ -44,8 +45,11 @@ async def run_tests(
         http_port = random.randint(9000, 9999)  # noqa: S311 - Not used for security purposes
 
         # Build command to run tests
-        database = config["database"]
-        addons_path = config["addons_path"]
+        database = config.db_name
+        addons_path = config.addons_path
+
+        # Use different approach based on module status
+        # For existing modules, skip install/update to avoid conflicts
         cmd = [
             "/odoo/odoo-bin",
             f"--database={database}",
@@ -53,9 +57,11 @@ async def run_tests(
             f"--http-port={http_port}",  # Use random port to avoid conflicts
             "--stop-after-init",
             "--test-enable",
-            "-i",
-            module,
+            "--without-demo=all",  # Avoid demo data conflicts
         ]
+
+        # Add module with appropriate operation
+        cmd.extend(["-u", module])
 
         # Add test tags if specified
         if test_tags:
@@ -77,6 +83,9 @@ async def run_tests(
         # Combine output
         output = stdout_str + "\n" + stderr_str
 
+        # Filter out verbose Odoo initialization messages to reduce token count
+        output = _filter_output(output, max_output_lines)
+
         # Extract test results from output
         test_results, test_status = _parse_test_results(output)
 
@@ -88,11 +97,11 @@ async def run_tests(
 
         # Handle pagination for output
         if pagination is None:
-            pagination = PaginationParams()
+            pagination = PaginationParams(page_size=20)  # Limit default page size
         # Split output into lines for pagination
         output_lines = output.splitlines()
         # Create items for pagination - group lines into chunks
-        chunk_size = 50  # Lines per item
+        chunk_size = 25  # Reduced lines per item to control token usage
         output_items = []
         for i in range(0, len(output_lines), chunk_size):
             chunk_lines = output_lines[i : i + chunk_size]
@@ -102,7 +111,7 @@ async def run_tests(
 
         paginated_output = paginate_dict_list(output_items, pagination, ["content"])
 
-        return {
+        result_dict = {
             "success": exit_code == 0,
             "module": module,
             "test_class": test_class,
@@ -119,6 +128,28 @@ async def run_tests(
             "return_code": exit_code,
             "container": container_name,
         }
+
+        # Add error field when tests fail for consistency with other tools
+        if exit_code != 0:
+            # Check for specific database errors
+            if "unique constraint" in output.lower() or "constraint violation" in output.lower():
+                result_dict["error"] = (
+                    "Database constraint violation detected. Try using '--test-tags' to run specific tests or clean test data."
+                )
+                result_dict["error_type"] = "DatabaseConstraintError"
+                result_dict["recommendation"] = "Consider running tests with specific tags or on a clean test database"
+            elif "lock timeout" in output.lower() or "could not obtain lock" in output.lower():
+                result_dict["error"] = "Database lock timeout. The database may be in use by another Odoo instance."
+                result_dict["error_type"] = "DatabaseLockError"
+                result_dict["recommendation"] = "Stop other Odoo instances or wait for current operations to complete"
+            elif "ERROR" in output or "CRITICAL" in output:
+                result_dict["error"] = f"Test execution failed with return code {exit_code}. Check output_chunks for details."
+                result_dict["error_type"] = "TestExecutionError"
+            else:
+                result_dict["error"] = f"Tests failed with return code {exit_code}"
+                result_dict["error_type"] = "TestExecutionError"
+
+        return result_dict
 
     except Exception as e:
         if "timeout" in str(e).lower():
@@ -139,6 +170,71 @@ async def run_tests(
             "test_class": test_class,
             "test_method": test_method,
         }
+
+
+def _filter_output(output: str, max_lines: int = 1000) -> str:
+    """Filter verbose Odoo output to focus on test results."""
+    lines = output.splitlines()
+    filtered_lines = []
+    important_patterns = [
+        r"^(FAIL|ERROR|OK):",
+        r"^Ran \d+ tests?",
+        r"^={70,}",  # Test separators
+        r"^-{70,}",  # Test separators
+        r"test_\w+",  # Test names
+        r"AssertionError",
+        r"Traceback",
+        r"^  File",  # Stack traces
+        r"FAILED \(",
+        r"WARNING:",
+        r"ERROR:",
+        r"CRITICAL:",
+    ]
+
+    skip_patterns = [
+        r"^INFO:odoo\.",  # Verbose Odoo logs
+        r"^DEBUG:",
+        r"loading module",
+        r"module .+ loaded",
+        r"registry loaded",
+        r"^loading translation",
+    ]
+
+    skip_mode = False
+    kept_lines = 0
+
+    for line in lines:
+        if kept_lines >= max_lines:
+            filtered_lines.append(f"... Output truncated at {max_lines} lines ...")
+            break
+
+        # Check if line should be kept
+        should_keep = False
+        should_skip = False
+
+        for pattern in important_patterns:
+            if re.search(pattern, line, re.IGNORECASE):
+                should_keep = True
+                skip_mode = False
+                break
+
+        if not should_keep:
+            for pattern in skip_patterns:
+                if re.search(pattern, line, re.IGNORECASE):
+                    should_skip = True
+                    skip_mode = True
+                    break
+
+        # Keep line if important or if we're in context of important info
+        if should_keep or (not should_skip and not skip_mode and line.strip()):
+            filtered_lines.append(line)
+            kept_lines += 1
+        elif not skip_mode and "test" in line.lower():
+            # Keep lines mentioning tests even if not matching patterns
+            filtered_lines.append(line)
+            kept_lines += 1
+
+    return "\\n".join(filtered_lines)
 
 
 def _parse_test_results(output: str) -> tuple[dict[str, int], str]:

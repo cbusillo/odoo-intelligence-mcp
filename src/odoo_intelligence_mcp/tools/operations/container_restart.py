@@ -9,7 +9,7 @@ async def odoo_restart(services: str = "web-1,shell-1,script-runner-1") -> dict[
     try:
         docker_manager = DockerClientManager()
         config = load_env_config()
-        container_prefix = config["container_prefix"]
+        container_prefix = config.container_prefix
         service_list = [f"{container_prefix}-{s.strip()}" for s in services.split(",")]
         results = {}
 

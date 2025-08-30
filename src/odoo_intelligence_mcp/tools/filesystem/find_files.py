@@ -23,7 +23,7 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
 
     docker_manager = DockerClientManager()
     config = load_env_config()
-    container = docker_manager.get_container(config["web_container"])
+    container = docker_manager.get_container(config.web_container)
     if isinstance(container, dict):
         return {"success": False, "error": f"Container error: {container.get('error', 'Unknown error')}"}
 

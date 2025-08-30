@@ -58,12 +58,18 @@ result = {{
 
     result = await env.execute_code(code)
 
-    if pagination and "exact_matches" in result:
+    # Extract the actual result data from execute_code response
+    if "result" in result and isinstance(result["result"], dict):
+        data = result["result"]
+    else:
+        data = result
+
+    if pagination and "exact_matches" in data:
         # Combine all matches for pagination
         all_matches = []
 
         # Add exact matches with priority
-        exact_matches = result.get("exact_matches", [])
+        exact_matches = data.get("exact_matches", [])
         assert isinstance(exact_matches, list)  # Type assertion for PyCharm
         for match in exact_matches:
             match["match_type"] = "exact"
@@ -71,7 +77,7 @@ result = {{
             all_matches.append(match)
 
         # Add partial matches
-        partial_matches = result.get("partial_matches", [])
+        partial_matches = data.get("partial_matches", [])
         assert isinstance(partial_matches, list)  # Type assertion for PyCharm
         for match in partial_matches:
             match["match_type"] = "partial"
@@ -79,7 +85,7 @@ result = {{
             all_matches.append(match)
 
         # Add description matches
-        description_matches = result.get("description_matches", [])
+        description_matches = data.get("description_matches", [])
         assert isinstance(description_matches, list)  # Type assertion for PyCharm
         for match in description_matches:
             match["match_type"] = "description"
@@ -92,6 +98,6 @@ result = {{
         # Apply pagination
         paginated_result = paginate_dict_list(all_matches, pagination, ["name", "description"])
 
-        return {"pattern": result["pattern"], "total_models": result["total_models"], "matches": paginated_result.to_dict()}
+        return {"pattern": data["pattern"], "total_models": data["total_models"], "matches": paginated_result.to_dict()}
 
-    return result
+    return data

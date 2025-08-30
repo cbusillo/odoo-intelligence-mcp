@@ -15,7 +15,22 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
         # Check if the environment has a Docker-based execute_code method
         if hasattr(env, "execute_code"):
             # Use the environment's execute_code method which properly handles Docker execution
-            result = await env.execute_code(code)
+            try:
+                result = await env.execute_code(code)
+            except TimeoutError as e:
+                return {
+                    "success": False,
+                    "error": f"Code execution timed out: {e}",
+                    "error_type": "TimeoutError",
+                    "hint": "Try reducing the complexity of the code or use pagination for large datasets",
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": f"Docker execution failed: {e}",
+                    "error_type": type(e).__name__,
+                    "hint": "Ensure Docker container is running and accessible",
+                }
 
             # The Docker execution returns raw results, format them appropriately
             if isinstance(result, dict):
@@ -89,11 +104,11 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
 def odoo_shell(code: str, timeout: int = 30) -> dict[str, Any]:
     try:
         config = load_env_config()
-        container_name = config["container_name"]
-        database = config["database"]
+        container_name = config.container_name
+        database = config.db_name
         cmd = ["docker", "exec", "-i", container_name, "/odoo/odoo-bin", "shell", f"--database={database}"]
 
-        result = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=timeout, check=False)
 
         return {
             "success": result.returncode == 0,

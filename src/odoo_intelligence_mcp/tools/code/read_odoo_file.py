@@ -82,7 +82,7 @@ async def read_odoo_file(
 
     docker_manager = DockerClientManager()
     config = load_env_config()
-    container_name = config["script_runner_container"]
+    container_name = config.script_runner_container
 
     container_result = docker_manager.get_container(container_name)
     if isinstance(container_result, dict):  # Error

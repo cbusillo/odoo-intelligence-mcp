@@ -134,42 +134,48 @@ else:
     if isinstance(result, dict) and "error" in result:
         return result
 
+    # Extract the actual result data from execute_code response
+    if "result" in result and isinstance(result["result"], dict):
+        data = result["result"]
+    else:
+        data = result
+
     # Apply pagination to large lists if provided
-    if isinstance(result, dict) and pagination:
+    if isinstance(data, dict) and pagination:
         # Paginate inheriting_models if needed
-        if "inheriting_models" in result and isinstance(result["inheriting_models"], list):
-            inheriting_models = result["inheriting_models"]
+        if "inheriting_models" in data and isinstance(data["inheriting_models"], list):
+            inheriting_models = data["inheriting_models"]
             assert isinstance(inheriting_models, list)  # Type assertion for PyCharm
             paginated = paginate_dict_list(inheriting_models, pagination, ["model", "description"])
-            result["inheriting_models"] = paginated.to_dict()
+            data["inheriting_models"] = paginated.to_dict()
 
         # Paginate inherited_fields if needed
-        if "inherited_fields" in result and isinstance(result["inherited_fields"], dict):
+        if "inherited_fields" in data and isinstance(data["inherited_fields"], dict):
             # Convert dict to list for pagination
-            inherited_fields_dict = result["inherited_fields"]
+            inherited_fields_dict = data["inherited_fields"]
             assert isinstance(inherited_fields_dict, dict)  # Type assertion for PyCharm
             fields_list = [{"field_name": k, **v} for k, v in inherited_fields_dict.items()]
             if len(fields_list) > pagination.page_size:
                 paginated = paginate_dict_list(fields_list, pagination, ["field_name", "from_model"])
-                result["inherited_fields"] = paginated.to_dict()
+                data["inherited_fields"] = paginated.to_dict()
 
         # Paginate overridden_methods if needed
-        if "overridden_methods" in result and isinstance(result["overridden_methods"], list):
-            overridden_methods = result["overridden_methods"]
+        if "overridden_methods" in data and isinstance(data["overridden_methods"], list):
+            overridden_methods = data["overridden_methods"]
             assert isinstance(overridden_methods, list)  # Type assertion for PyCharm
             if len(overridden_methods) > pagination.page_size:
                 paginated = paginate_dict_list(overridden_methods, pagination, ["method"])
-                result["overridden_methods"] = paginated.to_dict()
+                data["overridden_methods"] = paginated.to_dict()
 
         # Paginate inherited_methods if needed
-        if "inherited_methods" in result and isinstance(result["inherited_methods"], dict):
+        if "inherited_methods" in data and isinstance(data["inherited_methods"], dict):
             # Convert dict to list for pagination
-            inherited_methods_dict = result["inherited_methods"]
+            inherited_methods_dict = data["inherited_methods"]
             assert isinstance(inherited_methods_dict, dict)  # Type assertion for PyCharm
             methods_list = [{"method_name": k, "from_model": v} for k, v in inherited_methods_dict.items()]
             if len(methods_list) > pagination.page_size:
                 paginated = paginate_dict_list(methods_list, pagination, ["method_name"])
-                result["inherited_methods"] = paginated.to_dict()
+                data["inherited_methods"] = paginated.to_dict()
 
     # Validate response size
-    return validate_response_size(result)
+    return validate_response_size(data)

@@ -72,15 +72,21 @@ result = {{"results": results}}
     try:
         result = await env.execute_code(code)
 
-        if pagination and "results" in result:
+        # Extract the actual result data from execute_code response
+        if "result" in result and isinstance(result["result"], dict):
+            data = result["result"]
+        else:
+            data = result
+
+        if pagination and "results" in data:
             # Apply pagination to the results
-            results_list = result["results"]
+            results_list = data["results"]
             assert isinstance(results_list, list)  # Type assertion for PyCharm
             paginated_result = paginate_dict_list(results_list, pagination, ["model", "description"])
 
             return {"decorator": decorator, "results": paginated_result.to_dict()}
 
-        return result
+        return data
     except Exception as e:
         return {
             "success": False,

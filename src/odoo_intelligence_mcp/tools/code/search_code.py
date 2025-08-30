@@ -1,59 +1,92 @@
 import re
-from pathlib import Path
 from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ..addon.get_addon_paths import get_addon_paths_from_container
 
 
 async def search_code(pattern: str, file_type: str = "py", pagination: PaginationParams | None = None) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
 
-    results = []
-    # Get addon paths from the container
-    container_paths = await get_addon_paths_from_container()
-
-    # Use container paths directly - this tool searches on the host filesystem
-    # which may not have the Odoo source code available
-    search_paths = container_paths
-
     try:
-        regex = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
+        # Validate regex pattern
+        re.compile(pattern)
     except re.error as e:
         return {"error": f"Invalid regex pattern: {e!s}"}
 
-    for base_path in search_paths:
-        base = Path(base_path)
-        if not base.exists():
-            continue
+    # Use Python script execution in container for more reliable search
+    from ...core.env import HostOdooEnvironmentManager
 
-        for file_path in base.rglob(f"*.{file_type}"):
+    env_manager = HostOdooEnvironmentManager()
+    env = await env_manager.get_environment()
+
+    search_code_script = f"""
+import os
+import re
+import glob
+
+pattern = {pattern!r}
+file_type = {file_type!r}
+results = []
+
+# Get addon paths from Odoo configuration
+addon_paths = []
+try:
+    import odoo.tools.config as odoo_config
+    for path in odoo_config.get('addons_path', '').split(','):
+        path = path.strip()
+        if os.path.exists(path):
+            addon_paths.append(path)
+except:
+    pass
+
+# If no addon paths from config, use default locations
+if not addon_paths:
+    default_paths = ['/opt/project/addons', '/odoo/addons', '/volumes/enterprise']
+    addon_paths = [p for p in default_paths if os.path.exists(p)]
+
+# Search for files and patterns
+for addon_path in addon_paths:
+    try:
+        # Find all files with the specified extension
+        for file_path in glob.glob(os.path.join(addon_path, '**', f'*.{{file_type}}'), recursive=True):
             try:
-                content = file_path.read_text(encoding="utf-8")
-                matches = list(regex.finditer(content))
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+                    for line_num, line in enumerate(lines, 1):
+                        if re.search(pattern, line):
+                            results.append({{
+                                'file': file_path,
+                                'line': line_num,
+                                'match': line.strip(),
+                                'context': line.strip()
+                            }})
+                            if len(results) >= 100:  # Limit results
+                                break
+            except Exception:
+                continue
+            if len(results) >= 100:
+                break
+    except Exception:
+        continue
+    if len(results) >= 100:
+        break
 
-                if matches:
-                    lines = content.split("\n")
-                    for match in matches[:5]:  # Limit to 5 matches per file
-                        line_no = content[: match.start()].count("\n") + 1
-                        results.append(
-                            {
-                                "file": str(file_path),
-                                "line": line_no,
-                                "match": match.group(),
-                                "context": get_line_context(lines, line_no - 1),
-                            }
-                        )
-            except (OSError, UnicodeDecodeError):
-                pass
+result = results[:100]  # Ensure we don't exceed limits
+"""
 
-    paginated_results = paginate_dict_list(results, pagination, search_fields=["file", "match", "context"])
+    try:
+        output = await env.execute_code(search_code_script)
 
-    return validate_response_size(paginated_results.to_dict())
+        if isinstance(output, dict) and "error" in output:
+            return output
 
+        results = output if isinstance(output, list) else []
 
-def get_line_context(lines: list[str], line_idx: int, context: int = 2) -> str:
-    start = max(0, line_idx - context)
-    end = min(len(lines), line_idx + context + 1)
-    return "\n".join(f"{i + 1}: {lines[i]}" for i in range(start, end))
+        # Apply pagination
+        paginated_results = paginate_dict_list(results, pagination, search_fields=["file", "match", "context"])
+
+        return validate_response_size(paginated_results.to_dict())
+
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__, "pattern": pattern, "file_type": file_type}

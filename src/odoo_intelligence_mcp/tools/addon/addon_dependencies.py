@@ -15,7 +15,7 @@ def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
     try:
         docker_manager = DockerClientManager()
         config = load_env_config()
-        container = docker_manager.get_container(config["web_container"])
+        container = docker_manager.get_container(config.web_container)
         if isinstance(container, dict):
             return None
 
@@ -65,7 +65,7 @@ def _find_dependent_addons(addon_name: str, addon_paths: list[str]) -> list[dict
 
     docker_manager = DockerClientManager()
     config = load_env_config()
-    container = docker_manager.get_container(config["web_container"])
+    container = docker_manager.get_container(config.web_container)
     if isinstance(container, dict):
         return addons_depending_on_this
 

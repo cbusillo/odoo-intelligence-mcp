@@ -10,12 +10,24 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
     try:
         client = docker.from_env()
         config = load_env_config()
-        container_name = config["script_runner_container"]
-        database = config["database"]
-        module_list = [m.strip() for m in modules.split(",")]
+        container_name = config.script_runner_container
+        database = config.db_name
+        # Sanitize module names to prevent command injection
+        # Only allow alphanumeric, underscore, dash, and dot
+        import re
+
+        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
+        raw_modules = modules.split(",")
+        module_list = []
+        for m in raw_modules:
+            m = m.strip()
+            # Remove any dangerous characters
+            m = m.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()
+            if safe_pattern.match(m):
+                module_list.append(m)
 
         # Build command
-        addons_path = config["addons_path"]
+        addons_path = config.addons_path
         cmd = [
             "/odoo/odoo-bin",
             f"--database={database}",

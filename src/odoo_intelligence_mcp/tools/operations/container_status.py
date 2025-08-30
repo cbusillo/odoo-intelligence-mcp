@@ -10,9 +10,9 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
         docker_manager = DockerClientManager()
         config = load_env_config()
         containers = [
-            config["web_container"],
-            config["shell_container"],
-            config["script_runner_container"],
+            config.web_container,
+            config.shell_container,
+            config.script_runner_container,
         ]
         status = {}
 
@@ -25,7 +25,8 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
             )
 
         for container_name in containers:
-            container_result = docker_manager.get_container(container_name)
+            # Auto-start containers that should be running
+            container_result = docker_manager.get_container(container_name, auto_start=True)
 
             if isinstance(container_result, dict):
                 status[container_name] = {"status": "not_found", "running": False}

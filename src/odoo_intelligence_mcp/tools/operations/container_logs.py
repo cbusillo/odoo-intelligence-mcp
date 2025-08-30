@@ -7,7 +7,7 @@ from ...utils.docker_utils import DockerClientManager
 async def odoo_logs(container: str | None = None, lines: int = 100) -> dict[str, Any]:
     if container is None:
         config = load_env_config()
-        container = config["web_container"]
+        container = config.web_container
     docker_manager = DockerClientManager()
 
     def get_logs(container_obj: Any) -> dict[str, Any]:

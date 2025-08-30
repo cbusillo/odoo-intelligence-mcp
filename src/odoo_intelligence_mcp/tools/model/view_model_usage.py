@@ -105,17 +105,23 @@ else:
         if "error" in result:
             return result
 
+        # Extract the actual result data from execute_code response
+        if "result" in result and isinstance(result["result"], dict):
+            data = result["result"]
+        else:
+            data = result
+
         # Apply pagination to views
-        views = result.get("views", [])
+        views = data.get("views", [])
         assert isinstance(views, list)  # Type assertion for PyCharm
         paginated_views = paginate_dict_list(views, pagination, ["name", "type", "xml_id", "inherit_id"])
 
         return {
-            "model": result.get("model"),
-            "view_types": result.get("view_types", {}),
-            "exposed_fields": result.get("exposed_fields", []),
-            "field_usage_count": result.get("field_usage_count", {}),
-            "field_coverage": result.get("field_coverage", {}),
+            "model": data.get("model"),
+            "view_types": data.get("view_types", {}),
+            "exposed_fields": data.get("exposed_fields", []),
+            "field_usage_count": data.get("field_usage_count", {}),
+            "field_coverage": data.get("field_coverage", {}),
             "views": paginated_views.to_dict(),
         }
     except Exception as e:

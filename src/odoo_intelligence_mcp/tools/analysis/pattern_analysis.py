@@ -10,128 +10,144 @@ async def analyze_patterns(
     if pagination is None:
         pagination = PaginationParams()
 
-    # Execute pattern collection in Odoo environment
-    collection_code = f"""
+    # Execute pattern collection in Odoo environment with batching for memory efficiency
+    collection_code = (
+        """
 import inspect
+import gc  # For garbage collection
 
-pattern_type = {pattern_type!r}
+pattern_type = """
+        + repr(pattern_type)
+        + """
 
-patterns = {{
+patterns = {
     "computed_fields": [],
     "related_fields": [],
     "api_decorators": [],
     "custom_methods": [],
     "state_machines": []
-}}
+}
 
 def safe_serialize(obj):
     \"\"\"Ensure all objects are JSON serializable\"\"\"
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
     elif isinstance(obj, (list, tuple)):
-        return [safe_serialize(item) for item in obj]
+        return [safe_serialize(item) for item in obj[:10]]  # Limit list size
     elif isinstance(obj, dict):
-        return {{k: safe_serialize(v) for k, v in obj.items()}}
+        return {k: safe_serialize(v) for k, v in list(obj.items())[:10]}  # Limit dict size
     else:
-        return str(obj)
+        return str(obj)[:100]  # Limit string representation
 
 def get_decorators(func):
     decorators = []
     if hasattr(func, "_constrains"):
-        decorators.append({{
+        decorators.append({
             "type": "constrains",
             "fields": list(func._constrains) if func._constrains else []
-        }})
+        })
     if hasattr(func, "_depends"):
-        decorators.append({{
+        decorators.append({
             "type": "depends",
             "fields": list(func._depends) if func._depends else []
-        }})
+        })
     if hasattr(func, "_onchange"):
-        decorators.append({{
+        decorators.append({
             "type": "onchange",
             "fields": list(func._onchange) if func._onchange else []
-        }})
+        })
     if hasattr(func, "__name__") and func.__name__ in ["create", "write", "unlink"]:
-        decorators.append({{
+        decorators.append({
             "type": "model_create_multi" if func.__name__ == "create" else func.__name__,
             "fields": []
-        }})
+        })
     return decorators
 
-# Get all model names from the registry
+# Get all model names from the registry and process in batches
 model_names = list(env.registry.models.keys())
+batch_size = 50  # Process 50 models at a time to avoid memory issues
+processed_count = 0
 
-for model_name in model_names:
-    try:
-        model = env[model_name]
-        model_class = type(model)
+for batch_start in range(0, len(model_names), batch_size):
+    batch_end = min(batch_start + batch_size, len(model_names))
+    batch_models = model_names[batch_start:batch_end]
+    
+    for model_name in batch_models:
+        try:
+            model = env[model_name]
+            model_class = type(model)
 
-        # Get fields using fields_get() which includes inherited fields
-        fields_info = model.fields_get()
-
-        # Collect computed fields
-        for field_name, field_data in fields_info.items():
-            if field_data.get("compute"):
-                patterns["computed_fields"].append({{
-                    "model": model_name,
-                    "field": field_name,
-                    "compute_method": safe_serialize(field_data.get("compute")),
-                    "store": field_data.get("store", False),
-                    "depends": safe_serialize(field_data.get("depends", [])),
-                }})
-
-            # Collect related fields
-            if field_data.get("related"):
-                patterns["related_fields"].append({{
-                    "model": model_name,
-                    "field": field_name,
-                    "related_path": safe_serialize(field_data.get("related")),
-                    "store": field_data.get("store", True),
-                }})
-
-            # Collect state machines (selection fields named state)
-            if field_name == "state" and field_data.get("type") == "selection":
-                selection = field_data.get("selection", [])
-                if selection:
-                    patterns["state_machines"].append({{
+            # Use model._fields to access field objects directly
+            # This gives us access to the actual field attributes
+            
+            # Collect computed fields
+            for field_name, field in model._fields.items():
+                if hasattr(field, 'compute') and field.compute:
+                    patterns["computed_fields"].append({
                         "model": model_name,
-                        "states": safe_serialize(selection),
-                        "field_type": field_data.get("type"),
-                    }})
+                        "field": field_name,
+                        "compute_method": safe_serialize(field.compute),
+                        "store": getattr(field, 'store', False),
+                        "depends": safe_serialize(getattr(field, 'depends', [])),
+                    })
 
-        # Collect decorated and custom methods
-        for method_name, method in inspect.getmembers(model_class, inspect.isfunction):
-            if not method_name.startswith("_"):
-                decorators = get_decorators(method)
-
-                # Add to api_decorators
-                for decorator in decorators:
-                    patterns["api_decorators"].append({{
+                # Collect related fields
+                if hasattr(field, 'related') and field.related:
+                    patterns["related_fields"].append({
                         "model": model_name,
-                        "method": method_name,
-                        "decorator_type": safe_serialize(decorator["type"]),
-                        "decorator_fields": safe_serialize(decorator["fields"]),
-                    }})
+                        "field": field_name,
+                        "related_path": safe_serialize(field.related),
+                        "store": getattr(field, 'store', True),
+                    })
 
-                # Add to custom_methods if not standard method
-                if method_name not in ["create", "write", "unlink", "search", "browse", "read", "exists"]:
-                    try:
-                        signature = str(inspect.signature(method))
-                    except Exception:
-                        signature = "unable_to_inspect"
+                # Collect state machines (selection fields named state)
+                if field_name == "state" and getattr(field, 'type', '') == "selection":
+                    selection = getattr(field, 'selection', [])
+                    if selection:
+                        patterns["state_machines"].append({
+                            "model": model_name,
+                            "states": safe_serialize(selection),
+                            "field_type": getattr(field, 'type', ''),
+                        })
 
-                    patterns["custom_methods"].append({{
-                        "model": model_name,
-                        "method": method_name,
-                        "signature": safe_serialize(signature),
-                        "has_decorators": bool(decorators),
-                    }})
-    except Exception:
-        continue
+            # Collect decorated and custom methods
+            for method_name, method in inspect.getmembers(model_class, inspect.isfunction):
+                if not method_name.startswith("_"):
+                    decorators = get_decorators(method)
+
+                    # Add to api_decorators
+                    for decorator in decorators:
+                        patterns["api_decorators"].append({
+                            "model": model_name,
+                            "method": method_name,
+                            "decorator_type": safe_serialize(decorator["type"]),
+                            "decorator_fields": safe_serialize(decorator["fields"]),
+                        })
+
+                    # Add to custom_methods if not standard method
+                    if method_name not in ["create", "write", "unlink", "search", "browse", "read", "exists"]:
+                        try:
+                            signature = str(inspect.signature(method))
+                        except Exception:
+                            signature = "unable_to_inspect"
+
+                        patterns["custom_methods"].append({
+                            "model": model_name,
+                            "method": method_name,
+                            "signature": safe_serialize(signature),
+                            "has_decorators": bool(decorators),
+                        })
+        except Exception:
+            continue
+    
+    # Garbage collect after each batch to free memory
+    processed_count += len(batch_models)
+    if processed_count % 100 == 0:
+        gc.collect()
 
 result = patterns
 """
+    )
 
     try:
         raw_patterns = await env.execute_code(collection_code)

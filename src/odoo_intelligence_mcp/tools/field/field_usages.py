@@ -249,25 +249,31 @@ else:
     if "error" in result:
         return result
 
+    # Extract the actual result data from execute_code response
+    if "result" in result and isinstance(result["result"], dict):
+        data = result["result"]
+    else:
+        data = result
+
     # Combine all usages for pagination
     all_usages = []
 
     # Add view usages
-    view_usages = result.get("used_in_views", [])
+    view_usages = data.get("used_in_views", [])
     assert isinstance(view_usages, list)  # Type assertion for PyCharm
     for usage in view_usages:
         usage["usage_type"] = "view"
         all_usages.append(usage)
 
     # Add domain usages
-    domain_usages = result.get("used_in_domains", [])
+    domain_usages = data.get("used_in_domains", [])
     assert isinstance(domain_usages, list)  # Type assertion for PyCharm
     for usage in domain_usages:
         usage["usage_type"] = "domain"
         all_usages.append(usage)
 
     # Add method usages
-    method_usages = result.get("used_in_methods", [])
+    method_usages = data.get("used_in_methods", [])
     assert isinstance(method_usages, list)  # Type assertion for PyCharm
     for usage in method_usages:
         usage["usage_type"] = "method"
@@ -277,9 +283,9 @@ else:
     paginated_result = paginate_dict_list(all_usages, pagination, ["name", "type", "model", "method"])
 
     return {
-        "model": result["model"],
-        "field": result["field"],
-        "field_info": result["field_info"],
-        "usage_summary": result["usage_summary"],
+        "model": data["model"],
+        "field": data["field"],
+        "field_info": data["field_info"],
+        "usage_summary": data["usage_summary"],
         "usages": paginated_result.to_dict(),
     }
