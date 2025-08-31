@@ -173,7 +173,7 @@ class TestPaginatedResponse:
     def test_to_dict_with_filter(self) -> None:
         items = ["a"]
         response = PaginatedResponse(items, total_count=1, filter_applied="test")
-        result = response.to_dict()
+        result: dict[str, Any] = response.to_dict()
 
         assert result["pagination"]["filter_applied"] == "test"
 

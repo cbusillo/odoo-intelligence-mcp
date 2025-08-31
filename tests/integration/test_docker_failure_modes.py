@@ -25,7 +25,7 @@ class TestDockerFailureModes:
     async def test_container_start_timeout(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
 
-            def side_effect(*args: object, **kwargs: object) -> MagicMock:
+            def side_effect(*args: object, **_kwargs: object) -> MagicMock:
                 if "exec" in str(args[0]):
                     raise subprocess.TimeoutExpired(cmd=cast(list[str], args[0]), timeout=30)
                 return MagicMock(returncode=0, stdout="odoo\n", stderr="")
@@ -42,7 +42,7 @@ class TestDockerFailureModes:
     async def test_docker_daemon_not_running(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
 
-            def side_effect(*args: object, **kwargs: object) -> MagicMock:
+            def side_effect(*args: object, **_kwargs: object) -> MagicMock:
                 # Raise FileNotFoundError for any docker command
                 if args and "docker" in str(args[0]):
                     raise FileNotFoundError("docker command not found")
@@ -100,7 +100,7 @@ class TestDockerFailureModes:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             call_count = 0
 
-            def side_effect(*args: object, **kwargs: object) -> MagicMock:
+            def side_effect(*args: object, **_kwargs: object) -> MagicMock:
                 nonlocal call_count
                 call_count += 1
                 # Handle docker inspect commands for container status check
@@ -125,7 +125,7 @@ class TestDockerFailureModes:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
             attempts = 0
 
-            def side_effect(*args: object, **kwargs: object) -> MagicMock:
+            def side_effect(*args: object, **_kwargs: object) -> MagicMock:
                 nonlocal attempts
                 attempts += 1
                 if "ps" in str(args[0]):
