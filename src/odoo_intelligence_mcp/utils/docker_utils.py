@@ -64,7 +64,8 @@ class DockerClientManager:
             response["data"] = data
         return response
 
-    def _auto_start_container(self, container_name: str) -> bool:
+    @staticmethod
+    def _auto_start_container(container_name: str) -> bool:
         try:
             # First try docker start (for existing stopped containers)
             start_result = subprocess.run(["docker", "start", container_name], capture_output=True, text=True, timeout=10)
