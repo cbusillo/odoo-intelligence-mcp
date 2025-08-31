@@ -44,7 +44,9 @@ class TestToolContracts:
                     elif tool.name == "field_query":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner", "field_name": "name"})
                     elif tool.name == "field_query" and False:
-                        result = await handle_call_tool(tool.name, {"operation": "analyze_values", "model_name": "res.partner", "field_name": "name"})
+                        result = await handle_call_tool(
+                            tool.name, {"operation": "analyze_values", "model_name": "res.partner", "field_name": "name"}
+                        )
                     elif tool.name == "permission_checker":
                         result = await handle_call_tool(tool.name, {"user": "admin", "model": "res.partner", "operation": "read"})
                     elif tool.name == "execute_code":
@@ -73,9 +75,7 @@ class TestToolContracts:
                         result = await handle_call_tool(tool.name, {"field_type": "many2one"})
                     elif tool.name == "addon_dependencies":
                         result = await handle_call_tool(tool.name, {"addon_name": "sale"})
-                    elif tool.name == "inheritance_chain":
-                        result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
-                    elif tool.name == "resolve_dynamic_fields":
+                    elif tool.name == "inheritance_chain" or tool.name == "resolve_dynamic_fields":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
                     else:
                         continue
@@ -322,6 +322,7 @@ class TestToolPerformanceContracts:
 
         mock_env = AsyncMock()
 
+        # noinspection PyUnusedLocal
         async def slow_execution(*args: Any, **kwargs: Any) -> dict[str, Any]:
             await asyncio.sleep(10)
             return {"success": True}

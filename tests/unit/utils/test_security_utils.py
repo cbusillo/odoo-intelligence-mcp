@@ -118,6 +118,7 @@ def calculate_total(items):
         assert is_valid is False
         assert "Character code manipulation" in message
 
+    # noinspection PyUnusedLocal
     def test_validate_code_allowed_modules(self) -> None:
         code = """
 import datetime
@@ -134,6 +135,7 @@ data = json.dumps({'key': 'value'})
         message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
+    # noinspection PyUnusedLocal
     def test_validate_code_odoo_import_allowed(self) -> None:
         code = """
 from odoo import models, fields, api
@@ -147,6 +149,7 @@ class SaleOrder(models.Model):
         message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
+    # noinspection PyUnusedLocal
     def test_validate_code_nested_loops_within_limit(self) -> None:
         code = """
 for i in range(10):
@@ -185,6 +188,7 @@ while True:
         assert is_valid is False
         assert "must have a clear termination condition" in message
 
+    # noinspection PyUnusedLocal
     def test_validate_code_while_with_break(self) -> None:
         code = """
 i = 0
@@ -262,7 +266,7 @@ while True:
     if condition:
         break
 """)
-        while_node = cast(ast.While, tree.body[0])
+        while_node = cast("ast.While", tree.body[0])
         assert SecurityValidator._has_break_condition(while_node) is True
 
     def test_has_break_condition_false(self) -> None:
@@ -270,7 +274,7 @@ while True:
 while True:
     print('infinite')
 """)
-        while_node = cast(ast.While, tree.body[0])
+        while_node = cast("ast.While", tree.body[0])
         assert SecurityValidator._has_break_condition(while_node) is False
 
     def test_visit_import_dangerous(self) -> None:

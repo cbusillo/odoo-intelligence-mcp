@@ -70,6 +70,7 @@ async def test_handle_call_tool_model_info_success() -> None:
         }
     )
 
+    # noinspection DuplicatedCode
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
@@ -87,6 +88,7 @@ async def test_handle_call_tool_with_error() -> None:
     mock_env = AsyncMock()
     mock_env.execute_code = AsyncMock(side_effect=Exception("Test error"))
 
+    # noinspection DuplicatedCode
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
         result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
@@ -144,7 +146,9 @@ async def test_handle_call_tool_field_usages() -> None:
     )
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("field_query", {"operation": "usages", "model_name": "product.template", "field_name": "name"})
+        result = await handle_call_tool(
+            "field_query", {"operation": "usages", "model_name": "product.template", "field_name": "name"}
+        )
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -167,7 +171,9 @@ async def test_handle_call_tool_with_pagination() -> None:
     )
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("analysis_query", {"analysis_type": "patterns", "pattern_type": "computed_fields", "limit": 5, "offset": 0})
+        result = await handle_call_tool(
+            "analysis_query", {"analysis_type": "patterns", "pattern_type": "computed_fields", "limit": 5, "offset": 0}
+        )
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)

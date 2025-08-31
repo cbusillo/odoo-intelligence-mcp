@@ -44,10 +44,10 @@ class TestBaseService:
 
     @pytest.fixture
     def service(self, mock_env: MagicMock) -> ConcreteService:
-        return ConcreteService(cast(Environment, mock_env))
+        return ConcreteService(cast("Environment", mock_env))
 
     def test_init(self, mock_env: MagicMock) -> None:
-        service = ConcreteService(cast(Environment, mock_env))
+        service = ConcreteService(cast("Environment", mock_env))
         assert service.env == mock_env
         assert service._cache == {}
 
@@ -161,4 +161,5 @@ class TestBaseService:
     def test_env_property_access(self, service: ConcreteService, mock_env: MagicMock) -> None:
         assert service.env is mock_env
         mock_env.some_method = Mock(return_value="result")
+        # noinspection PyUnresolvedReferences
         assert service.env.some_method() == "result"

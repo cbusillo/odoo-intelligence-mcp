@@ -110,6 +110,7 @@ class TestPathTraversalPrevention:
 
 
 class TestCommandInjectionPrevention:
+    # noinspection PyUnusedLocal
     @pytest.mark.asyncio
     async def test_prevent_command_injection_in_module_ops(self) -> None:
         dangerous_inputs = [

@@ -180,7 +180,7 @@ class HostOdooEnvironment:
         # Remove dangerous shell characters
         safe_name = container_name.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()
         # Only allow alphanumeric, underscore, dash, and dot
-        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
+        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
         if not safe_pattern.match(safe_name):
             # If still not safe, use a default
             safe_name = "odoo-script-runner-1"

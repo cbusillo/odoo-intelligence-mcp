@@ -91,6 +91,7 @@ class TestFieldAnalyzer:
         with pytest.raises(ServiceValidationError):
             await analyzer.get_comprehensive_field_analysis("sale.order", "nonexistent")
 
+    # noinspection PyUnusedLocal
     @pytest.mark.asyncio
     async def test_cache_field_analysis(self, analyzer: FieldAnalyzer, mock_env: MagicMock) -> None:
         analyzer._get_field_info = AsyncMock(return_value={"name": "field1", "type": "char", "store": True})

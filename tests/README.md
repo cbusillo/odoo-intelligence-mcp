@@ -104,40 +104,21 @@ Performance tests ensure acceptable response times and resource usage.
 
 ### Using Test Helpers
 
-```python
-from tests.fixtures import assert_handles_docker_failure
-
-async def test_tool_with_docker_failure() -> None:
-    await assert_handles_docker_failure(
-        tool_function,
-        required_arg="value"
-    )
-```
+**See real Docker failure test examples:**
+- `tests/integration/test_docker_failure_modes.py::test_container_not_found()`
+- `tests/integration/test_docker_failure_modes.py::test_docker_timeout_handling()`
 
 ### Testing Error Scenarios
 
-```python
-async def test_handles_model_not_found() -> None:
-    mock_env = AsyncMock()
-    mock_env.execute_code = AsyncMock(
-        side_effect=ModelNotFoundError("Model not found")
-    )
-    
-    result = await tool_function(mock_env, "invalid.model")
-    assert "error" in result
-    assert result["error_type"] == "ModelNotFoundError"
-```
+**See real error scenario examples:**
+- `tests/unit/services/test_base_service.py::test_validate_model_exists_model_not_found()`  
+- `tests/unit/tools/model/test_model_info.py::test_get_model_info_nonexistent_model()`
 
 ### Testing Pagination
 
-```python
-from tests.fixtures import assert_paginated_response
-
-async def test_paginated_response() -> None:
-    result = await tool_function(env, pattern="test", page=2, page_size=10)
-    assert_paginated_response(result)
-    assert result["pagination"]["page"] == 2
-```
+**See real pagination test examples:**
+- `tests/unit/tools/analysis/test_analysis_query.py::test_analyze_performance_with_pagination()`
+- `tests/unit/core/test_utils.py::test_paginate_list()` for pagination logic
 
 ## Mock Data
 
@@ -175,34 +156,19 @@ def test_model_info_invalid_name_returns_error() -> None:
 ```
 
 ### 2. Arrange-Act-Assert Pattern
-```python
-async def test_example() -> None:
-    # Arrange
-    mock_env = create_mock_environment()
-    
-    # Act
-    result = await function_under_test(mock_env)
-    
-    # Assert
-    assert result["success"] is True
-```
+**See real AAA pattern examples:**
+- `tests/unit/tools/model/test_model_info.py::test_get_model_info_basic()`
+- `tests/unit/services/test_base_service.py` for structured test patterns
 
 ### 3. Comprehensive Assertions
-```python
-# Don't just check for existence
-assert "field" in result  # Basic
-
-# Verify structure and content
-assert_model_info_response(result, "res.partner")  # Comprehensive
-```
+**See real assertion examples:**
+- `tests/fixtures/common.py::assert_model_info_response()` - Comprehensive validation
+- `tests/unit/tools/model/test_model_info.py` - Multiple assertion patterns
 
 ### 4. Error Message Testing
-```python
-# Verify error messages are helpful
-assert "error" in result
-assert "Model test.model not found" in result["error"]  # Specific
-assert result["error_type"] == "ModelNotFoundError"
-```
+**See real error testing examples:**
+- `tests/unit/services/test_base_service.py::test_validate_model_exists_model_not_found()`
+- `tests/fixtures/common.py::assert_error_response()` - Error validation helper
 
 ## Debugging Failed Tests
 
@@ -230,75 +196,28 @@ uv run pytest tests/failing_test.py::TestClass::test_method -v
 ## Working Import Examples
 
 ### Common Test Helpers
-```python
-from tests.fixtures import (
-    assert_error_response,
-    assert_model_info_response,
-    assert_paginated_response,
-    assert_tool_response_valid,
-    create_field_info,
-    create_mock_odoo_model,
-    create_mock_registry,
-    create_odoo_response,
-)
-
-# Use in your tests
-async def test_model_with_error() -> None:
-    result = await get_model_info(mock_env, "invalid.model")
-    assert_error_response(result, "Model invalid.model not found")
-```
+**See real helper usage examples:**
+- `tests/unit/tools/model/test_model_info.py` - Uses `assert_model_info_response()`
+- `tests/fixtures/common.py` - All available assertion helpers
+- `tests/conftest.py` - Fixture definitions and usage patterns
 
 ### Docker Testing Helpers
-```python
-from tests.fixtures import (
-    create_docker_manager_with_get_container,
-    create_successful_container_mock,
-    get_expected_container_names,
-    get_test_config,
-    setup_docker_manager_mock,
-)
-
-# Test Docker container operations
-async def test_container_operation() -> None:
-    config = get_test_config()
-    container_names = get_expected_container_names()
-    mock_container = create_successful_container_mock()
-    # ... test implementation
-```
+**See real Docker test examples in:**
+- `tests/unit/utils/test_docker_utils.py::test_get_container_names_success()`
+- `tests/integration/test_docker_integration.py::test_docker_container_operations()`
+- `tests/fixtures/docker.py` for all Docker test utilities
 
 ### Mock Utilities
-```python
-from tests.fixtures import (
-    MockEnv,
-    create_mock_env_with_fields,
-    create_mock_model,
-    create_mock_record,
-    create_mock_user,
-)
-
-# Create mock environment with specific fields
-def test_with_mock_env() -> None:
-    fields = {"name": {"type": "char"}, "email": {"type": "char"}}
-    mock_env = create_mock_env_with_fields("res.partner", fields)
-    # ... test implementation
-```
+**See real mock examples in:**
+- `tests/unit/tools/model/test_model_info.py::test_get_model_info_basic()` - MockOdooEnvironment usage
+- `tests/fixtures/mocks.py` - All available mock utilities  
+- `tests/fixtures/odoo.py` - Odoo-specific mock helpers
 
 ### Type Definitions
-```python
-from tests.fixtures import (
-    MockOdooEnvironment,
-    MockModel,
-    MockRecord,
-    MockRecordset,
-    MockRegistry,
-)
-
-# Use proper type hints in tests
-async def test_with_types(mock_env: MockOdooEnvironment) -> None:
-    model: MockModel = mock_env["res.partner"]
-    record: MockRecord = model.browse(1)
-    # ... test implementation
-```
+**See real type usage examples in:**
+- `tests/unit/services/test_base_service.py` - MockOdooEnvironment usage
+- `tests/fixtures/types.py` - All available type protocols (MockModel, MockRecord, etc.)
+- `tests/conftest.py::mock_odoo_env()` - Fixture with proper typing
 
 ## Contributing Tests
 

@@ -153,7 +153,7 @@ class SaleOrder(models.Model):
         code = 'fields.Char("Name", required=True, help="Enter name")'
         tree = ast.parse(code)
         expr_node = cast(ast.Expr, tree.body[0])
-        call_node = expr_node.value
+        call_node = cast(ast.Call, expr_node.value)
 
         result = analyzer._extract_field_info(call_node, code)
         assert result is not None

@@ -16,7 +16,7 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
         # Only allow alphanumeric, underscore, dash, and dot
         import re
 
-        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
+        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
         raw_modules = modules.split(",")
         module_list = []
         for m in raw_modules:

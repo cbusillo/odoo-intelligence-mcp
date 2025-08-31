@@ -75,6 +75,7 @@ class TestServerIntegration:
 
         mock_env_with_cleanup.cr.close.assert_called_once()
 
+    # noinspection PyUnusedLocal
     @pytest.mark.asyncio
     async def test_pagination_parameters_passed_correctly(self) -> None:
         mock_env = AsyncMock()

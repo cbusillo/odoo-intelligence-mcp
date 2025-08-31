@@ -88,6 +88,7 @@ def test_handle_container_operation_success() -> None:
 
         manager = DockerClientManager()
 
+        # noinspection PyUnusedLocal
         def operation(container: object) -> dict[str, str]:
             return {"result": "success"}
 
@@ -108,6 +109,7 @@ def test_handle_container_operation_failure() -> None:
 
         manager = DockerClientManager()
 
+        # noinspection PyUnusedLocal
         def operation(container: object) -> None:
             raise ValueError("Operation failed")
 
@@ -134,6 +136,7 @@ def test_handle_container_operation_container_error() -> None:
                 "container": "missing-container",
             }
 
+            # noinspection PyUnusedLocal
             def operation(container: object) -> dict[str, str]:
                 return {"result": "success"}
 

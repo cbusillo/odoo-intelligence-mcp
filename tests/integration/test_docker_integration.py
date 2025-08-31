@@ -34,6 +34,7 @@ async def test_host_odoo_environment_execute_code() -> None:
 
     with patch("subprocess.run") as mock_run:
         # Mock responses for container operations
+        # noinspection PyUnusedLocal
         def side_effect(*args: object, **kwargs: object) -> MagicMock:
             cmd = args[0] if args else []
             # Handle docker inspect for status check
