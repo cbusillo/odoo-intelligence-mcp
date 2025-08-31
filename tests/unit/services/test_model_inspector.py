@@ -1,9 +1,11 @@
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from odoo_intelligence_mcp.services.base_service import ServiceExecutionError, ServiceValidationError
 from odoo_intelligence_mcp.services.model_inspector import ModelInspector
+from odoo_intelligence_mcp.type_defs.odoo_types import Environment
 
 
 class TestModelInspector:
@@ -16,7 +18,7 @@ class TestModelInspector:
 
     @pytest.fixture
     def model_inspector(self, mock_env: MagicMock) -> ModelInspector:
-        return ModelInspector(mock_env)
+        return ModelInspector(cast(Environment, mock_env))
 
     def test_get_service_name(self, model_inspector: ModelInspector) -> None:
         assert model_inspector.get_service_name() == "ModelInspector"

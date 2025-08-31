@@ -1,9 +1,11 @@
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from odoo_intelligence_mcp.services.base_service import ServiceExecutionError
 from odoo_intelligence_mcp.services.odoo_analyzer import OdooAnalyzer
+from odoo_intelligence_mcp.type_defs.odoo_types import Environment
 
 
 class TestOdooAnalyzer:
@@ -13,7 +15,7 @@ class TestOdooAnalyzer:
 
     @pytest.fixture
     def odoo_analyzer(self, mock_env: MagicMock) -> OdooAnalyzer:
-        return OdooAnalyzer(mock_env)
+        return OdooAnalyzer(cast(Environment, mock_env))
 
     def test_get_service_name(self, odoo_analyzer: OdooAnalyzer) -> None:
         assert odoo_analyzer.get_service_name() == "OdooAnalyzer"
