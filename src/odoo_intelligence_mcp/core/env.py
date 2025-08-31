@@ -145,7 +145,11 @@ def load_env_config() -> EnvConfig:
 
     # Pydantic BaseSettings will automatically load from env vars and .env file
     if env_file_path:
-        return EnvConfig(_env_file=env_file_path)
+        # Create config with custom env file path by setting the model_config
+        config = EnvConfig()
+        # Store the env file path for later access (this is what Pydantic does internally)
+        config.__dict__["_env_file"] = Path(env_file_path)  # noqa: SLF001
+        return config
     else:
         return EnvConfig()
 
@@ -191,7 +195,7 @@ class HostOdooEnvironment:
         return ModelProxy(self, model_name)
 
     def __call__(self, *, _user: int | None = None, _context: dict[str, object] | None = None) -> "HostOdooEnvironment":
-        return HostOdooEnvironment(self.container_name, self.database, self.addons_path)
+        return HostOdooEnvironment(self.container_name, self.database, self.addons_path, self.db_host, self.db_port)
 
     def __contains__(self, model_name: str) -> bool:
         # For synchronous access, we assume the model exists
@@ -258,7 +262,9 @@ class HostOdooEnvironment:
     def _get_project_directory(self, config: EnvConfig) -> str | None:
         """Extract project directory from config, with fallback logic."""
         project_dir = None
+        # noinspection PyProtectedMember
         if hasattr(config, "_env_file") and config._env_file:
+            # noinspection PyProtectedMember
             project_dir = str(Path(config._env_file).parent)
         else:
             # Fallback: try to find compose files relative to this package

@@ -98,7 +98,7 @@ def create_mock_docker_environment(
     else:
         from odoo_intelligence_mcp.utils.error_utils import DockerConnectionError
 
-        env.execute_code = AsyncMock(side_effect=DockerConnectionError("Container not running"))
+        env.execute_code = AsyncMock(side_effect=DockerConnectionError("test-container", "Container not running"))
 
     env.cr = MagicMock()
     env.cr.close = MagicMock()
