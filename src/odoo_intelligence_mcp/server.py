@@ -356,7 +356,7 @@ async def handle_list_tools() -> list[Tool]:
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
-                    "properties": {"module_name": {"type": "string"}},
+                    "properties": {"module_name": {"type": "string", "description": "Name of the module to analyze"}},
                     "required": ["module_name"],
                 }
             ),
@@ -367,7 +367,7 @@ async def handle_list_tools() -> list[Tool]:
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
-                    "properties": {"method_name": {"type": "string"}},
+                    "properties": {"method_name": {"type": "string", "description": "Name of the method to find"}},
                     "required": ["method_name"],
                 }
             ),
@@ -381,6 +381,7 @@ async def handle_list_tools() -> list[Tool]:
                     "properties": {
                         "decorator": {
                             "type": "string",
+                            "description": "Type of decorator to search for",
                             "enum": ["depends", "constrains", "onchange", "create_multi"],
                         }
                     },
@@ -393,7 +394,7 @@ async def handle_list_tools() -> list[Tool]:
             description="Execute code",
             inputSchema={
                 "type": "object",
-                "properties": {"code": {"type": "string"}},
+                "properties": {"code": {"type": "string", "description": "Python code to execute in Odoo environment"}},
                 "required": ["code"],
             },
         ),
@@ -403,13 +404,14 @@ async def handle_list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "user": {"type": "string"},
-                    "model": {"type": "string"},
+                    "user": {"type": "string", "description": "Username to check permissions for"},
+                    "model": {"type": "string", "description": "Model name to check permissions on"},
                     "operation": {
                         "type": "string",
+                        "description": "Operation to check permission for",
                         "enum": ["read", "write", "create", "unlink"],
                     },
-                    "record_id": {"type": "integer"},
+                    "record_id": {"type": "integer", "description": "Optional record ID to check specific record permissions"},
                 },
                 "required": ["user", "model", "operation"],
             },
@@ -468,10 +470,11 @@ async def handle_list_tools() -> list[Tool]:
                     "properties": {
                         "operation": {
                             "type": "string",
+                            "description": "Type of query operation to perform",
                             "enum": ["info", "search", "relationships", "inheritance", "view_usage"],
                         },
-                        "model_name": {"type": "string"},
-                        "pattern": {"type": "string"},
+                        "model_name": {"type": "string", "description": "Name of the model to query"},
+                        "pattern": {"type": "string", "description": "Search pattern for model search"},
                     },
                     "required": ["operation"],
                 }
@@ -486,6 +489,7 @@ async def handle_list_tools() -> list[Tool]:
                     "properties": {
                         "operation": {
                             "type": "string",
+                            "description": "Type of field query operation to perform",
                             "enum": [
                                 "usages",
                                 "analyze_values",
@@ -495,14 +499,14 @@ async def handle_list_tools() -> list[Tool]:
                                 "search_type",
                             ],
                         },
-                        "model": {"type": "string"},
-                        "model_name": {"type": "string"},
-                        "field": {"type": "string"},
-                        "field_name": {"type": "string"},
-                        "property": {"type": "string"},
-                        "field_type": {"type": "string"},
-                        "domain": {"type": "array"},
-                        "sample_size": {"type": "integer"},
+                        "model": {"type": "string", "description": "Model name (deprecated, use model_name)"},
+                        "model_name": {"type": "string", "description": "Name of the model containing the field"},
+                        "field": {"type": "string", "description": "Field name (deprecated, use field_name)"},
+                        "field_name": {"type": "string", "description": "Name of the field to query"},
+                        "property": {"type": "string", "description": "Field property to search for"},
+                        "field_type": {"type": "string", "description": "Type of field to search for"},
+                        "domain": {"type": "array", "description": "Domain filter for field search"},
+                        "sample_size": {"type": "integer", "description": "Number of sample values to analyze"},
                     },
                     "required": ["operation"],
                 }
@@ -517,10 +521,11 @@ async def handle_list_tools() -> list[Tool]:
                     "properties": {
                         "analysis_type": {
                             "type": "string",
+                            "description": "Type of analysis to perform",
                             "enum": ["performance", "patterns", "workflow"],
                         },
-                        "model_name": {"type": "string"},
-                        "pattern_type": {"type": "string"},
+                        "model_name": {"type": "string", "description": "Name of the model to analyze"},
+                        "pattern_type": {"type": "string", "description": "Type of pattern to analyze"},
                     },
                     "required": ["analysis_type"],
                 }

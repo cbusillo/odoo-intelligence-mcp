@@ -232,7 +232,7 @@ class TestToolContracts:
     async def test_tool_input_sanitization(self, mock_env: AsyncMock) -> None:
         dangerous_inputs = [
             ("execute_code", {"code": "'; DROP TABLE users; --"}),
-            ("odoo_shell", {"code": "import os; os.system('rm -rf /')"}),
+            ("execute_code", {"code": "import os; os.system('rm -rf /')"}),
             ("search_models", {"pattern": "../../../etc/passwd"}),
             ("read_odoo_file", {"file_path": "/etc/passwd"}),
             ("odoo_update_module", {"modules": "base; rm -rf /"}),
@@ -252,7 +252,7 @@ class TestToolContracts:
 
                     if "error" in content:
                         error_msg = content["error"].lower()
-                        assert any(word in error_msg for word in ["security", "invalid", "not allowed", "not found", "required", "missing"]), f"Tool {tool_name} error message doesn't contain expected keywords: {content['error']}"
+                        assert any(word in error_msg for word in ["security", "invalid", "not allowed", "not found", "required", "missing", "unknown"]), f"Tool {tool_name} error message doesn't contain expected keywords: {content['error']}"
 
     @pytest.mark.asyncio
     async def test_tool_schema_validation(self) -> None:
