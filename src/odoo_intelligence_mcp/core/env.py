@@ -255,6 +255,19 @@ class HostOdooEnvironment:
         model_names = await self.get_model_names()
         return model_name in model_names
 
+    def _get_project_directory(self, config: EnvConfig) -> str | None:
+        """Extract project directory from config, with fallback logic."""
+        project_dir = None
+        if hasattr(config, "_env_file") and config._env_file:
+            project_dir = str(Path(config._env_file).parent)
+        else:
+            # Fallback: try to find compose files relative to this package
+            developer_dir = Path(__file__).parent.parent.parent.parent.parent
+            potential_project_dir = developer_dir / "odoo-ai"
+            if (potential_project_dir / "docker-compose.yml").exists():
+                project_dir = str(potential_project_dir)
+        return project_dir
+
     def ensure_container_running(self) -> None:
         try:
             # Check container status with health information
@@ -269,15 +282,7 @@ class HostOdooEnvironment:
                 logger.info(f"Attempting to create container {self.container_name} via docker compose service '{service_name}'...")
 
                 # Get the project directory from the config's .env file path
-                project_dir = None
-                if hasattr(config, "_env_file") and config._env_file:
-                    project_dir = str(Path(config._env_file).parent)
-                else:
-                    # Fallback: try to find compose files relative to this package
-                    developer_dir = Path(__file__).parent.parent.parent.parent.parent
-                    potential_project_dir = developer_dir / "odoo-ai"
-                    if (potential_project_dir / "docker-compose.yml").exists():
-                        project_dir = str(potential_project_dir)
+                project_dir = self._get_project_directory(config)
 
                 if not project_dir:
                     raise DockerConnectionError(self.container_name, "Cannot determine project directory for docker compose")
@@ -323,15 +328,7 @@ class HostOdooEnvironment:
                 if containers_to_start:
                     logger.info(f"Essential containers not running: {containers_to_start}. Starting them...")
                     # Get the project directory from the config's .env file path
-                    project_dir = None
-                    if hasattr(config, "_env_file") and config._env_file:
-                        project_dir = str(Path(config._env_file).parent)
-                    else:
-                        # Fallback: try to find compose files relative to this package
-                        developer_dir = Path(__file__).parent.parent.parent.parent.parent
-                        potential_project_dir = developer_dir / "odoo-ai"
-                        if (potential_project_dir / "docker-compose.yml").exists():
-                            project_dir = str(potential_project_dir)
+                    project_dir = self._get_project_directory(config)
 
                     if project_dir:
                         compose_cmd = ["docker", "compose", "up", "-d"] + containers_to_start
