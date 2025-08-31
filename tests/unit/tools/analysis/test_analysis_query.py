@@ -4,7 +4,7 @@ from odoo_intelligence_mcp.core.utils import PaginationParams
 from odoo_intelligence_mcp.tools.analysis.pattern_analysis import analyze_patterns
 from odoo_intelligence_mcp.tools.analysis.performance_analysis import analyze_performance
 from odoo_intelligence_mcp.tools.analysis.workflow_states import analyze_workflow_states
-from tests.mock_types import MockOdooEnvironment
+from tests.fixtures.types import MockOdooEnvironment
 
 
 @pytest.mark.asyncio
@@ -61,7 +61,7 @@ async def test_analyze_performance_basic(mock_odoo_env: MockOdooEnvironment) -> 
 @pytest.mark.asyncio
 async def test_analyze_performance_with_pagination(mock_odoo_env: MockOdooEnvironment) -> None:
     model_name = "sale.order"
-    pagination = PaginationParams(page=1, page_size=5)
+    pagination = PaginationParams(page_size=5)
     result = await analyze_performance(mock_odoo_env, model_name, pagination)
     
     assert "model" in result
@@ -86,7 +86,7 @@ async def test_analyze_workflow_states_basic(mock_odoo_env: MockOdooEnvironment)
 @pytest.mark.asyncio
 async def test_analyze_workflow_states_with_pagination(mock_odoo_env: MockOdooEnvironment) -> None:
     model_name = "sale.order"
-    pagination = PaginationParams(page=1, page_size=10)
+    pagination = PaginationParams(page_size=10)
     result = await analyze_workflow_states(mock_odoo_env, model_name, pagination)
     
     assert "model" in result

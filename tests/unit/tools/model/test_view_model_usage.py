@@ -79,7 +79,7 @@ async def test_view_model_usage_with_pagination(mock_odoo_env: MagicMock) -> Non
     from odoo_intelligence_mcp.core.utils import PaginationParams
 
     model_name = "sale.order.line"
-    pagination = PaginationParams(page=1, page_size=10)
+    pagination = PaginationParams(page_size=10)
 
     result = await get_view_model_usage(mock_odoo_env, model_name, pagination)
 

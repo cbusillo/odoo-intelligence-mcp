@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment, MockRegistry, load_env_config
-from tests.mock_types import ConcreteModelMock as MockModel
+from tests.fixtures.types import ConcreteModelMock as MockModel
 
 
 class TestMockRegistryIteration:

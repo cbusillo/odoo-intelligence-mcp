@@ -93,7 +93,7 @@ async def test_find_method_with_pagination(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
 
     method_name = "write"
-    pagination = PaginationParams(page=1, page_size=5)
+    pagination = PaginationParams(page_size=5)
 
     # Mock many implementations for pagination
     mock_implementations = [

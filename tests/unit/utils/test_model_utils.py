@@ -65,7 +65,8 @@ class TestModelIterator:
             assert model._name == model_name
             break
 
-    def _setup_mock_model_fields(self, mock_env: MagicMock) -> tuple[MagicMock, MagicMock, MagicMock]:
+    @staticmethod
+    def _setup_mock_model_fields(mock_env: MagicMock) -> tuple[MagicMock, MagicMock, MagicMock]:
         """Helper to setup mock model with standard fields to avoid duplication."""
         mock_field1 = MagicMock(type="char", name="name")
         mock_field2 = MagicMock(type="many2one", name="partner_id")
@@ -81,7 +82,7 @@ class TestModelIterator:
         return mock_field1, mock_field2, mock_field3
 
     def test_iter_model_fields(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
-        mock_field1, mock_field2, mock_field3 = self._setup_mock_model_fields(mock_env)
+        mock_field1, mock_field2, mock_field3 = TestModelIterator._setup_mock_model_fields(mock_env)
 
         fields = list(iterator.iter_model_fields("sale.order"))
         assert len(fields) == 3
@@ -90,7 +91,7 @@ class TestModelIterator:
         assert ("amount", mock_field3) in fields
 
     def test_iter_model_fields_with_filter(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
-        mock_field1, mock_field2, mock_field3 = self._setup_mock_model_fields(mock_env)
+        mock_field1, mock_field2, mock_field3 = TestModelIterator._setup_mock_model_fields(mock_env)
 
         def field_filter(name: str, field: Any) -> bool:
             return field.type == "many2one"

@@ -76,7 +76,7 @@ async def test_search_models_with_pagination(mock_odoo_env: MagicMock) -> None:
     from odoo_intelligence_mcp.core.utils import PaginationParams
 
     pattern = "account"
-    pagination = PaginationParams(page=1, page_size=10)
+    pagination = PaginationParams(page_size=10)
 
     result = await search_models(mock_odoo_env, pattern, pagination)
 

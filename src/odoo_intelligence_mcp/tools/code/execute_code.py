@@ -108,7 +108,7 @@ def odoo_shell(code: str, timeout: int = 30) -> dict[str, Any]:
         database = config.db_name
         cmd = ["docker", "exec", "-i", container_name, "/odoo/odoo-bin", "shell", f"--database={database}"]
 
-        result = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=timeout, check=False)
+        result = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=timeout)
 
         return {
             "success": result.returncode == 0,

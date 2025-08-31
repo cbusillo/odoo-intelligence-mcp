@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -164,19 +164,6 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
 
     def _get_mock_response_for_code(code: str) -> dict[str, Any]:
         """Get mock response based on code patterns."""
-        # Generic patterns for common queries
-        model_name = None
-        if "'res.partner'" in code:
-            model_name = "res.partner"
-        elif "'product.template'" in code:
-            model_name = "product.template"
-        elif "'sale.order'" in code:
-            model_name = "sale.order"
-        elif "'sale.order.line'" in code:
-            model_name = "sale.order.line"
-        elif "'account.move'" in code:
-            model_name = "account.move"
-
         # Check for invalid models
         if "invalid.model" in code or "nonexistent.model" in code:
             model = "nonexistent.model" if "nonexistent.model" in code else "invalid.model"
@@ -890,10 +877,10 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             method_name = method_match.group(1) if method_match else "create"
 
             if method_name == "nonexistent_method":
-                return cast(list[object], [])  # Return empty list for nonexistent methods
+                return {"implementations": {"items": [], "pagination": {}}}  # Return empty implementations
 
             # Return list of implementations (the function wraps this in the result dict)
-            return cast(list[object], [
+            implementations_list: list[dict[str, Any]] = [
                 {
                     "model": "sale.order",
                     "module": "odoo.addons.sale.models.sale_order",
@@ -910,7 +897,8 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
                     "has_super": False,
                 },
-            ])
+            ]
+            return {"implementations": {"items": implementations_list, "pagination": {}}}
 
         # Handle search_decorators queries
         if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
@@ -1057,15 +1045,6 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
 
     env.execute_code = mock_execute_code
     return env
-
-
-@pytest.fixture
-def mock_docker_client() -> MagicMock:
-    client = MagicMock()
-    container = MagicMock()
-    container.exec_run.return_value = (0, b"Success")
-    client.containers.get.return_value = container
-    return client
 
 
 @pytest_asyncio.fixture

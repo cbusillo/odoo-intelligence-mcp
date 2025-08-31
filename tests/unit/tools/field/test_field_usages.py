@@ -1,7 +1,7 @@
 import pytest
 
 from odoo_intelligence_mcp.tools.field.field_usages import get_field_usages
-from tests.mock_types import MockOdooEnvironment
+from tests.fixtures.types import MockOdooEnvironment
 
 
 @pytest.mark.asyncio

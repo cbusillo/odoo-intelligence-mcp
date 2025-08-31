@@ -106,7 +106,7 @@ async def test_find_files_with_pagination() -> None:
             mock_exec_result.output = "\n".join(files).encode()
             mock_container.exec_run.return_value = mock_exec_result
 
-            pagination = PaginationParams(page=1, page_size=5)
+            pagination = PaginationParams(page_size=5)
             result = await find_files("*.py", pagination=pagination)
 
             assert "results" in result

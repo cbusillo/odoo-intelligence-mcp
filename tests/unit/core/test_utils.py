@@ -189,7 +189,7 @@ class TestPaginatedResponse:
 
     def test_has_next_and_previous(self) -> None:
         # First page
-        response = PaginatedResponse([], total_count=30, page=1, page_size=10)
+        response = PaginatedResponse([], total_count=30, page_size=10)
         assert response.has_next_page is True
         assert response.has_previous_page is False
 
@@ -204,7 +204,7 @@ class TestPaginatedResponse:
         assert response.has_previous_page is True
 
         # Single page
-        response = PaginatedResponse([], total_count=5, page=1, page_size=10)
+        response = PaginatedResponse([], total_count=5, page_size=10)
         assert response.has_next_page is False
         assert response.has_previous_page is False
 
@@ -248,7 +248,7 @@ class TestPaginationParams:
         assert params.page_size == 100  # Falls back to default
 
     def test_get_offset(self) -> None:
-        params = PaginationParams(page=1, page_size=10)
+        params = PaginationParams(page_size=10)
         assert params.offset == 0
 
         params = PaginationParams(page=2, page_size=10)
@@ -262,7 +262,7 @@ def test_paginate_list() -> None:
     items = list(range(1, 26))  # 1-25
 
     # First page
-    params = PaginationParams(page=1, page_size=10)
+    params = PaginationParams(page_size=10)
     result = paginate_list(items, params)
     assert result.items == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     assert result.total_count == 25
@@ -292,7 +292,7 @@ def test_paginate_list() -> None:
 
 def test_paginate_list_with_filter() -> None:
     items = list(range(1, 11))
-    params = PaginationParams(page=1, page_size=5, filter_text="numbers")
+    params = PaginationParams(page_size=5, filter_text="numbers")
     result = paginate_list(items, params)
     assert result.filter_applied == "numbers"
 
@@ -306,7 +306,7 @@ def test_paginate_dict_list() -> None:
         {"id": 5, "name": "Eve"},
     ]
 
-    params = PaginationParams(page=1, page_size=2)
+    params = PaginationParams(page_size=2)
     result = paginate_dict_list(items, params)
 
     assert result.items == [
@@ -321,7 +321,7 @@ def test_paginate_dict_list() -> None:
 
 def test_paginate_dict_list_with_filter() -> None:
     items = [{"id": i, "name": f"test{i}"} for i in range(1, 6)]
-    params = PaginationParams(page=1, page_size=10, filter_text="test")
+    params = PaginationParams(page_size=10, filter_text="test")
     result = paginate_dict_list(items, params)
 
     # All items should match because they all contain "test"

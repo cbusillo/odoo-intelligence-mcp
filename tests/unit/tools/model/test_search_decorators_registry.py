@@ -77,7 +77,7 @@ async def test_search_decorators_with_pagination(mock_odoo_env: MagicMock) -> No
     from odoo_intelligence_mcp.core.utils import PaginationParams
 
     decorator_type = "depends"
-    pagination = PaginationParams(page=1, page_size=10)
+    pagination = PaginationParams(page_size=10)
 
     result = await search_decorators(mock_odoo_env, decorator_type, pagination)
 

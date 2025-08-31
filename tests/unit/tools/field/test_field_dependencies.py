@@ -74,7 +74,7 @@ async def test_field_dependencies_with_pagination(mock_odoo_env: MagicMock) -> N
 
     model_name = "account.move"
     field_name = "state"
-    pagination = PaginationParams(page=1, page_size=5)
+    pagination = PaginationParams(page_size=5)
 
     result = await get_field_dependencies(mock_odoo_env, model_name, field_name, pagination)
 

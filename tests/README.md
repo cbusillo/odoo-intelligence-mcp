@@ -105,11 +105,7 @@ Performance tests ensure acceptable response times and resource usage.
 ### Using Test Helpers
 
 ```python
-from tests.helpers import (
-    create_mock_odoo_model,
-    assert_tool_response_valid,
-    assert_handles_docker_failure
-)
+from tests.fixtures import assert_handles_docker_failure
 
 async def test_tool_with_docker_failure() -> None:
     await assert_handles_docker_failure(
@@ -135,7 +131,7 @@ async def test_handles_model_not_found() -> None:
 ### Testing Pagination
 
 ```python
-from tests.helpers import assert_paginated_response
+from tests.fixtures import assert_paginated_response
 
 async def test_paginated_response() -> None:
     result = await tool_function(env, pattern="test", page=2, page_size=10)
@@ -229,6 +225,79 @@ logging.basicConfig(level=logging.DEBUG)
 ### 4. Isolate the test
 ```bash
 uv run pytest tests/failing_test.py::TestClass::test_method -v
+```
+
+## Working Import Examples
+
+### Common Test Helpers
+```python
+from tests.fixtures import (
+    assert_error_response,
+    assert_model_info_response,
+    assert_paginated_response,
+    assert_tool_response_valid,
+    create_field_info,
+    create_mock_odoo_model,
+    create_mock_registry,
+    create_odoo_response,
+)
+
+# Use in your tests
+async def test_model_with_error() -> None:
+    result = await get_model_info(mock_env, "invalid.model")
+    assert_error_response(result, "Model invalid.model not found")
+```
+
+### Docker Testing Helpers
+```python
+from tests.fixtures import (
+    create_docker_manager_with_get_container,
+    create_successful_container_mock,
+    get_expected_container_names,
+    get_test_config,
+    setup_docker_manager_mock,
+)
+
+# Test Docker container operations
+async def test_container_operation() -> None:
+    config = get_test_config()
+    container_names = get_expected_container_names()
+    mock_container = create_successful_container_mock()
+    # ... test implementation
+```
+
+### Mock Utilities
+```python
+from tests.fixtures import (
+    MockEnv,
+    create_mock_env_with_fields,
+    create_mock_model,
+    create_mock_record,
+    create_mock_user,
+)
+
+# Create mock environment with specific fields
+def test_with_mock_env() -> None:
+    fields = {"name": {"type": "char"}, "email": {"type": "char"}}
+    mock_env = create_mock_env_with_fields("res.partner", fields)
+    # ... test implementation
+```
+
+### Type Definitions
+```python
+from tests.fixtures import (
+    MockOdooEnvironment,
+    MockModel,
+    MockRecord,
+    MockRecordset,
+    MockRegistry,
+)
+
+# Use proper type hints in tests
+async def test_with_types(mock_env: MockOdooEnvironment) -> None:
+    model: MockModel = mock_env["res.partner"]
+    record: MockRecord = model.browse(1)
+    # ... test implementation
 ```
 
 ## Contributing Tests

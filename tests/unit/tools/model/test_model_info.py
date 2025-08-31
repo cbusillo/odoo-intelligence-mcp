@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from odoo_intelligence_mcp.tools.model.model_info import get_model_info
+from tests.fixtures.common import assert_model_info_response
 
 
 @pytest.mark.asyncio
@@ -22,14 +23,7 @@ async def test_get_model_info_basic(mock_odoo_env: MagicMock) -> None:
     assert result["rec_name"] == "name"
     assert "order" in result
     assert result["order"] == "id"
-    assert "fields" in result
-    assert isinstance(result["fields"], dict)
-    assert "field_count" in result
-    assert result["field_count"] == len(result["fields"])
-    assert "methods" in result
-    assert isinstance(result["methods"], list)
-    assert "method_count" in result
-    assert result["method_count"] == len(result["methods"])
+    assert_model_info_response(result, "res.partner")
 
 
 @pytest.mark.asyncio

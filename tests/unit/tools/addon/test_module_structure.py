@@ -309,7 +309,7 @@ async def test_get_module_structure_with_pagination() -> None:
 
             from odoo_intelligence_mcp.core.utils import PaginationParams
 
-            pagination = PaginationParams(page=1, page_size=10)
+            pagination = PaginationParams(page_size=10)
             result = await get_module_structure("large_module", pagination=pagination)
 
     assert "module" in result

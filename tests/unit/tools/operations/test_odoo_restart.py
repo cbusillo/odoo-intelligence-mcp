@@ -6,7 +6,7 @@ import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_restart import odoo_restart
 
-from ....helpers.docker_test_helpers import (
+from tests.fixtures import (
     create_mock_handle_operation_success,
     get_expected_container_names,
 )

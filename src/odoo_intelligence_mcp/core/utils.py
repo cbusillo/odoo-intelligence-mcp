@@ -215,7 +215,7 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
             # Instead of failing, truncate the response
 
             # Check for paginated responses (may be nested)
-            items_path = None
+            items_path: list[str] | None = None
             if "items" in data:
                 items_path = ["items"]
             elif "implementations" in data and isinstance(data["implementations"], dict) and "items" in data["implementations"]:
@@ -228,7 +228,8 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
                 items_container = data
                 for key in items_path[:-1]:
                     items_container = items_container[key]
-                items_key: str = items_path[-1]
+                items_key = items_path[-1]
+                assert isinstance(items_key, str)
 
                 # For paginated responses, reduce items
                 original_count = len(items_container[items_key])

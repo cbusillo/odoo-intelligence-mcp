@@ -1,7 +1,7 @@
 import pytest
 
 from odoo_intelligence_mcp.tools.model.inheritance_chain import analyze_inheritance_chain
-from tests.mock_types import MockOdooEnvironment
+from tests.fixtures.types import MockOdooEnvironment
 
 
 @pytest.mark.asyncio

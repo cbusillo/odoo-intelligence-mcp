@@ -67,7 +67,7 @@ async def test_resolve_dynamic_fields_with_pagination(mock_odoo_env: MagicMock) 
     from odoo_intelligence_mcp.core.utils import PaginationParams
 
     model_name = "account.move"
-    pagination = PaginationParams(page=1, page_size=5)
+    pagination = PaginationParams(page_size=5)
 
     result = await resolve_dynamic_fields(mock_odoo_env, model_name, pagination)
 

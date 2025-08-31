@@ -81,7 +81,7 @@ class TestOdooAnalyzer:
                 "summary": {"total_files": 3, "total_matches": 4},
             }
 
-            result = await odoo_analyzer.search_across_modules("test_pattern", "py")
+            result = await odoo_analyzer.search_across_modules("test_pattern")
 
             assert result["pattern"] == "test_pattern"
             assert result["file_type"] == "py"

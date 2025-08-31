@@ -1,7 +1,7 @@
 import pytest
 
 from odoo_intelligence_mcp.tools.model.model_relationships import get_model_relationships
-from tests.mock_types import MockOdooEnvironment
+from tests.fixtures.types import MockOdooEnvironment
 
 
 @pytest.mark.asyncio

@@ -76,7 +76,7 @@ async def test_search_field_properties_with_pagination(mock_odoo_env: MagicMock)
     from odoo_intelligence_mcp.core.utils import PaginationParams
 
     property_type = "computed"
-    pagination = PaginationParams(page=1, page_size=10)
+    pagination = PaginationParams(page_size=10)
 
     result = await search_field_properties(mock_odoo_env, property_type, pagination)
 

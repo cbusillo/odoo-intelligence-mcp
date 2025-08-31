@@ -369,7 +369,8 @@ class HostOdooEnvironment:
                 # If docker start failed, try docker compose up
                 elif "No such container" in start_result.stderr or "not found" in start_result.stderr:
                     logger.info(f"Container {self.container_name} doesn't exist. Attempting to create with docker compose...")
-                    service_name = self.container_name.replace(f"{self.config.container_prefix}-", "").replace("-1", "")
+                    config = load_env_config()
+                    service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
                     compose_cmd = ["docker", "compose", "up", "-d", service_name]
                     compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=30)
                     if compose_result.returncode == 0:

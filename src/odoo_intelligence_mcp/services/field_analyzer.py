@@ -24,7 +24,7 @@ class FieldAnalyzer(BaseService):
     async def get_comprehensive_field_analysis(
         self, model_name: str, field_name: str, analyze_values: bool = False
     ) -> dict[str, object]:
-        await self._validate_field_exists(model_name, field_name)
+        self._validate_field_exists(model_name, field_name)
 
         cache_key = f"field_analysis:{model_name}:{field_name}:{analyze_values}"
         cached = self._get_cached(cache_key)
@@ -64,7 +64,7 @@ class FieldAnalyzer(BaseService):
         return {}
 
     async def analyze_field_impact(self, model_name: str, field_name: str) -> dict[str, object]:
-        await self._validate_field_exists(model_name, field_name)
+        self._validate_field_exists(model_name, field_name)
 
         dependencies = await get_field_dependencies(self.env, model_name, field_name)
 
@@ -122,7 +122,7 @@ class FieldAnalyzer(BaseService):
     async def find_similar_fields(self, model_name: str, field_name: str) -> dict[str, object]:
         self._validate_field_exists(model_name, field_name)
 
-        field_info = self._get_field_info(model_name, field_name)
+        field_info = await self._get_field_info(model_name, field_name)
         field_type = str(field_info.get("type", ""))
 
         return {
@@ -218,11 +218,11 @@ class FieldAnalyzer(BaseService):
             "suggestions": suggestions,
         }
 
-    def get_field_migration_plan(self, model_name: str, field_name: str, new_field_type: str | None = None) -> dict[str, object]:
+    async def get_field_migration_plan(self, model_name: str, field_name: str, new_field_type: str | None = None) -> dict[str, object]:
         self._validate_field_exists(model_name, field_name)
 
-        impact = self.analyze_field_impact(model_name, field_name)
-        field_info = self._get_field_info(model_name, field_name)
+        impact = await self.analyze_field_impact(model_name, field_name)
+        field_info = await self._get_field_info(model_name, field_name)
 
         migration_plan = {
             "field": f"{model_name}.{field_name}",

@@ -39,7 +39,7 @@ class TestCLIFunctions:
         mock_run.assert_called_once_with([sys.executable, "-m", "ruff", "check", ".", "--fix"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_check_function(self, mock_run: MagicMock) -> None:
+    def test_check_function(self, _mock_run: MagicMock) -> None:
         with patch("odoo_intelligence_mcp.cli.format_code") as mock_format, patch("odoo_intelligence_mcp.cli.lint") as mock_lint:
             cli.check()
             mock_format.assert_called_once()

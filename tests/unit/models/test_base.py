@@ -18,8 +18,8 @@ class TestBaseModel:
         assert model.id == 42
 
     def test_init_with_timestamps(self) -> None:
-        created = datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC)
-        updated = datetime(2024, 1, 2, 10, 0, 0, tzinfo=UTC)
+        created = datetime(2024, 1, 1, 10, tzinfo=UTC)
+        updated = datetime(2024, 1, 2, 10, tzinfo=UTC)
         model = BaseModel(id=1, created_at=created, updated_at=updated)
         assert model.created_at == created
         assert model.updated_at == updated
@@ -33,8 +33,8 @@ class TestBaseModel:
         assert "updated_at" in result
 
     def test_to_dict_datetime_serialization(self) -> None:
-        created = datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC)
-        updated = datetime(2024, 1, 2, 10, 0, 0, tzinfo=UTC)
+        created = datetime(2024, 1, 1, 10, tzinfo=UTC)
+        updated = datetime(2024, 1, 2, 10, tzinfo=UTC)
         model = BaseModel(id=1, created_at=created, updated_at=updated)
         result = model.to_dict()
         assert result["created_at"] == "2024-01-01T10:00:00+00:00"
@@ -44,7 +44,7 @@ class TestBaseModel:
         model = BaseModel()
         original_updated = model.updated_at
         with patch("odoo_intelligence_mcp.models.base.datetime") as mock_datetime:
-            new_time = datetime(2024, 12, 25, 12, 0, 0, tzinfo=UTC)
+            new_time = datetime(2024, 12, 25, 12, tzinfo=UTC)
             mock_datetime.now.return_value = new_time
             mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
             model.update_timestamp()
