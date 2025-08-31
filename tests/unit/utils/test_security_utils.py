@@ -131,7 +131,7 @@ data = json.dumps({'key': 'value'})
 """
         result = CodeSecurityValidator.validate_code(code)
         is_valid = result["is_valid"]
-        message = result.get("error", result.get("message", ""))
+        _message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
     def test_validate_code_odoo_import_allowed(self) -> None:
@@ -144,7 +144,7 @@ class SaleOrder(models.Model):
 """
         result = CodeSecurityValidator.validate_code(code)
         is_valid = result["is_valid"]
-        message = result.get("error", result.get("message", ""))
+        _message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
     def test_validate_code_nested_loops_within_limit(self) -> None:
@@ -156,7 +156,7 @@ for i in range(10):
 """
         result = CodeSecurityValidator.validate_code(code)
         is_valid = result["is_valid"]
-        message = result.get("error", result.get("message", ""))
+        _message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
     def test_validate_code_nested_loops_exceed_limit(self) -> None:
@@ -195,7 +195,7 @@ while True:
 """
         result = CodeSecurityValidator.validate_code(code)
         is_valid = result["is_valid"]
-        message = result.get("error", result.get("message", ""))
+        _message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
     def test_validate_code_private_function(self) -> None:

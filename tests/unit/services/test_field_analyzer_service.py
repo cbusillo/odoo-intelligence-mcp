@@ -17,8 +17,8 @@ class TestFieldAnalyzer:
     def analyzer(self, mock_env: MagicMock) -> FieldAnalyzer:
         analyzer = FieldAnalyzer(mock_env)
         # Mock the validation methods to avoid actual environment checks
-        analyzer._validate_model_exists = AsyncMock()
-        analyzer._validate_field_exists = AsyncMock()
+        analyzer._validate_model_exists = MagicMock()
+        analyzer._validate_field_exists = MagicMock()
         return analyzer
 
     @pytest.mark.asyncio
@@ -72,7 +72,7 @@ class TestFieldAnalyzer:
         from odoo_intelligence_mcp.services.base_service import ServiceValidationError
 
         # Make _validate_field_exists raise an exception for invalid models
-        analyzer._validate_field_exists = AsyncMock(side_effect=ServiceValidationError("Model invalid.model not found"))
+        analyzer._validate_field_exists = MagicMock(side_effect=ServiceValidationError("Model invalid.model not found"))
         mock_env.execute_code.return_value = {"error": "Model invalid.model not found"}
 
         with pytest.raises(ServiceValidationError):
@@ -83,7 +83,7 @@ class TestFieldAnalyzer:
         from odoo_intelligence_mcp.services.base_service import ServiceValidationError
 
         # Make _validate_field_exists raise an exception for invalid fields
-        analyzer._validate_field_exists = AsyncMock(
+        analyzer._validate_field_exists = MagicMock(
             side_effect=ServiceValidationError("Field nonexistent not found on model sale.order")
         )
         mock_env.execute_code.return_value = {"name": "sale.order", "fields": {}}
@@ -107,5 +107,5 @@ class TestFieldAnalyzer:
         assert result1 == result2
 
         analyzer.clear_cache()
-        result3 = await analyzer.get_comprehensive_field_analysis("test.model", "field1")
+        _result3 = await analyzer.get_comprehensive_field_analysis("test.model", "field1")
         assert mock_env.execute_code.call_count >= 1
