@@ -88,7 +88,7 @@ def test_handle_container_operation_success() -> None:
 
         manager = DockerClientManager()
 
-        def operation(container):
+        def operation(container: object) -> dict[str, str]:
             return {"result": "success"}
 
         result = manager.handle_container_operation("test-container", "test_op", operation)
@@ -108,7 +108,7 @@ def test_handle_container_operation_failure() -> None:
 
         manager = DockerClientManager()
 
-        def operation(container):
+        def operation(container: object) -> None:
             raise ValueError("Operation failed")
 
         result = manager.handle_container_operation("test-container", "test_op", operation)
@@ -134,7 +134,7 @@ def test_handle_container_operation_container_error() -> None:
                 "container": "missing-container",
             }
 
-            def operation(container):
+            def operation(container: object) -> dict[str, str]:
                 return {"result": "success"}
 
             result = manager.handle_container_operation("missing-container", "test_op", operation)
