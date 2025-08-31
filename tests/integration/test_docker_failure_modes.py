@@ -1,5 +1,6 @@
 import asyncio
 import subprocess
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,7 +27,7 @@ class TestDockerFailureModes:
 
             def side_effect(*args: object, **kwargs: object) -> MagicMock:
                 if "exec" in str(args[0]):
-                    raise subprocess.TimeoutExpired(args[0], 30)
+                    raise subprocess.TimeoutExpired(cmd=cast(list[str], args[0]), timeout=30)
                 return MagicMock(returncode=0, stdout="odoo\n", stderr="")
 
             mock_run.side_effect = side_effect
@@ -107,7 +108,7 @@ class TestDockerFailureModes:
                     return MagicMock(returncode=0, stdout="running\n", stderr="")
                 if "exec" in str(args[0]) and call_count <= 12:  # Allow more calls
                     return MagicMock(returncode=0, stdout='{"result": ' + str(call_count) + "}", stderr="")
-                raise subprocess.TimeoutExpired(args[0], 5)
+                raise subprocess.TimeoutExpired(cmd=cast(list[str], args[0]), timeout=5)
 
             mock_run.side_effect = side_effect
 

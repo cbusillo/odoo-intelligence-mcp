@@ -1,6 +1,6 @@
 import ast
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -145,7 +145,7 @@ class SaleOrder(models.Model):
         assign_node = tree.body[0]
         info: dict[str, Any] = {"fields": {}}
 
-        analyzer._analyze_field_assignment(assign_node, code, info)
+        analyzer._analyze_field_assignment(cast(ast.Assign, assign_node), code, info)
         assert "name" in info["fields"]
         assert info["fields"]["name"]["type"] == "Char"
 
@@ -196,7 +196,7 @@ def _compute_value(self):
             "decorators": {"depends": [], "constrains": [], "onchange": [], "model_create_multi": []},
         }
 
-        analyzer._analyze_method(func_node, code, info)
+        analyzer._analyze_method(cast(ast.FunctionDef, func_node), code, info)
         assert "_compute_value" in info["methods"]
         assert len(info["methods"]["_compute_value"]["decorators"]) == 1
         assert len(info["decorators"]["depends"]) == 1
@@ -223,7 +223,7 @@ def _compute_value(self):
         code = "def method(self, arg1, arg2): pass"
         tree = ast.parse(code)
         func_node = tree.body[0]
-        result = analyzer._get_method_signature(func_node)
+        result = analyzer._get_method_signature(cast(ast.FunctionDef, func_node))
         assert result == "(self, arg1, arg2)"
 
     @patch.object(OdooStaticAnalyzer, "find_model_file")

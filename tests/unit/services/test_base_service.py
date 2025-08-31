@@ -148,12 +148,14 @@ class TestBaseService:
         assert retrieved is complex_obj  # Should be the same object reference
 
     def test_abstract_method_enforcement(self) -> None:
-        class IncompleteService(BaseService):
+        # noinspection PyAbstractClass
+        class IncompleteService(BaseService):  # Intentionally incomplete for testing
             pass
 
         mock_env = MagicMock()
         with pytest.raises(TypeError) as exc_info:
-            IncompleteService(mock_env)  # type: ignore
+            # noinspection PyAbstractClass
+            IncompleteService(mock_env)  # type: ignore  # Testing abstract class behavior
         assert "Can't instantiate abstract class" in str(exc_info.value)
 
     def test_env_property_access(self, service: ConcreteService, mock_env: MagicMock) -> None:

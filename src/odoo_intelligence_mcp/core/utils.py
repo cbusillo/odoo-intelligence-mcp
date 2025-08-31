@@ -228,7 +228,7 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
                 items_container = data
                 for key in items_path[:-1]:
                     items_container = items_container[key]
-                items_key = items_path[-1]
+                items_key: str = items_path[-1]
 
                 # For paginated responses, reduce items
                 original_count = len(items_container[items_key])

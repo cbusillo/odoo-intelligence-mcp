@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -890,10 +890,10 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             method_name = method_match.group(1) if method_match else "create"
 
             if method_name == "nonexistent_method":
-                return []  # Return empty list for nonexistent methods
+                return cast(list[object], [])  # Return empty list for nonexistent methods
 
             # Return list of implementations (the function wraps this in the result dict)
-            return [
+            return cast(list[object], [
                 {
                     "model": "sale.order",
                     "module": "odoo.addons.sale.models.sale_order",
@@ -910,7 +910,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
                     "has_super": False,
                 },
-            ]
+            ])
 
         # Handle search_decorators queries
         if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
@@ -1037,7 +1037,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
         return {"success": True}
 
     # Mock execute_code as an async method
-    async def mock_execute_code(code: str) -> dict[str, object] | str | int | float | bool | None:
+    async def mock_execute_code(code: str) -> dict[str, object] | list[object] | str | int | float | bool | None:
         # Simulate actual code execution behavior
         try:
             # Check for syntax errors
