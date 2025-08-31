@@ -5,19 +5,23 @@ from pathlib import Path
 
 
 def test() -> None:
-    subprocess.run([sys.executable, "-m", "pytest"])
+    result = subprocess.run([sys.executable, "-m", "pytest"])
+    sys.exit(result.returncode)
 
 
 def test_unit() -> None:
-    subprocess.run([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration"])
+    result = subprocess.run([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration"])
+    sys.exit(result.returncode)
 
 
 def test_integration() -> None:
-    subprocess.run([sys.executable, "-m", "pytest", "tests/integration", "-m", "integration"])
+    result = subprocess.run([sys.executable, "-m", "pytest", "tests/integration", "-m", "integration"])
+    sys.exit(result.returncode)
 
 
 def test_cov() -> None:
-    subprocess.run([sys.executable, "-m", "pytest", "--cov", "--cov-report=term-missing", "--cov-report=html"])
+    result = subprocess.run([sys.executable, "-m", "pytest", "--cov", "--cov-report=term-missing", "--cov-report=html"])
+    sys.exit(result.returncode)
 
 
 def format_code() -> None:
