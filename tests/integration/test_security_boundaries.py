@@ -236,7 +236,7 @@ class TestRateLimitingAndDoS:
         mock_env = AsyncMock()
         call_count = 0
 
-        async def delayed_response(code):
+        async def delayed_response(code: str) -> dict[str, str]:
             nonlocal call_count
             call_count += 1
             await asyncio.sleep(0.01)  # Small delay to simulate processing

@@ -58,7 +58,7 @@ class TestFieldSearchRegistryIssue:
         env = MagicMock()
 
         # Mock execute_code to simulate field search
-        async def mock_execute_search_many2one(*args, **kwargs):
+        async def mock_execute_search_many2one(*args: object, **kwargs: object) -> dict[str, object]:
             return {
                 "results": [
                     {
@@ -90,7 +90,7 @@ class TestFieldSearchRegistryIssue:
         assert "sale.order" in model_names
 
         # Mock execute_code for computed field search
-        async def mock_execute_search_computed(*args, **kwargs):
+        async def mock_execute_search_computed(*args: object, **kwargs: object) -> dict[str, object]:
             return {
                 "results": [
                     {

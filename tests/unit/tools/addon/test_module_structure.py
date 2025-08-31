@@ -25,7 +25,7 @@ async def test_get_module_structure_complete() -> None:
         "manifest": {"name": "Test Module", "version": "1.0", "depends": ["base", "sale"]}
     }"""
 
-    def exec_run_side_effect(cmd):
+    def exec_run_side_effect(cmd: object) -> MagicMock:
         if "for path in" in str(cmd):
             return check_result
         else:
@@ -96,7 +96,7 @@ async def test_get_module_structure_empty_module() -> None:
         "manifest": {"name": "Empty Module", "version": "1.0"}
     }"""
 
-    def exec_run_side_effect(cmd):
+    def exec_run_side_effect(cmd: object) -> MagicMock:
         if "for path in" in str(cmd):
             return check_result
         else:
@@ -140,7 +140,7 @@ async def test_get_module_structure_models_only() -> None:
         "manifest": {"name": "Models Module"}
     }"""
 
-    def exec_run_side_effect(cmd):
+    def exec_run_side_effect(cmd: object) -> MagicMock:
         if "for path in" in str(cmd):
             return check_result
         else:
@@ -187,7 +187,7 @@ async def test_get_module_structure_with_static_assets() -> None:
         "manifest": {"name": "Static Module"}
     }"""
 
-    def exec_run_side_effect(cmd):
+    def exec_run_side_effect(cmd: object) -> MagicMock:
         if "for path in" in str(cmd):
             return check_result
         else:
@@ -230,7 +230,7 @@ async def test_get_module_structure_with_tests() -> None:
         "manifest": {"name": "Tested Module"}
     }"""
 
-    def exec_run_side_effect(cmd):
+    def exec_run_side_effect(cmd: object) -> MagicMock:
         if "for path in" in str(cmd):
             return check_result
         else:
@@ -291,7 +291,7 @@ async def test_get_module_structure_with_pagination() -> None:
         "manifest": {{"name": "Large Module"}}
     }}""".encode()
 
-    def exec_run_side_effect(cmd):
+    def exec_run_side_effect(cmd: object) -> MagicMock:
         if "for path in" in str(cmd):
             return check_result
         else:
