@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock
 
-from odoo_intelligence_mcp.core.env import load_env_config
+from odoo_intelligence_mcp.core.env import EnvConfig, load_env_config
 
 
 def create_successful_container_mock() -> MagicMock:
@@ -64,7 +64,7 @@ def create_docker_manager_with_get_container(mock_manager_class: MagicMock) -> M
     return mock_instance
 
 
-def get_test_config() -> dict[str, str]:
+def get_test_config() -> EnvConfig:
     """Get test configuration from environment - single source of truth."""
     return load_env_config()
 

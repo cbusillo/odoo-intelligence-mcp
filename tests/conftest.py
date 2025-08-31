@@ -1037,7 +1037,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
         return {"success": True}
 
     # Mock execute_code as an async method
-    async def mock_execute_code(code: str) -> dict[str, Any]:
+    async def mock_execute_code(code: str) -> dict[str, object] | str | int | float | bool | None:
         # Simulate actual code execution behavior
         try:
             # Check for syntax errors

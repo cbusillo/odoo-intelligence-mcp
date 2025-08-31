@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
+from odoo_intelligence_mcp.type_defs.odoo_types import Field, Model
 from odoo_intelligence_mcp.utils.model_utils import (
     ModelIterator,
     extract_field_info,
@@ -147,7 +148,7 @@ class TestExtractFieldInfo:
             help="Field help text",
         )
 
-        info = extract_field_info(field)
+        info = extract_field_info(cast(Field, field))
         assert info["type"] == "char"
         assert info["string"] == "Name"
         assert info["required"] is True
@@ -169,7 +170,7 @@ class TestExtractFieldInfo:
             help="",
         )
 
-        info = extract_field_info(field)
+        info = extract_field_info(cast(Field, field))
         assert info["type"] == "float"
         assert info["compute"] == "_compute_total"
         assert info["store"] is False
@@ -187,7 +188,7 @@ class TestExtractFieldInfo:
             help="",
         )
 
-        info = extract_field_info(field)
+        info = extract_field_info(cast(Field, field))
         assert info["related"] == "partner_id.name"
         assert info["store"] is False
 
@@ -202,7 +203,7 @@ class TestExtractFieldInfo:
         del field.related
         del field.help
 
-        info = extract_field_info(field)
+        info = extract_field_info(cast(Field, field))
         assert info["type"] == "integer"
         assert info["string"] == ""
         assert info["required"] is False
@@ -226,7 +227,7 @@ class TestExtractModelInfo:
             _transient=False,
         )
 
-        info = extract_model_info(model)
+        info = extract_model_info(cast(Model, model))
         assert info["name"] == "sale.order"
         assert info["description"] == "Sales Order"
         assert info["table"] == "sale_order"
@@ -248,7 +249,7 @@ class TestExtractModelInfo:
         del model._order
         del model._auto
 
-        info = extract_model_info(model)
+        info = extract_model_info(cast(Model, model))
         assert info["name"] == "mail.thread"
         assert info["abstract"] is True
         assert info["transient"] is False
@@ -269,7 +270,7 @@ class TestExtractModelInfo:
         del model._order
         del model._auto
 
-        info = extract_model_info(model)
+        info = extract_model_info(cast(Model, model))
         assert info["name"] == "wizard.model"
         assert info["transient"] is True
         assert info["abstract"] is False
@@ -285,7 +286,7 @@ class TestExtractModelInfo:
         del model._abstract
         del model._transient
 
-        info = extract_model_info(model)
+        info = extract_model_info(cast(Model, model))
         assert info["name"] == "minimal.model"
         assert info["description"] == ""
         assert info["table"] == ""
@@ -307,7 +308,7 @@ class TestExtractModelInfo:
             _transient=False,
         )
 
-        info = extract_model_info(model)
+        info = extract_model_info(cast(Model, model))
         assert info["table"] == "custom_table_name"
         assert info["rec_name"] == "display_name"
         assert info["order"] == "sequence, id"
