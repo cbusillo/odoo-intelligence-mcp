@@ -7,6 +7,20 @@ import pytest
 from odoo_intelligence_mcp.tools.code.read_odoo_file import read_odoo_file
 
 
+def _create_mock_exec_result(exit_code: int, stdout: bytes = b"", stderr: bytes = b"") -> MagicMock:
+    """Helper to create mock exec_run result to avoid duplication."""
+    mock_exec = MagicMock()
+    mock_exec.exit_code = exit_code
+    mock_exec.output = (stdout, stderr)
+    return mock_exec
+
+
+def _setup_docker_exec_sequence(mock_container: MagicMock, exec_results: list[tuple[int, bytes, bytes]]) -> None:
+    """Helper to setup a sequence of Docker exec_run results to avoid duplication."""
+    mock_execs = [_create_mock_exec_result(exit_code, stdout, stderr) for exit_code, stdout, stderr in exec_results]
+    mock_container.exec_run.side_effect = mock_execs
+
+
 @pytest.mark.asyncio
 async def test_read_full_file_from_docker() -> None:
     """Test reading entire file from Docker container."""
@@ -193,21 +207,11 @@ async def test_read_file_with_relative_path_search() -> None:
             mock_instance = mock_docker.return_value
             mock_container = mock_instance.get_container.return_value
 
-            # First exec_run (absolute path check) fails
-            first_exec = MagicMock()
-            first_exec.exit_code = 1
-            first_exec.output = (b"", b"not found")
-
-            # Second exec_run (test -f for first addon path) succeeds
-            test_exec = MagicMock()
-            test_exec.exit_code = 0
-
-            # Third exec_run (cat file) succeeds
-            cat_exec = MagicMock()
-            cat_exec.exit_code = 0
-            cat_exec.output = (b"# Product module code\nclass Product:\n    pass", b"")
-
-            mock_container.exec_run.side_effect = [first_exec, test_exec, cat_exec]
+            _setup_docker_exec_sequence(mock_container, [
+                (1, b"", b"not found"),  # First exec_run (absolute path check) fails
+                (0, b"", b""),  # Second exec_run (test -f for first addon path) succeeds
+                (0, b"# Product module code\nclass Product:\n    pass", b""),  # Third exec_run (cat file) succeeds
+            ])
 
             result = await read_odoo_file("product/models/product.py")
 
@@ -227,21 +231,11 @@ async def test_read_file_with_addon_prefix_path() -> None:
             mock_instance = mock_docker.return_value
             mock_container = mock_instance.get_container.return_value
 
-            # First exec_run (absolute path) fails
-            first_exec = MagicMock()
-            first_exec.exit_code = 1
-            first_exec.output = (b"", b"not found")
-
-            # Second exec_run (test -f for mapped path) succeeds
-            test_exec = MagicMock()
-            test_exec.exit_code = 0
-
-            # Third exec_run (cat file) succeeds
-            cat_exec = MagicMock()
-            cat_exec.exit_code = 0
-            cat_exec.output = (b"# Enterprise module", b"")
-
-            mock_container.exec_run.side_effect = [first_exec, test_exec, cat_exec]
+            _setup_docker_exec_sequence(mock_container, [
+                (1, b"", b"not found"),  # First exec_run (absolute path) fails
+                (0, b"", b""),  # Second exec_run (test -f for mapped path) succeeds
+                (0, b"# Enterprise module", b""),  # Third exec_run (cat file) succeeds
+            ])
 
             result = await read_odoo_file("enterprise/hr_payroll/models/hr_payslip.py")
 

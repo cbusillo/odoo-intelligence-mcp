@@ -65,7 +65,8 @@ class TestModelIterator:
             assert model._name == model_name
             break
 
-    def test_iter_model_fields(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
+    def _setup_mock_model_fields(self, mock_env: MagicMock) -> tuple[MagicMock, MagicMock, MagicMock]:
+        """Helper to setup mock model with standard fields to avoid duplication."""
         mock_field1 = MagicMock(type="char", name="name")
         mock_field2 = MagicMock(type="many2one", name="partner_id")
         mock_field3 = MagicMock(type="float", name="amount")
@@ -77,6 +78,10 @@ class TestModelIterator:
             "amount": mock_field3,
         }
         mock_env.__getitem__.side_effect = lambda x: mock_model if x == "sale.order" else MagicMock(_name=x)
+        return mock_field1, mock_field2, mock_field3
+
+    def test_iter_model_fields(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
+        mock_field1, mock_field2, mock_field3 = self._setup_mock_model_fields(mock_env)
 
         fields = list(iterator.iter_model_fields("sale.order"))
         assert len(fields) == 3
@@ -85,17 +90,7 @@ class TestModelIterator:
         assert ("amount", mock_field3) in fields
 
     def test_iter_model_fields_with_filter(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
-        mock_field1 = MagicMock(type="char", name="name")
-        mock_field2 = MagicMock(type="many2one", name="partner_id")
-        mock_field3 = MagicMock(type="float", name="amount")
-
-        mock_model = MagicMock()
-        mock_model._fields = {
-            "name": mock_field1,
-            "partner_id": mock_field2,
-            "amount": mock_field3,
-        }
-        mock_env.__getitem__.side_effect = lambda x: mock_model if x == "sale.order" else MagicMock(_name=x)
+        mock_field1, mock_field2, mock_field3 = self._setup_mock_model_fields(mock_env)
 
         def field_filter(name: str, field: Any) -> bool:
             return field.type == "many2one"
