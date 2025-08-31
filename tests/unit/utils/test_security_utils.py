@@ -118,7 +118,6 @@ def calculate_total(items):
         assert is_valid is False
         assert "Character code manipulation" in message
 
-    # noinspection PyUnusedLocal
     def test_validate_code_allowed_modules(self) -> None:
         code = """
 import datetime
@@ -135,7 +134,6 @@ data = json.dumps({'key': 'value'})
         message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
-    # noinspection PyUnusedLocal
     def test_validate_code_odoo_import_allowed(self) -> None:
         code = """
 from odoo import models, fields, api
@@ -149,7 +147,6 @@ class SaleOrder(models.Model):
         message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
-    # noinspection PyUnusedLocal
     def test_validate_code_nested_loops_within_limit(self) -> None:
         code = """
 for i in range(10):
@@ -188,7 +185,6 @@ while True:
         assert is_valid is False
         assert "must have a clear termination condition" in message
 
-    # noinspection PyUnusedLocal
     def test_validate_code_while_with_break(self) -> None:
         code = """
 i = 0

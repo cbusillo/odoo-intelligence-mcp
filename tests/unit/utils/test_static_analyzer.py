@@ -145,15 +145,15 @@ class SaleOrder(models.Model):
         assign_node = tree.body[0]
         info: dict[str, Any] = {"fields": {}}
 
-        analyzer._analyze_field_assignment(cast(ast.Assign, assign_node), code, info)
+        analyzer._analyze_field_assignment(cast("ast.Assign", assign_node), code, info)
         assert "name" in info["fields"]
         assert info["fields"]["name"]["type"] == "Char"
 
     def test_extract_field_info(self, analyzer: OdooStaticAnalyzer) -> None:
         code = 'fields.Char("Name", required=True, help="Enter name")'
         tree = ast.parse(code)
-        expr_node = cast(ast.Expr, tree.body[0])
-        call_node = cast(ast.Call, expr_node.value)
+        expr_node = cast("ast.Expr", tree.body[0])
+        call_node = cast("ast.Call", expr_node.value)
 
         result = analyzer._extract_field_info(call_node, code)
         assert result is not None
@@ -162,28 +162,28 @@ class SaleOrder(models.Model):
 
     def test_extract_keyword_value_constant(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse("True")
-        expr_node = cast(ast.Expr, tree.body[0])
+        expr_node = cast("ast.Expr", tree.body[0])
         node = expr_node.value
         result = analyzer._extract_keyword_value(node, "True")
         assert result is True
 
     def test_extract_keyword_value_name(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse("variable")
-        expr_node = cast(ast.Expr, tree.body[0])
+        expr_node = cast("ast.Expr", tree.body[0])
         node = expr_node.value
         result = analyzer._extract_keyword_value(node, "variable")
         assert result == "variable"
 
     def test_extract_keyword_value_list(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse("[1, 2, 3]")
-        expr_node = cast(ast.Expr, tree.body[0])
+        expr_node = cast("ast.Expr", tree.body[0])
         node = expr_node.value
         result = analyzer._extract_keyword_value(node, "[1, 2, 3]")
         assert result == [1, 2, 3]
 
     def test_extract_keyword_value_tuple(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse("(1, 2)")
-        expr_node = cast(ast.Expr, tree.body[0])
+        expr_node = cast("ast.Expr", tree.body[0])
         node = expr_node.value
         result = analyzer._extract_keyword_value(node, "(1, 2)")
         assert result == (1, 2)
@@ -201,28 +201,28 @@ def _compute_value(self):
             "decorators": {"depends": [], "constrains": [], "onchange": [], "model_create_multi": []},
         }
 
-        analyzer._analyze_method(cast(ast.FunctionDef, func_node), code, info)
+        analyzer._analyze_method(cast("ast.FunctionDef", func_node), code, info)
         assert "_compute_value" in info["methods"]
         assert len(info["methods"]["_compute_value"]["decorators"]) == 1
         assert len(info["decorators"]["depends"]) == 1
 
     def test_analyze_decorator_name(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse("@simple_decorator\ndef func(): pass")
-        func_node = cast(ast.FunctionDef, tree.body[0])
+        func_node = cast("ast.FunctionDef", tree.body[0])
         decorator_node = func_node.decorator_list[0]
         result = analyzer._analyze_decorator(decorator_node, "")
         assert result == {"name": "simple_decorator"}
 
     def test_analyze_decorator_attribute(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse("@api.depends\ndef func(): pass")
-        func_node = cast(ast.FunctionDef, tree.body[0])
+        func_node = cast("ast.FunctionDef", tree.body[0])
         decorator_node = func_node.decorator_list[0]
         result = analyzer._analyze_decorator(decorator_node, "")
         assert result == {"name": "api.depends"}
 
     def test_analyze_decorator_call(self, analyzer: OdooStaticAnalyzer) -> None:
         tree = ast.parse('@api.depends("field1", "field2")\ndef func(): pass')
-        func_node = cast(ast.FunctionDef, tree.body[0])
+        func_node = cast("ast.FunctionDef", tree.body[0])
         decorator_node = func_node.decorator_list[0]
         result = analyzer._analyze_decorator(decorator_node, "")
         assert result == {"name": "api.depends", "args": ["field1", "field2"]}
@@ -231,7 +231,7 @@ def _compute_value(self):
         code = "def method(self, arg1, arg2): pass"
         tree = ast.parse(code)
         func_node = tree.body[0]
-        result = analyzer._get_method_signature(cast(ast.FunctionDef, func_node))
+        result = analyzer._get_method_signature(cast("ast.FunctionDef", func_node))
         assert result == "(self, arg1, arg2)"
 
     @patch.object(OdooStaticAnalyzer, "find_model_file")

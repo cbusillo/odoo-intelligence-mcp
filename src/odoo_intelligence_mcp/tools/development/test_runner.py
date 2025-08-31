@@ -173,7 +173,6 @@ async def run_tests(
 
 
 def _filter_output(output: str, max_lines: int = 1000) -> str:
-    """Filter verbose Odoo output to focus on test results."""
     lines = output.splitlines()
     filtered_lines = []
     important_patterns = [
@@ -238,7 +237,6 @@ def _filter_output(output: str, max_lines: int = 1000) -> str:
 
 
 def _parse_test_results(output: str) -> tuple[dict[str, int], str]:
-    """Parse test results from output."""
     test_results = {
         "tests_run": 0,
         "passed": 0,
@@ -274,7 +272,6 @@ def _parse_test_results(output: str) -> tuple[dict[str, int], str]:
 
 
 def _extract_test_failures(output: str) -> list[dict[str, str]]:
-    """Extract individual test failures from output."""
     failures = []
     failure_pattern = r"FAIL: (test_\w+) \(([^)]+)\)"
     for match in re.finditer(failure_pattern, output):

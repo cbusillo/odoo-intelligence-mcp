@@ -18,7 +18,7 @@ class TestModelInspector:
 
     @pytest.fixture
     def model_inspector(self, mock_env: MagicMock) -> ModelInspector:
-        return ModelInspector(cast(Environment, mock_env))
+        return ModelInspector(cast("Environment", mock_env))
 
     def test_get_service_name(self, model_inspector: ModelInspector) -> None:
         assert model_inspector.get_service_name() == "ModelInspector"

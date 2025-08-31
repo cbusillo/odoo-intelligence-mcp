@@ -148,7 +148,7 @@ def load_env_config() -> EnvConfig:
         # Create config with custom env file path by setting the model_config
         config = EnvConfig()
         # Store the env file path for later access (this is what Pydantic does internally)
-        config.__dict__["_env_file"] = Path(env_file_path)  # noqa: SLF001
+        config.__dict__["_env_file"] = Path(env_file_path)
         return config
     else:
         return EnvConfig()
@@ -247,7 +247,6 @@ class HostOdooEnvironment:
         return "en_US"
 
     async def get_model_names(self) -> list[str]:
-        """Get all model names from the Odoo registry."""
         registry = self.registry
         if isinstance(registry, DockerRegistry):
             # noinspection PyProtectedMember
@@ -255,12 +254,10 @@ class HostOdooEnvironment:
         return []
 
     async def has_model(self, model_name: str) -> bool:
-        """Check if a model exists in the registry."""
         model_names = await self.get_model_names()
         return model_name in model_names
 
     def _get_project_directory(self, config: EnvConfig) -> str | None:
-        """Extract project directory from config, with fallback logic."""
         project_dir = None
         # noinspection PyProtectedMember
         if hasattr(config, "_env_file") and config._env_file:

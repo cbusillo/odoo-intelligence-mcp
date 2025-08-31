@@ -15,7 +15,7 @@ class TestOdooAnalyzer:
 
     @pytest.fixture
     def odoo_analyzer(self, mock_env: MagicMock) -> OdooAnalyzer:
-        return OdooAnalyzer(cast(Environment, mock_env))
+        return OdooAnalyzer(cast("Environment", mock_env))
 
     def test_get_service_name(self, odoo_analyzer: OdooAnalyzer) -> None:
         assert odoo_analyzer.get_service_name() == "OdooAnalyzer"

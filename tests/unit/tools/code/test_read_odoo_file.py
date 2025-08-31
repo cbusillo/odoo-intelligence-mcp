@@ -207,11 +207,14 @@ async def test_read_file_with_relative_path_search() -> None:
             mock_instance = mock_docker.return_value
             mock_container = mock_instance.get_container.return_value
 
-            _setup_docker_exec_sequence(mock_container, [
-                (1, b"", b"not found"),  # First exec_run (absolute path check) fails
-                (0, b"", b""),  # Second exec_run (test -f for first addon path) succeeds
-                (0, b"# Product module code\nclass Product:\n    pass", b""),  # Third exec_run (cat file) succeeds
-            ])
+            _setup_docker_exec_sequence(
+                mock_container,
+                [
+                    (1, b"", b"not found"),  # First exec_run (absolute path check) fails
+                    (0, b"", b""),  # Second exec_run (test -f for first addon path) succeeds
+                    (0, b"# Product module code\nclass Product:\n    pass", b""),  # Third exec_run (cat file) succeeds
+                ],
+            )
 
             result = await read_odoo_file("product/models/product.py")
 
@@ -231,11 +234,14 @@ async def test_read_file_with_addon_prefix_path() -> None:
             mock_instance = mock_docker.return_value
             mock_container = mock_instance.get_container.return_value
 
-            _setup_docker_exec_sequence(mock_container, [
-                (1, b"", b"not found"),  # First exec_run (absolute path) fails
-                (0, b"", b""),  # Second exec_run (test -f for mapped path) succeeds
-                (0, b"# Enterprise module", b""),  # Third exec_run (cat file) succeeds
-            ])
+            _setup_docker_exec_sequence(
+                mock_container,
+                [
+                    (1, b"", b"not found"),  # First exec_run (absolute path) fails
+                    (0, b"", b""),  # Second exec_run (test -f for mapped path) succeeds
+                    (0, b"# Enterprise module", b""),  # Third exec_run (cat file) succeeds
+                ],
+            )
 
             result = await read_odoo_file("enterprise/hr_payroll/models/hr_payslip.py")
 

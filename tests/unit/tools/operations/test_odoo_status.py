@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_status import odoo_status
-
 from tests.fixtures import get_expected_container_names
 
 

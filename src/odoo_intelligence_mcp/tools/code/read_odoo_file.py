@@ -1,5 +1,3 @@
-"""Read Odoo source files from core, enterprise, or custom addons."""
-
 import re
 from pathlib import Path
 from typing import Any

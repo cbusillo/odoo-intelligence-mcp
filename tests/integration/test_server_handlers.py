@@ -128,7 +128,6 @@ class TestServerHandlers:
         assert "state_fields" in content
         assert "transitions" in content
 
-
     @pytest.mark.asyncio
     async def test_handle_field_value_analyzer(self) -> None:
         mock_env = AsyncMock()
@@ -148,7 +147,9 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("field_query", {"operation": "analyze_values", "model": "product.template", "field": "list_price"})
+            result = await handle_call_tool(
+                "field_query", {"operation": "analyze_values", "model": "product.template", "field": "list_price"}
+            )
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -206,7 +207,6 @@ class TestServerHandlers:
         assert "success" in content
         assert content["success"] is True
 
-
     @pytest.mark.asyncio
     async def test_handle_field_dependencies(self) -> None:
         mock_env = AsyncMock()
@@ -223,7 +223,9 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("field_query", {"operation": "dependencies", "model_name": "sale.order", "field_name": "amount_total"})
+            result = await handle_call_tool(
+                "field_query", {"operation": "dependencies", "model_name": "sale.order", "field_name": "amount_total"}
+            )
 
         assert len(result) == 1
         content = json.loads(result[0].text)

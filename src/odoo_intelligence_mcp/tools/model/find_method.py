@@ -150,7 +150,6 @@ result = implementations  # Limited collection
 async def find_models_with_method(
     method_name: str, page: int = 1, page_size: int = 100, text_filter: str | None = None
 ) -> dict[str, Any]:
-    """Find all models that implement a specific method."""
     # This is a simplified version that would need the actual implementation
     # For now, return an empty result to fix the import error
     # Note: text_filter parameter would be used to filter results in a full implementation

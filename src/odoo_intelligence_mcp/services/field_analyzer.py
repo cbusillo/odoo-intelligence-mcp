@@ -218,7 +218,9 @@ class FieldAnalyzer(BaseService):
             "suggestions": suggestions,
         }
 
-    async def get_field_migration_plan(self, model_name: str, field_name: str, new_field_type: str | None = None) -> dict[str, object]:
+    async def get_field_migration_plan(
+        self, model_name: str, field_name: str, new_field_type: str | None = None
+    ) -> dict[str, object]:
         self._validate_field_exists(model_name, field_name)
 
         impact = await self.analyze_field_impact(model_name, field_name)

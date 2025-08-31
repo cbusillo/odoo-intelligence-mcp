@@ -39,7 +39,9 @@ async def test_handle_call_tool_field_not_found_error() -> None:
     mock_env.execute_code = AsyncMock(side_effect=FieldNotFoundError("res.partner", "invalid_field"))
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-        result = await handle_call_tool("field_query", {"operation": "usages", "model_name": "res.partner", "field_name": "invalid_field"})
+        result = await handle_call_tool(
+            "field_query", {"operation": "usages", "model_name": "res.partner", "field_name": "invalid_field"}
+        )
 
     assert len(result) == 1
     content = json.loads(result[0].text)

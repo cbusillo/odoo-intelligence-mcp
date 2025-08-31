@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_logs import odoo_logs
-
 from tests.fixtures import (
     create_docker_manager_with_get_container,
     get_expected_container_names,
