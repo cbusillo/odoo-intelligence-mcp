@@ -10,22 +10,34 @@ from odoo_intelligence_mcp import cli
 class TestCLIFunctions:
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_function(self, mock_run: MagicMock) -> None:
-        cli.test()
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test()
+        assert exc_info.value.code == 0
         mock_run.assert_called_once_with([sys.executable, "-m", "pytest"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_unit_function(self, mock_run: MagicMock) -> None:
-        cli.test_unit()
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_unit()
+        assert exc_info.value.code == 0
         mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_integration_function(self, mock_run: MagicMock) -> None:
-        cli.test_integration()
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_integration()
+        assert exc_info.value.code == 0
         mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/integration", "-m", "integration"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_cov_function(self, mock_run: MagicMock) -> None:
-        cli.test_cov()
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_cov()
+        assert exc_info.value.code == 0
         mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "--cov", "--cov-report=term-missing", "--cov-report=html"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
@@ -92,10 +104,10 @@ class TestCLIFunctions:
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_subprocess_run_with_error(self, mock_run: MagicMock) -> None:
-        mock_run.side_effect = subprocess.CalledProcessError(1, ["test"])
-
-        with pytest.raises(subprocess.CalledProcessError):
+        mock_run.return_value.returncode = 1
+        with pytest.raises(SystemExit) as exc_info:
             cli.test()
+        assert exc_info.value.code == 1
 
     @patch("odoo_intelligence_mcp.cli.Path")
     def test_clean_handles_permission_error(self, mock_path_class: MagicMock) -> None:
@@ -112,16 +124,22 @@ class TestCLIFunctions:
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_all_cli_commands_use_sys_executable(self, mock_run: MagicMock) -> None:
-        cli.test()
+        mock_run.return_value.returncode = 0
+        
+        with pytest.raises(SystemExit):
+            cli.test()
         assert mock_run.call_args[0][0][0] == sys.executable
 
-        cli.test_unit()
+        with pytest.raises(SystemExit):
+            cli.test_unit()
         assert mock_run.call_args[0][0][0] == sys.executable
 
-        cli.test_integration()
+        with pytest.raises(SystemExit):
+            cli.test_integration()
         assert mock_run.call_args[0][0][0] == sys.executable
 
-        cli.test_cov()
+        with pytest.raises(SystemExit):
+            cli.test_cov()
         assert mock_run.call_args[0][0][0] == sys.executable
 
         cli.format_code()

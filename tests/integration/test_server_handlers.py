@@ -148,7 +148,7 @@ class TestServerHandlers:
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
             result = await handle_call_tool(
-                "field_query", {"operation": "analyze_values", "model": "product.template", "field": "list_price"}
+                "field_query", {"operation": "analyze_values", "model_name": "product.template", "field_name": "list_price"}
             )
 
         assert len(result) == 1

@@ -278,7 +278,7 @@ async def handle_list_tools() -> list[Tool]:
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
-                    "properties": {"addon_name": {"type": "string"}},
+                    "properties": {"addon_name": {"type": "string", "description": "Name of the addon to get dependencies for"}},
                     "required": ["addon_name"],
                 }
             ),
@@ -294,7 +294,7 @@ async def handle_list_tools() -> list[Tool]:
                             "type": "string",
                             "description": "Regex pattern",
                         },
-                        "file_type": {"type": "string"},
+                        "file_type": {"type": "string", "description": "File extension filter"},
                     },
                     "required": ["pattern"],
                 }

@@ -251,7 +251,8 @@ class TestToolContracts:
                     content = json.loads(result[0].text)
 
                     if "error" in content:
-                        assert any(word in content["error"].lower() for word in ["security", "invalid", "not allowed", "not found"])
+                        error_msg = content["error"].lower()
+                        assert any(word in error_msg for word in ["security", "invalid", "not allowed", "not found", "required", "missing"]), f"Tool {tool_name} error message doesn't contain expected keywords: {content['error']}"
 
     @pytest.mark.asyncio
     async def test_tool_schema_validation(self) -> None:
@@ -274,7 +275,7 @@ class TestToolContracts:
             if "properties" in schema:
                 for prop_name, prop_schema in schema["properties"].items():
                     assert "type" in prop_schema or "$ref" in prop_schema
-                    assert "description" in prop_schema
+                    assert "description" in prop_schema, f"Tool {tool.name} property {prop_name} missing description"
 
     @pytest.mark.asyncio
     async def test_tool_consistency_across_errors(self, mock_env: AsyncMock) -> None:
