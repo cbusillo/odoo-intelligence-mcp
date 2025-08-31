@@ -146,7 +146,7 @@ async def test_docker_container_restart() -> None:
         mock_docker_manager.handle_container_operation.return_value = {"success": True, "status": "running"}
 
         result = await odoo_restart(services="web-1")
-        
+
         assert result["success"] is True
         assert "data" in result
         assert "services" in result["data"]

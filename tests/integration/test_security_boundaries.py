@@ -153,7 +153,7 @@ class TestCommandInjectionPrevention:
         ]
 
         for name in dangerous_names:
-            with patch.dict(os.environ, {"ODOO_CONTAINER_PREFIX": name}):
+            with patch.dict(os.environ, {"ODOO_PROJECT_NAME": name}):
                 from odoo_intelligence_mcp.core.env import HostOdooEnvironment, load_env_config
 
                 config = load_env_config()

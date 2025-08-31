@@ -26,7 +26,7 @@ class EnvConfig(BaseSettings):
         extra="ignore",
     )
 
-    container_prefix: str = PydanticField(default="odoo", alias="ODOO_CONTAINER_PREFIX")
+    container_prefix: str = PydanticField(default="odoo", alias="ODOO_PROJECT_NAME")
     db_name: str = PydanticField(default="odoo", alias="ODOO_DB_NAME")
     db_host: str = PydanticField(default="database", alias="ODOO_DB_HOST")
     db_port: str = PydanticField(default="5432", alias="ODOO_DB_PORT")
@@ -267,10 +267,10 @@ class HostOdooEnvironment:
                 config = load_env_config()
                 service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
                 logger.info(f"Attempting to create container {self.container_name} via docker compose service '{service_name}'...")
-                
+
                 # Get the project directory from the config's .env file path
                 project_dir = None
-                if hasattr(config, '_env_file') and config._env_file:
+                if hasattr(config, "_env_file") and config._env_file:
                     project_dir = str(Path(config._env_file).parent)
                 else:
                     # Fallback: try to find compose files relative to this package
@@ -278,10 +278,10 @@ class HostOdooEnvironment:
                     potential_project_dir = developer_dir / "odoo-ai"
                     if (potential_project_dir / "docker-compose.yml").exists():
                         project_dir = str(potential_project_dir)
-                
+
                 if not project_dir:
                     raise DockerConnectionError(self.container_name, "Cannot determine project directory for docker compose")
-                
+
                 # Start all essential services: database, script-runner, shell, and the requested service
                 # This ensures all dependencies and related services are available
                 essential_services = ["database", "script-runner", "shell", service_name]
@@ -289,10 +289,11 @@ class HostOdooEnvironment:
                 services_to_start = list(dict.fromkeys(essential_services))
                 compose_cmd = ["docker", "compose", "up", "-d"] + services_to_start
                 compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
-                
+
                 if compose_result.returncode == 0:
                     logger.info(f"Successfully created and started container {self.container_name} via compose")
                     import time
+
                     time.sleep(5)  # Give container time to fully start
                 else:
                     logger.error(f"Failed to start container via compose: {compose_result.stderr}")
@@ -307,9 +308,9 @@ class HostOdooEnvironment:
                 essential_containers = [
                     f"{config.container_prefix}-database-1",
                     f"{config.container_prefix}-script-runner-1",
-                    f"{config.container_prefix}-shell-1"
+                    f"{config.container_prefix}-shell-1",
                 ]
-                
+
                 containers_to_start = []
                 for container in essential_containers:
                     check_cmd = ["docker", "inspect", container, "--format", "{{.State.Status}}"]
@@ -318,12 +319,12 @@ class HostOdooEnvironment:
                         # Extract service name from container name
                         service = container.replace(f"{config.container_prefix}-", "").replace("-1", "")
                         containers_to_start.append(service)
-                
+
                 if containers_to_start:
                     logger.info(f"Essential containers not running: {containers_to_start}. Starting them...")
                     # Get the project directory from the config's .env file path
                     project_dir = None
-                    if hasattr(config, '_env_file') and config._env_file:
+                    if hasattr(config, "_env_file") and config._env_file:
                         project_dir = str(Path(config._env_file).parent)
                     else:
                         # Fallback: try to find compose files relative to this package
@@ -331,13 +332,14 @@ class HostOdooEnvironment:
                         potential_project_dir = developer_dir / "odoo-ai"
                         if (potential_project_dir / "docker-compose.yml").exists():
                             project_dir = str(potential_project_dir)
-                    
+
                     if project_dir:
                         compose_cmd = ["docker", "compose", "up", "-d"] + containers_to_start
                         compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
                         if compose_result.returncode == 0:
                             logger.info(f"Successfully started containers: {containers_to_start}")
                             import time
+
                             time.sleep(5)  # Give containers time to fully start
                         else:
                             logger.warning(f"Failed to start containers: {compose_result.stderr}")

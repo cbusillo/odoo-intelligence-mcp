@@ -28,7 +28,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("resolve_dynamic_fields", {"model_name": "sale.order"})
+            result = await handle_call_tool("field_query", {"operation": "resolve_dynamic", "model_name": "sale.order"})
 
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
@@ -63,7 +63,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("search_field_properties", {"property": "computed"})
+            result = await handle_call_tool("field_query", {"operation": "search_properties", "property": "computed"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -89,14 +89,14 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("search_field_type", {"field_type": "many2one"})
+            result = await handle_call_tool("field_query", {"operation": "search_type", "field_type": "many2one"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
         assert "fields" in content  # The result is paginated under "fields" key
 
     @pytest.mark.asyncio
-    async def test_handle_workflow_states(self) -> None:
+    async def test_handle_analysis_query_workflow(self) -> None:
         mock_env = AsyncMock()
         mock_env.execute_code = AsyncMock(
             return_value={
@@ -120,7 +120,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("workflow_states", {"model_name": "sale.order"})
+            result = await handle_call_tool("analysis_query", {"analysis_type": "workflow", "model_name": "sale.order"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -128,31 +128,6 @@ class TestServerHandlers:
         assert "state_fields" in content
         assert "transitions" in content
 
-    @pytest.mark.asyncio
-    async def test_handle_test_runner(self) -> None:
-        # Mock the Docker container and its execution
-        mock_container = MagicMock()
-        mock_exec_result = MagicMock()
-        mock_exec_result.exit_code = 0
-        mock_exec_result.output = (b"Ran 5 tests in 2.5s\n\nOK", b"")
-        mock_container.exec_run.return_value = mock_exec_result
-
-        # Mock DockerClientManager
-        with patch("odoo_intelligence_mcp.tools.development.test_runner.DockerClientManager") as mock_docker_manager:
-            mock_manager_instance = MagicMock()
-            mock_manager_instance.get_container.return_value = mock_container
-            mock_docker_manager.return_value = mock_manager_instance
-
-            result = await handle_call_tool("test_runner", {"module": "sale"})
-
-        assert len(result) == 1
-        content = json.loads(result[0].text)
-        assert content["success"] is True
-        assert content["module"] == "sale"
-        # Check the test_results structure
-        assert "test_results" in content
-        assert content["test_results"]["tests_run"] == 5
-        assert content["test_results"]["passed"] == 5
 
     @pytest.mark.asyncio
     async def test_handle_field_value_analyzer(self) -> None:
@@ -173,7 +148,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("field_value_analyzer", {"model": "product.template", "field": "list_price"})
+            result = await handle_call_tool("field_query", {"operation": "analyze_values", "model": "product.template", "field": "list_price"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -231,61 +206,6 @@ class TestServerHandlers:
         assert "success" in content
         assert content["success"] is True
 
-    @pytest.mark.asyncio
-    async def test_handle_odoo_shell(self) -> None:
-        # odoo_shell uses subprocess, not env.execute_code
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = ">>> result = 5 + 5\n>>> result\n10"
-            mock_run.return_value.stderr = ""
-
-            result = await handle_call_tool("odoo_shell", {"code": "result = 5 + 5"})
-
-        assert len(result) == 1
-        content = json.loads(result[0].text)
-        assert content["success"] is True
-        assert "10" in content["stdout"]
-
-    @pytest.mark.asyncio
-    async def test_handle_odoo_install_module(self) -> None:
-        mock_env = AsyncMock()
-
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = "Module installed successfully"
-            mock_run.return_value.stderr = ""
-
-            with patch(
-                "odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env
-            ):
-                result = await handle_call_tool("odoo_install_module", {"modules": "sale_management"})
-
-        assert len(result) == 1
-        content = json.loads(result[0].text)
-        assert "success" in content
-        assert content["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_handle_odoo_logs(self) -> None:
-        mock_env = AsyncMock()
-
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = "2024-01-01 10:00:00,123 INFO odoo: Odoo version 16.0\n2024-01-01 10:00:01,456 INFO odoo.modules.loading: Loading module sale"
-            mock_run.return_value.stderr = ""
-
-            with patch(
-                "odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env
-            ):
-                result = await handle_call_tool("odoo_logs", {"lines": 50})
-
-        assert len(result) == 1
-        content = json.loads(result[0].text)
-        assert "success" in content
-        assert content["success"] is True
-        # Logs are nested inside data
-        assert "data" in content
-        assert "logs" in content["data"]
 
     @pytest.mark.asyncio
     async def test_handle_field_dependencies(self) -> None:
@@ -303,7 +223,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("field_dependencies", {"model_name": "sale.order", "field_name": "amount_total"})
+            result = await handle_call_tool("field_query", {"operation": "dependencies", "model_name": "sale.order", "field_name": "amount_total"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -330,7 +250,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("search_models", {"pattern": "sale", "page": 1, "page_size": 5})
+            result = await handle_call_tool("model_query", {"operation": "search", "pattern": "sale", "page": 1, "page_size": 5})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -347,7 +267,7 @@ class TestServerHandlers:
         mock_env.execute_code = AsyncMock(side_effect=ModelNotFoundError("Model test.model not found"))
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("model_info", {"model_name": "test.model"})
+            result = await handle_call_tool("model_query", {"operation": "info", "model_name": "test.model"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)
@@ -425,7 +345,7 @@ class TestServerHandlers:
         )
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("view_model_usage", {"model_name": "sale.order"})
+            result = await handle_call_tool("model_query", {"operation": "view_usage", "model_name": "sale.order"})
 
         assert len(result) == 1
         content = json.loads(result[0].text)

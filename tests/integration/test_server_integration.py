@@ -48,7 +48,7 @@ class TestServerIntegration:
             mock_env_with_cleanup.execute_code = AsyncMock(side_effect=error)
 
             with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env_with_cleanup):
-                result = await handle_call_tool("model_info", {"model_name": "test.model"})
+                result = await handle_call_tool("model_query", {"operation": "info", "model_name": "test.model"})
 
                 assert len(result) == 1
                 assert isinstance(result[0], TextContent)
@@ -62,7 +62,7 @@ class TestServerIntegration:
         mock_env_with_cleanup.execute_code = AsyncMock(return_value={"success": True})
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env_with_cleanup):
-            await handle_call_tool("model_info", {"model_name": "res.partner"})
+            await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
         mock_env_with_cleanup.cr.close.assert_called_once()
 
@@ -71,7 +71,7 @@ class TestServerIntegration:
         mock_env_with_cleanup.execute_code = AsyncMock(side_effect=Exception("Test error"))
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env_with_cleanup):
-            await handle_call_tool("model_info", {"model_name": "res.partner"})
+            await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
         mock_env_with_cleanup.cr.close.assert_called_once()
 
@@ -81,30 +81,21 @@ class TestServerIntegration:
         mock_env.execute_code = AsyncMock(return_value=[])
 
         pagination_tools = [
-            "search_models",
-            "model_relationships",
-            "field_usages",
-            "performance_analysis",
-            "pattern_analysis",
-            "inheritance_chain",
+            ("model_query", {"operation": "search", "pattern": "test"}),
+            ("model_query", {"operation": "relationships", "model_name": "test.model"}),
+            ("field_query", {"operation": "usages", "model_name": "test.model", "field_name": "test_field"}),
+            ("analysis_query", {"analysis_type": "patterns"}),
+            ("model_query", {"operation": "inheritance", "model_name": "test.model"}),
         ]
 
-        for tool_name in pagination_tools:
+        for tool_name, args in pagination_tools:
             with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-                if tool_name == "field_usages":
-                    args = {"model_name": "test.model", "field_name": "test_field"}
-                elif tool_name == "search_models":
-                    args = {"pattern": "test"}
-                elif tool_name == "pattern_analysis":
-                    args = {}
-                else:
-                    args = {"model_name": "test.model"}
                 args.update({"page": 2, "page_size": 50, "filter": "test_filter"})
 
                 result = await handle_call_tool(tool_name, args)
 
                 # Some tools apply pagination after fetching data rather than in the query
-                if tool_name in ["search_models", "pattern_analysis"]:
+                if tool_name in ["search_models", "analysis_query"]:
                     # For these tools, check that pagination is applied to the result
                     import json
 
@@ -147,7 +138,7 @@ class TestServerIntegration:
         mock_env.cr.close = MagicMock()
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            tasks = [handle_call_tool("model_info", {"model_name": f"model_{i}"}) for i in range(5)]
+            tasks = [handle_call_tool("model_query", {"operation": "info", "model_name": f"model_{i}"}) for i in range(5)]
             results = await asyncio.gather(*tasks)
 
             assert len(results) == 5
@@ -168,7 +159,7 @@ class TestServerIntegration:
         mock_env = AsyncMock()
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("model_info", {})
+            result = await handle_call_tool("model_query", {"operation": "info"})
 
             assert len(result) == 1
             content = json.loads(result[0].text)
@@ -181,9 +172,8 @@ class TestServerIntegration:
 
         tools_with_optionals = [
             ("odoo_status", {}),
-            ("odoo_logs", {}),
             ("odoo_restart", {}),
-            ("field_value_analyzer", {"model": "test", "field": "name"}),
+            ("field_query", {"operation": "analyze_values", "model_name": "test", "field_name": "name"}),
         ]
 
         for tool_name, required_args in tools_with_optionals:
@@ -228,7 +218,7 @@ class TestToolResponseContracts:
         mock_env.execute_code = AsyncMock(side_effect=ValueError("Test error"))
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("model_info", {"model_name": "test"})
+            result = await handle_call_tool("model_query", {"operation": "info", "model_name": "test"})
 
             content = json.loads(result[0].text)
             assert "error" in content
@@ -254,7 +244,7 @@ class TestToolResponseContracts:
         mock_env.execute_code = AsyncMock(return_value=paginated_response)
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("search_models", {"pattern": "test"})
+            result = await handle_call_tool("model_query", {"operation": "search", "pattern": "test"})
 
             content = json.loads(result[0].text)
             if "pagination" in content:
@@ -286,7 +276,7 @@ class TestResourceManagement:
             mock_env.cr.close.reset_mock()
 
             with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-                result = await handle_call_tool("model_info", {"model_name": "test"})
+                result = await handle_call_tool("model_query", {"operation": "info", "model_name": "test"})
 
                 assert mock_env.cr.close.called
                 content = json.loads(result[0].text)
@@ -300,7 +290,7 @@ class TestResourceManagement:
         with patch.object(odoo_env_manager, "get_environment") as mock_get:
             mock_get.return_value = AsyncMock()
 
-            await handle_call_tool("model_info", {"model_name": "test1"})
-            await handle_call_tool("model_info", {"model_name": "test2"})
+            await handle_call_tool("model_query", {"operation": "info", "model_name": "test1"})
+            await handle_call_tool("model_query", {"operation": "info", "model_name": "test2"})
 
             assert mock_get.call_count == 2

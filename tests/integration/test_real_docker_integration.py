@@ -108,7 +108,7 @@ async def test_handle_tool_with_all_docker_scenarios() -> None:
                 manager = HostOdooEnvironmentManager()
                 mock_get_env.return_value = await manager.get_environment()
 
-                result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+                result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
                 import json
 
@@ -123,7 +123,7 @@ async def test_handle_tool_with_all_docker_scenarios() -> None:
 @pytest.mark.skipif(not container_running(load_env_config().container_name), reason="Requires running Odoo container")
 async def test_real_model_info_if_available() -> None:
     # This test runs against real Odoo if available
-    result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+    result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
     import json
 
@@ -164,7 +164,7 @@ async def test_concurrent_requests_handling() -> None:
 
     async def make_request(model_name: str) -> dict[str, Any]:
         with patch("subprocess.run", MockDockerRun(custom_response={"stdout": f'{{"model": "{model_name}"}}'})):
-            result = await handle_call_tool("model_info", {"model_name": model_name})
+            result = await handle_call_tool("model_query", {"operation": "info", "model_name": model_name})
             import json
 
             return json.loads(result[0].text)

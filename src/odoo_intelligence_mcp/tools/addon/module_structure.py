@@ -29,12 +29,12 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
         "sh",
         "-c",
         f"for path in {' '.join(container_paths)}; do "
-         f'  if [ -d "$path/{module_name}" ]; then '
-         f'    echo "$path/{module_name}"; '
-         "    exit 0; "
-         "  fi; "
-         "done; "
-         "exit 1",
+        f'  if [ -d "$path/{module_name}" ]; then '
+        f'    echo "$path/{module_name}"; '
+        "    exit 0; "
+        "  fi; "
+        "done; "
+        "exit 1",
     ]
 
     exec_result = container.exec_run(check_cmd)

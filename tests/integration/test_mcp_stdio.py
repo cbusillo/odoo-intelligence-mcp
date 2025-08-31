@@ -46,17 +46,17 @@ async def test_mcp_list_tools_request() -> None:
 
     # Check specific tools exist
     tool_names = [tool.name for tool in tools]
-    assert "model_info" in tool_names
-    assert "search_models" in tool_names
+    assert "model_query" in tool_names
+    assert "field_query" in tool_names
     assert "execute_code" in tool_names
-    assert "odoo_shell" in tool_names
+    assert "analysis_query" in tool_names
     assert "odoo_update_module" in tool_names
 
     # Verify all tools have proper schemas
     assert all(hasattr(tool, "inputSchema") for tool in tools)
 
-    # Check we have at least 25 tools
-    assert len(tools) >= 25
+    # Check we have at least 15 tools after consolidation
+    assert len(tools) >= 15
 
 
 @pytest.mark.asyncio
@@ -83,7 +83,7 @@ async def test_mcp_call_tool_request() -> None:
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
         # Test calling the model_info tool
-        result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
         # Verify result structure
         assert result is not None
@@ -105,7 +105,7 @@ async def test_mcp_error_handling() -> None:
     from odoo_intelligence_mcp.server import handle_call_tool
 
     # Test with missing required argument
-    result = await handle_call_tool("model_info", {})
+    result = await handle_call_tool("model_query", {"operation": "info"})
 
     # Should return an error response
     assert result is not None
@@ -130,7 +130,7 @@ async def test_mcp_error_handling() -> None:
     mock_env.execute_code = AsyncMock(side_effect=Exception("Model not found"))
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-        result = await handle_call_tool("model_info", {"model_name": "invalid.model"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "invalid.model"})
 
         assert result is not None
         assert len(result) > 0

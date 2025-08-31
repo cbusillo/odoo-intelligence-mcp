@@ -17,7 +17,7 @@ async def test_list_tools() -> None:
 
     # Check for some expected tools
     tool_names = {tool.name for tool in tools}
-    expected_tools = {"model_info", "search_models", "field_usages", "odoo_status", "execute_code"}
+    expected_tools = {"model_query", "field_query", "analysis_query", "odoo_status", "execute_code"}
     assert expected_tools.issubset(tool_names)
 
     # Verify tool structure
@@ -71,7 +71,7 @@ async def test_handle_call_tool_model_info_success() -> None:
     )
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -88,7 +88,7 @@ async def test_handle_call_tool_with_error() -> None:
     mock_env.execute_code = AsyncMock(side_effect=Exception("Test error"))
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -112,7 +112,7 @@ async def test_handle_call_tool_search_models() -> None:
     )
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("search_models", {"pattern": "product"})
+        result = await handle_call_tool("model_query", {"operation": "search", "pattern": "product"})
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -144,7 +144,7 @@ async def test_handle_call_tool_field_usages() -> None:
     )
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("field_usages", {"model_name": "product.template", "field_name": "name"})
+        result = await handle_call_tool("field_query", {"operation": "usages", "model_name": "product.template", "field_name": "name"})
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -167,7 +167,7 @@ async def test_handle_call_tool_with_pagination() -> None:
     )
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        result = await handle_call_tool("pattern_analysis", {"pattern_type": "computed_fields", "limit": 5, "offset": 0})
+        result = await handle_call_tool("analysis_query", {"analysis_type": "patterns", "pattern_type": "computed_fields", "limit": 5, "offset": 0})
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -221,21 +221,21 @@ async def test_server_initialization() -> None:
 
     # Test that server has proper tool registration
     tools = await handle_list_tools()
-    assert len(tools) > 20  # We should have at least 20 tools registered
+    assert len(tools) >= 15  # We should have at least 15 tools registered after consolidation
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_tool_input_validation() -> None:
     # Test missing required field
-    result = await handle_call_tool("model_info", {})
+    result = await handle_call_tool("model_query", {"operation": "info"})
 
     assert len(result) == 1
     content = json.loads(result[0].text)
     assert "error" in content
 
     # Test with wrong type
-    result = await handle_call_tool("model_info", {"model_name": 123})
+    result = await handle_call_tool("model_query", {"operation": "info", "model_name": 123})
 
     assert len(result) == 1
     _content = json.loads(result[0].text)
@@ -252,7 +252,7 @@ async def test_environment_cleanup() -> None:
     mock_env.execute_code = AsyncMock(return_value={"success": True})
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-        await handle_call_tool("model_info", {"model_name": "res.partner"})
+        await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
     # Verify cursor was closed
     mock_cr.close.assert_called_once()

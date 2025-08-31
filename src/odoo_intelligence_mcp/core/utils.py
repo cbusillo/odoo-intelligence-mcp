@@ -271,22 +271,11 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
 
 def add_pagination_to_schema(base_schema: dict[str, Any]) -> dict[str, Any]:
     pagination_properties = {
-        "page": {"type": "integer", "description": "Page number", "minimum": 1, "default": 1},
-        "page_size": {
-            "type": "integer",
-            "description": "Items per page",
-            "minimum": 1,
-            "maximum": 1000,
-            "default": 100,
-        },
-        "limit": {
-            "type": "integer",
-            "description": "Max items",
-            "minimum": 1,
-            "maximum": 1000,
-        },
-        "offset": {"type": "integer", "description": "Skip items", "minimum": 0},
-        "filter": {"type": "string", "description": "Filter results"},
+        "page": {"type": "integer", "default": 1},
+        "page_size": {"type": "integer", "default": 100, "maximum": 1000},
+        "limit": {"type": "integer", "maximum": 1000},
+        "offset": {"type": "integer"},
+        "filter": {"type": "string"},
     }
 
     enhanced_schema = base_schema.copy()

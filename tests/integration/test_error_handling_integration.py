@@ -20,7 +20,7 @@ async def test_handle_call_tool_model_not_found_error() -> None:
     mock_env.execute_code = AsyncMock(side_effect=ModelNotFoundError("invalid.model"))
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-        result = await handle_call_tool("model_info", {"model_name": "invalid.model"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "invalid.model"})
 
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
@@ -39,7 +39,7 @@ async def test_handle_call_tool_field_not_found_error() -> None:
     mock_env.execute_code = AsyncMock(side_effect=FieldNotFoundError("res.partner", "invalid_field"))
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-        result = await handle_call_tool("field_usages", {"model_name": "res.partner", "field_name": "invalid_field"})
+        result = await handle_call_tool("field_query", {"operation": "usages", "model_name": "res.partner", "field_name": "invalid_field"})
 
     assert len(result) == 1
     content = json.loads(result[0].text)
@@ -63,7 +63,7 @@ async def test_handle_call_tool_docker_connection_error() -> None:
         container_name = config.container_name
         mock_get_env.side_effect = DockerConnectionError(container_name, "Container not running")
 
-        result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
     assert len(result) == 1
     content = json.loads(result[0].text)
@@ -84,7 +84,7 @@ async def test_handle_call_tool_docker_connection_error() -> None:
 @pytest.mark.integration
 async def test_handle_call_tool_invalid_argument_validation() -> None:
     # Test with empty model name
-    result = await handle_call_tool("model_info", {"model_name": ""})
+    result = await handle_call_tool("model_query", {"operation": "info", "model_name": ""})
 
     assert len(result) == 1
     content = json.loads(result[0].text)
@@ -100,7 +100,7 @@ async def test_handle_call_tool_invalid_argument_validation() -> None:
 @pytest.mark.integration
 async def test_handle_call_tool_invalid_model_name_format() -> None:
     # Test with invalid model name format
-    result = await handle_call_tool("model_info", {"model_name": "res.partner!"})
+    result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner!"})
 
     assert len(result) == 1
     content = json.loads(result[0].text)
@@ -118,7 +118,7 @@ async def test_handle_call_tool_unexpected_error() -> None:
     mock_env.execute_code = AsyncMock(side_effect=RuntimeError("Unexpected runtime error"))
 
     with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-        result = await handle_call_tool("model_info", {"model_name": "res.partner"})
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
     assert len(result) == 1
     content = json.loads(result[0].text)
@@ -147,7 +147,7 @@ async def test_error_messages_are_user_friendly() -> None:
         mock_env.execute_code = AsyncMock(side_effect=error)
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("model_info", {"model_name": "test"})
+            result = await handle_call_tool("model_query", {"operation": "info", "model_name": "test"})
 
         content = json.loads(result[0].text)
         assert content["error"] == expected_message

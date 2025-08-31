@@ -29,26 +29,26 @@ class TestToolContracts:
                 mock_run.return_value.stdout = "test output"
 
                 for tool in tools:
-                    if tool.name in ["odoo_status", "odoo_logs", "odoo_restart", "odoo_update_module", "odoo_install_module"]:
+                    if tool.name in ["odoo_status", "odoo_restart", "odoo_update_module"]:
                         result = await handle_call_tool(tool.name, {"modules": "test"} if "module" in tool.name else {})
                     elif tool.name == "execute_code":
                         result = await handle_call_tool(tool.name, {"code": "result = 1"})
                     elif tool.name == "odoo_shell":
                         result = await handle_call_tool(tool.name, {"code": "print('test')"})
-                    elif tool.name == "model_info":
-                        result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
-                    elif tool.name == "search_models":
+                    elif tool.name == "model_query":
+                        result = await handle_call_tool(tool.name, {"operation": "info", "model_name": "res.partner"})
+                    elif tool.name == "model_query" and False:
                         result = await handle_call_tool(tool.name, {"pattern": "test"})
                     elif tool.name == "model_relationships":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
-                    elif tool.name == "field_usages":
+                    elif tool.name == "field_query":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner", "field_name": "name"})
-                    elif tool.name == "field_value_analyzer":
-                        result = await handle_call_tool(tool.name, {"model": "res.partner", "field": "name"})
+                    elif tool.name == "field_query" and False:
+                        result = await handle_call_tool(tool.name, {"operation": "analyze_values", "model_name": "res.partner", "field_name": "name"})
                     elif tool.name == "permission_checker":
                         result = await handle_call_tool(tool.name, {"user": "admin", "model": "res.partner", "operation": "read"})
-                    elif tool.name == "test_runner":
-                        result = await handle_call_tool(tool.name, {"module": "base"})
+                    elif tool.name == "execute_code":
+                        result = await handle_call_tool(tool.name, {"code": "result = 1+1"})
                     elif tool.name == "read_odoo_file":
                         result = await handle_call_tool(tool.name, {"file_path": "odoo/addons/base/models/res_partner.py"})
                     elif tool.name == "find_files":
@@ -63,8 +63,8 @@ class TestToolContracts:
                         result = await handle_call_tool(tool.name, {"decorator": "depends"})
                     elif tool.name == "view_model_usage":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
-                    elif tool.name == "workflow_states":
-                        result = await handle_call_tool(tool.name, {"model_name": "sale.order"})
+                    elif tool.name == "analysis_query":
+                        result = await handle_call_tool(tool.name, {"analysis_type": "workflow", "model_name": "sale.order"})
                     elif tool.name == "field_dependencies":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner", "field_name": "name"})
                     elif tool.name == "search_field_properties":
@@ -73,10 +73,8 @@ class TestToolContracts:
                         result = await handle_call_tool(tool.name, {"field_type": "many2one"})
                     elif tool.name == "addon_dependencies":
                         result = await handle_call_tool(tool.name, {"addon_name": "sale"})
-                    elif tool.name == "inheritance_chain" or tool.name == "performance_analysis":
+                    elif tool.name == "inheritance_chain":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
-                    elif tool.name == "pattern_analysis":
-                        result = await handle_call_tool(tool.name, {})
                     elif tool.name == "resolve_dynamic_fields":
                         result = await handle_call_tool(tool.name, {"model_name": "res.partner"})
                     else:
@@ -95,17 +93,16 @@ class TestToolContracts:
         mock_env.execute_code.side_effect = Exception("Test error")
 
         error_testable_tools = [
-            ("model_info", {"model_name": "res.partner"}),
-            ("search_models", {"pattern": "test"}),
-            ("model_relationships", {"model_name": "res.partner"}),
-            ("field_usages", {"model_name": "res.partner", "field_name": "name"}),
+            ("model_query", {"operation": "info", "model_name": "res.partner"}),
+            ("model_query", {"operation": "search", "pattern": "test"}),
+            ("model_query", {"operation": "relationships", "model_name": "res.partner"}),
+            ("field_query", {"operation": "usages", "model_name": "res.partner", "field_name": "name"}),
             ("execute_code", {"code": "1/0"}),
-            ("field_value_analyzer", {"model": "res.partner", "field": "name"}),
+            ("field_query", {"operation": "analyze_values", "model_name": "res.partner", "field_name": "name"}),
             ("permission_checker", {"user": "admin", "model": "res.partner", "operation": "read"}),
-            ("test_runner", {"module": "base"}),
-            ("field_dependencies", {"model_name": "res.partner", "field_name": "name"}),
-            ("search_field_properties", {"property": "computed"}),
-            ("search_field_type", {"field_type": "many2one"}),
+            ("field_query", {"operation": "dependencies", "model_name": "res.partner", "field_name": "name"}),
+            ("field_query", {"operation": "search_properties", "property": "computed"}),
+            ("field_query", {"operation": "search_type", "field_type": "many2one"}),
         ]
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
@@ -124,8 +121,7 @@ class TestToolContracts:
             ("search_models", {"pattern": "test", "page": 1, "page_size": 10}),
             ("model_relationships", {"model_name": "res.partner", "page": 1, "page_size": 10}),
             ("field_usages", {"model_name": "res.partner", "field_name": "name", "page": 1, "page_size": 10}),
-            ("performance_analysis", {"model_name": "res.partner", "page": 1, "page_size": 10}),
-            ("pattern_analysis", {"page": 1, "page_size": 10}),
+            ("analysis_query", {"analysis_type": "performance", "model_name": "res.partner", "page": 1, "page_size": 10}),
             ("inheritance_chain", {"model_name": "res.partner", "page": 1, "page_size": 10}),
             ("addon_dependencies", {"addon_name": "sale", "page": 1, "page_size": 10}),
             ("search_field_properties", {"property": "computed", "page": 1, "page_size": 10}),
@@ -164,9 +160,9 @@ class TestToolContracts:
     async def test_required_vs_optional_parameters(self, mock_env: AsyncMock) -> None:
         tools_with_requirements = [
             ("model_info", {"model_name": "res.partner"}, True),
-            ("model_info", {}, False),
+            ("model_query", {}, False),
             ("search_models", {"pattern": "test"}, True),
-            ("search_models", {}, False),
+            ("model_query", {"operation": "search"}, False),
             ("field_usages", {"model_name": "res.partner", "field_name": "name"}, True),
             ("field_usages", {"model_name": "res.partner"}, False),
             ("field_usages", {"field_name": "name"}, False),
@@ -176,7 +172,7 @@ class TestToolContracts:
             ("odoo_update_module", {"modules": "base"}, True),
             ("odoo_install_module", {"modules": "base"}, True),
             ("field_value_analyzer", {"model": "res.partner", "field": "name"}, True),
-            ("field_value_analyzer", {"model": "res.partner"}, False),
+            ("field_query", {"operation": "analyze_values", "model_name": "res.partner"}, False),
             ("permission_checker", {"user": "admin", "model": "res.partner", "operation": "read"}, True),
             ("permission_checker", {"user": "admin", "model": "res.partner"}, False),
         ]
@@ -214,8 +210,8 @@ class TestToolContracts:
     @pytest.mark.asyncio
     async def test_tool_idempotency(self, mock_env: AsyncMock) -> None:
         idempotent_tools = [
-            ("model_info", {"model_name": "res.partner"}),
-            ("search_models", {"pattern": "test"}),
+            ("model_query", {"operation": "info", "model_name": "res.partner"}),
+            ("model_query", {"operation": "search", "pattern": "test"}),
             ("field_dependencies", {"model_name": "res.partner", "field_name": "name"}),
             ("search_field_properties", {"property": "computed"}),
         ]
@@ -290,7 +286,7 @@ class TestToolContracts:
             RuntimeError("Runtime error"),
         ]
 
-        tools_to_test = ["model_info", "search_models", "execute_code"]
+        tools_to_test = ["model_query", "execute_code"]
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
             for tool_name in tools_to_test:
@@ -301,9 +297,9 @@ class TestToolContracts:
 
                     args = (
                         {"model_name": "test"}
-                        if tool_name == "model_info"
-                        else {"pattern": "test"}
-                        if tool_name == "search_models"
+                        if tool_name == "model_query"
+                        else {"operation": "info", "model_name": "test"}
+                        if tool_name == "model_query"
                         else {"code": "test"}
                     )
 
@@ -346,7 +342,7 @@ class TestToolPerformanceContracts:
         mock_env.cr.close = AsyncMock()
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            tasks = [handle_call_tool("model_info", {"model_name": f"model_{i}"}) for i in range(10)]
+            tasks = [handle_call_tool("model_query", {"operation": "info", "model_name": f"model_{i}"}) for i in range(10)]
 
             results = await asyncio.gather(*tasks)
 
