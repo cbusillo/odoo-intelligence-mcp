@@ -118,6 +118,9 @@ def load_env_config() -> EnvConfig:
     # Detect if we're running in test mode
     is_testing = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
 
+    # Log the current working directory for debugging
+    logger.debug("MCP server looking for .env file from working directory: %s", Path.cwd())
+
     # Find the .env file to use
     env_file_path = None
 
@@ -130,27 +133,34 @@ def load_env_config() -> EnvConfig:
             logger.info("Using target project .env from %s (test mode)", target_env_path)
 
     if not env_file_path:
-        # Look for local .env file in project root (where pyproject.toml is)
-        current_path = Path(__file__).parent
-        while current_path != current_path.parent:
-            pyproject_path = current_path / "pyproject.toml"
-            if pyproject_path.exists():
-                # Found project root
-                env_path = current_path / ".env"
-                if env_path.exists():
-                    env_file_path = env_path
-                    logger.info("Using local .env from %s", env_path)
-                break
-            current_path = current_path.parent
+        # First, check the current working directory (where Claude Code was launched)
+        cwd_env = Path.cwd() / ".env"
+        if cwd_env.exists():
+            env_file_path = cwd_env
+            logger.info("Using .env from current working directory: %s", cwd_env)
+        else:
+            # Fall back to looking for .env in MCP server's project root
+            current_path = Path(__file__).parent
+            while current_path != current_path.parent:
+                pyproject_path = current_path / "pyproject.toml"
+                if pyproject_path.exists():
+                    # Found project root
+                    env_path = current_path / ".env"
+                    if env_path.exists():
+                        env_file_path = env_path
+                        logger.info("Using local .env from %s", env_path)
+                    break
+                current_path = current_path.parent
 
     # Pydantic BaseSettings will automatically load from env vars and .env file
     if env_file_path:
-        # Create config with custom env file path by setting the model_config
-        config = EnvConfig()
-        # Store the env file path for later access (this is what Pydantic does internally)
+        # Create config with custom env file path
+        config = EnvConfig(_env_file=env_file_path)
+        # Store the env file path for later access (for _get_project_directory)
         config.__dict__["_env_file"] = Path(env_file_path)
         return config
     else:
+        logger.info("No .env file found, using defaults and environment variables")
         return EnvConfig()
 
 
@@ -282,20 +292,19 @@ class HostOdooEnvironment:
                 docker_check = subprocess.run(["docker", "version"], capture_output=True, text=True, timeout=2)
                 if docker_check.returncode != 0:
                     raise DockerConnectionError(
-                        self.container_name,
-                        f"Cannot connect to Docker daemon. Is Docker running? Error: {docker_check.stderr}"
+                        self.container_name, f"Cannot connect to Docker daemon. Is Docker running? Error: {docker_check.stderr}"
                     )
-                
+
                 # Check Docker context
                 context_check = subprocess.run(["docker", "context", "show"], capture_output=True, text=True, timeout=2)
                 if context_check.returncode == 0:
                     logger.info(f"Current Docker context: {context_check.stdout.strip()}")
-                
+
                 # Check if it's a permission issue or container doesn't exist
                 if "permission denied" in result.stderr.lower():
                     raise DockerConnectionError(
                         self.container_name,
-                        f"Permission denied accessing Docker. Try running with appropriate permissions or check Docker socket access."
+                        f"Permission denied accessing Docker. Try running with appropriate permissions or check Docker socket access.",
                     )
                 elif "no such object" in result.stderr.lower() or "no such container" in result.stderr.lower():
                     logger.info(f"Container {self.container_name} does not exist: {result.stderr}")
@@ -307,11 +316,8 @@ class HostOdooEnvironment:
                     list_result = subprocess.run(list_cmd, capture_output=True, text=True, timeout=5)
                     if list_result.returncode == 0:
                         logger.info(f"Available containers:\n{list_result.stdout}")
-                    raise DockerConnectionError(
-                        self.container_name,
-                        f"Cannot inspect container. Docker error: {result.stderr}"
-                    )
-                
+                    raise DockerConnectionError(self.container_name, f"Cannot inspect container. Docker error: {result.stderr}")
+
                 # Container doesn't exist, try to create it with docker compose
                 config = load_env_config()
                 service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
@@ -491,7 +497,9 @@ class HostOdooEnvironment:
                 if "executable file not found" in process.stderr:
                     error_msg = f"Odoo executable not found in container. Check if container has Odoo installed at /odoo/odoo-bin"
                 elif "no such container" in process.stderr.lower():
-                    error_msg = f"Container {self.container_name} not found. Ensure containers are running with: docker compose up -d"
+                    error_msg = (
+                        f"Container {self.container_name} not found. Ensure containers are running with: docker compose up -d"
+                    )
                 else:
                     error_msg = f"Docker exec failed: {process.stderr}"
                 raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301

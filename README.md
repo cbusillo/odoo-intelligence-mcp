@@ -37,7 +37,11 @@ Restart Claude Code after configuration changes.
 
 ### Environment
 
-Default configuration (can be customized via environment variables):
+The MCP server loads configuration from `.env` files in this order:
+1. **Current working directory** - Where Claude Code was launched from (your project directory)
+2. **MCP server directory** - Fallback if no .env found in working directory
+
+Default configuration (can be customized via environment variables or `.env` file):
 - **Database**: `odoo` (env: `ODOO_DB_NAME`)
 - **Addons Path**: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (env: `ODOO_ADDONS_PATH`)
 - **Container Prefix**: `odoo` (env: `ODOO_PROJECT_NAME`)
@@ -49,7 +53,11 @@ Containers are automatically derived from the prefix:
 
 ### Using with Different Projects
 
-To use with a different Odoo project, set environment variables before running:
+**Important**: Launch Claude Code from your Odoo project directory so the MCP server can find your `.env` file.
+
+To use with a different Odoo project, you can either:
+1. Launch Claude Code from your project directory (recommended)
+2. Or set environment variables before running:
 
 ```bash
 # Example for a project with containers named "odoo-dev-*" and database "mydb"

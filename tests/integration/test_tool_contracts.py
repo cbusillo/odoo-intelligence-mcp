@@ -252,7 +252,10 @@ class TestToolContracts:
 
                     if "error" in content:
                         error_msg = content["error"].lower()
-                        assert any(word in error_msg for word in ["security", "invalid", "not allowed", "not found", "required", "missing", "unknown"]), f"Tool {tool_name} error message doesn't contain expected keywords: {content['error']}"
+                        assert any(
+                            word in error_msg
+                            for word in ["security", "invalid", "not allowed", "not found", "required", "missing", "unknown"]
+                        ), f"Tool {tool_name} error message doesn't contain expected keywords: {content['error']}"
 
     @pytest.mark.asyncio
     async def test_tool_schema_validation(self) -> None:

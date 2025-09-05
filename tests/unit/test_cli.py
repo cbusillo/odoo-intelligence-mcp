@@ -125,7 +125,7 @@ class TestCLIFunctions:
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_all_cli_commands_use_sys_executable(self, mock_run: MagicMock) -> None:
         mock_run.return_value.returncode = 0
-        
+
         with pytest.raises(SystemExit):
             cli.test()
         assert mock_run.call_args[0][0][0] == sys.executable
