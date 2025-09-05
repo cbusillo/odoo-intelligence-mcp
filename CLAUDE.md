@@ -90,7 +90,7 @@ async def get_model_fields(env: HostOdooEnvironment, model_name: str) -> dict[st
 ## Configuration
 
 **Environment Variables** (for portability to any Odoo project):
-- `ODOO_CONTAINER_PREFIX`: Container name prefix (default: "odoo")
+- `ODOO_PROJECT_NAME`: Container name prefix (default: "odoo")
 - `ODOO_DB_NAME`: Database name (default: "odoo")
 - `ODOO_ADDONS_PATH`: Addon paths (default: "/opt/project/addons,/odoo/addons,/volumes/enterprise")
 
@@ -98,7 +98,7 @@ async def get_model_fields(env: HostOdooEnvironment, model_name: str) -> dict[st
 
 **Host-based MCP Server** (runs on host machine, not in Docker):
 
-- Connects to Odoo via Docker exec to containers (configurable via ODOO_CONTAINER_PREFIX)
+- Connects to Odoo via Docker exec to containers (configurable via ODOO_PROJECT_NAME)
 - Uses subprocess to execute Python code in Odoo environment
 - Returns JSON-serializable results
 
@@ -119,7 +119,7 @@ async def get_model_fields(env: HostOdooEnvironment, model_name: str) -> dict[st
 
 ## Docker Connection
 
-**Primary container**: `{ODOO_CONTAINER_PREFIX}-script-runner-1` (default prefix: odoo)
+**Primary container**: `{ODOO_PROJECT_NAME}-script-runner-1` (default prefix: odoo)
 **Database**: `odoo`
 **Execution**: Uses `/odoo/odoo-bin shell` with `--no-http`
 
