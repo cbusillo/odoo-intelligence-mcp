@@ -278,7 +278,40 @@ class HostOdooEnvironment:
             result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
 
             if result.returncode != 0:
-                logger.info(f"Container {self.container_name} not found: {result.stderr}")
+                # First check if Docker is accessible at all
+                docker_check = subprocess.run(["docker", "version"], capture_output=True, text=True, timeout=2)
+                if docker_check.returncode != 0:
+                    raise DockerConnectionError(
+                        self.container_name,
+                        f"Cannot connect to Docker daemon. Is Docker running? Error: {docker_check.stderr}"
+                    )
+                
+                # Check Docker context
+                context_check = subprocess.run(["docker", "context", "show"], capture_output=True, text=True, timeout=2)
+                if context_check.returncode == 0:
+                    logger.info(f"Current Docker context: {context_check.stdout.strip()}")
+                
+                # Check if it's a permission issue or container doesn't exist
+                if "permission denied" in result.stderr.lower():
+                    raise DockerConnectionError(
+                        self.container_name,
+                        f"Permission denied accessing Docker. Try running with appropriate permissions or check Docker socket access."
+                    )
+                elif "no such object" in result.stderr.lower() or "no such container" in result.stderr.lower():
+                    logger.info(f"Container {self.container_name} does not exist: {result.stderr}")
+                else:
+                    # Unknown error - log it and try to continue
+                    logger.warning(f"Docker inspect failed for {self.container_name}: {result.stderr}")
+                    # Try to list containers to see what's available
+                    list_cmd = ["docker", "ps", "-a", "--format", "table {{.Names}}"]
+                    list_result = subprocess.run(list_cmd, capture_output=True, text=True, timeout=5)
+                    if list_result.returncode == 0:
+                        logger.info(f"Available containers:\n{list_result.stdout}")
+                    raise DockerConnectionError(
+                        self.container_name,
+                        f"Cannot inspect container. Docker error: {result.stderr}"
+                    )
+                
                 # Container doesn't exist, try to create it with docker compose
                 config = load_env_config()
                 service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
@@ -454,8 +487,25 @@ class HostOdooEnvironment:
 
                 time.sleep(5)
                 raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
+            if process.returncode == 125:  # Docker run error
+                if "executable file not found" in process.stderr:
+                    error_msg = f"Odoo executable not found in container. Check if container has Odoo installed at /odoo/odoo-bin"
+                elif "no such container" in process.stderr.lower():
+                    error_msg = f"Container {self.container_name} not found. Ensure containers are running with: docker compose up -d"
+                else:
+                    error_msg = f"Docker exec failed: {process.stderr}"
+                raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
+            if process.returncode == 126:  # Permission denied
+                error_msg = f"Permission denied executing command in container: {process.stderr}"
+                raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
             if process.returncode != 0:
-                error_msg = f"Command failed with return code {process.returncode}: {process.stderr}"
+                # Check for common Odoo errors in stderr
+                if "database" in process.stderr.lower() and "does not exist" in process.stderr.lower():
+                    error_msg = f"Database '{self.database}' does not exist. Check ODOO_DB_NAME in your .env file"
+                elif "could not connect" in process.stderr.lower():
+                    error_msg = f"Cannot connect to database at {self.db_host}:{self.db_port}. Check database is running"
+                else:
+                    error_msg = f"Command failed with return code {process.returncode}: {process.stderr}"
                 raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
 
             output_lines = process.stdout.strip().split("\n")
