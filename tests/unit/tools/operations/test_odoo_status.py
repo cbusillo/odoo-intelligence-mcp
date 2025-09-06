@@ -1,5 +1,4 @@
 from unittest.mock import MagicMock, patch
-import json
 
 import pytest
 
@@ -13,14 +12,16 @@ async def test_odoo_status_all_running() -> None:
     with patch("subprocess.run") as mock_run:
         # Mock docker version succeeds
         mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
-        
+
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             # Mock containers
             containers = get_expected_container_names()
             container_names = [containers["web"], containers["shell"], containers["script_runner"]]
-            
+
             mock_instance = MagicMock()
+
             # Mock get_container to return running containers
+            # noinspection PyUnusedLocal
             def mock_get_container(container_name, auto_start=False):
                 if container_name in container_names:
                     return {
@@ -31,10 +32,10 @@ async def test_odoo_status_all_running() -> None:
                             "Id": "abc123456789",
                             "Created": "2024-01-01T00:00:00",
                             "Config": {"Image": f"{container_name}:latest"},
-                        }
+                        },
                     }
                 return {"success": False, "error": "Not found"}
-            
+
             mock_instance.get_container.side_effect = mock_get_container
             mock_manager.return_value = mock_instance
 
@@ -53,7 +54,7 @@ async def test_odoo_status_with_verbose() -> None:
     with patch("subprocess.run") as mock_run:
         # Mock docker version succeeds
         mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
-        
+
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             # Mock container with verbose info
             container_state = {
@@ -63,13 +64,9 @@ async def test_odoo_status_with_verbose() -> None:
                 "Created": "2024-01-01T00:00:00",
                 "Config": {"Image": "odoo:16.0"},
             }
-            
+
             mock_instance = MagicMock()
-            mock_instance.get_container.return_value = {
-                "success": True,
-                "container": "test-container",
-                "state": container_state
-            }
+            mock_instance.get_container.return_value = {"success": True, "container": "test-container", "state": container_state}
             mock_manager.return_value = mock_instance
 
             result = await odoo_status(verbose=True)
@@ -88,26 +85,27 @@ async def test_odoo_status_some_stopped() -> None:
     with patch("subprocess.run") as mock_run:
         # Mock docker version succeeds
         mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
-        
+
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             # Mock containers with different states
             containers = get_expected_container_names()
-            
+
+            # noinspection PyUnusedLocal
             def mock_get_container(container_name, auto_start=False):
                 if container_name == containers["web"]:
                     return {
                         "success": True,
                         "container": container_name,
-                        "state": {"Status": "exited", "Id": "abc123", "Created": "", "Config": {}}
+                        "state": {"Status": "exited", "Id": "abc123", "Created": "", "Config": {}},
                     }
                 elif container_name in [containers["shell"], containers["script_runner"]]:
                     return {
                         "success": True,
                         "container": container_name,
-                        "state": {"Status": "running", "Id": "def456", "Created": "", "Config": {}}
+                        "state": {"Status": "running", "Id": "def456", "Created": "", "Config": {}},
                     }
                 return {"success": False}
-            
+
             mock_instance = MagicMock()
             mock_instance.get_container.side_effect = mock_get_container
             mock_manager.return_value = mock_instance
@@ -127,7 +125,7 @@ async def test_odoo_status_container_not_found() -> None:
     with patch("subprocess.run") as mock_run:
         # Mock docker version succeeds
         mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
-        
+
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             mock_instance = MagicMock()
             mock_instance.get_container.return_value = {"success": False, "error": "Container not found"}
@@ -164,7 +162,7 @@ async def test_odoo_status_verbose_image_error_handling() -> None:
     with patch("subprocess.run") as mock_run:
         # Mock docker version succeeds
         mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
-        
+
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             mock_instance = MagicMock()
             # Mock get_container to return success with state info
@@ -176,7 +174,7 @@ async def test_odoo_status_verbose_image_error_handling() -> None:
                     "Id": "abc123456789",
                     "Created": "2024-01-01T00:00:00",
                     "Config": {"Image": "odoo-fallback-image"},
-                }
+                },
             }
             mock_manager.return_value = mock_instance
 

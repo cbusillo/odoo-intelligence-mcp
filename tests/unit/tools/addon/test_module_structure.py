@@ -8,12 +8,7 @@ from odoo_intelligence_mcp.tools.addon.module_structure import get_module_struct
 @pytest.mark.asyncio
 async def test_get_module_structure_complete() -> None:
     # Mock the check for module existence (first exec_run call)
-    check_result = {
-        "success": True,
-        "exit_code": 0,
-        "stdout": "/odoo/addons/test_module\n",
-        "stderr": ""
-    }
+    check_result = {"success": True, "exit_code": 0, "stdout": "/odoo/addons/test_module\n", "stderr": ""}
 
     # Mock the analyze result (second exec_run call)
     analyze_result = {
@@ -28,9 +23,10 @@ async def test_get_module_structure_complete() -> None:
         "static": {"js": ["js/widget.js"], "css": ["css/style.css"], "xml": []},
         "manifest": {"name": "Test Module", "version": "1.0", "depends": ["base", "sale"]}
     }""",
-        "stderr": ""
+        "stderr": "",
     }
 
+    # noinspection PyUnusedLocal
     def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
@@ -63,12 +59,7 @@ async def test_get_module_structure_complete() -> None:
 @pytest.mark.asyncio
 async def test_get_module_structure_not_found() -> None:
     # Mock exec_run to return failure (module not found)
-    check_result = {
-        "success": False,
-        "exit_code": 1,
-        "stdout": "",
-        "stderr": ""
-    }
+    check_result = {"success": False, "exit_code": 1, "stdout": "", "stderr": ""}
 
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
@@ -89,12 +80,7 @@ async def test_get_module_structure_not_found() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_empty_module() -> None:
-    check_result = {
-        "success": True,
-        "exit_code": 0,
-        "stdout": "/odoo/addons/empty_module\n",
-        "stderr": ""
-    }
+    check_result = {"success": True, "exit_code": 0, "stdout": "/odoo/addons/empty_module\n", "stderr": ""}
 
     analyze_result = {
         "success": True,
@@ -108,9 +94,10 @@ async def test_get_module_structure_empty_module() -> None:
         "static": {"js": [], "css": [], "xml": []},
         "manifest": {"name": "Empty Module", "version": "1.0"}
     }""",
-        "stderr": ""
+        "stderr": "",
     }
 
+    # noinspection PyUnusedLocal
     def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
@@ -136,12 +123,7 @@ async def test_get_module_structure_empty_module() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_models_only() -> None:
-    check_result = {
-        "success": True,
-        "exit_code": 0,
-        "stdout": "/odoo/addons/models_module\n",
-        "stderr": ""
-    }
+    check_result = {"success": True, "exit_code": 0, "stdout": "/odoo/addons/models_module\n", "stderr": ""}
 
     analyze_result = {
         "success": True,
@@ -155,9 +137,10 @@ async def test_get_module_structure_models_only() -> None:
         "static": {"js": [], "css": [], "xml": []},
         "manifest": {"name": "Models Module"}
     }""",
-        "stderr": ""
+        "stderr": "",
     }
 
+    # noinspection PyUnusedLocal
     def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
@@ -182,12 +165,7 @@ async def test_get_module_structure_models_only() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_with_static_assets() -> None:
-    check_result = {
-        "success": True,
-        "exit_code": 0,
-        "stdout": "/odoo/addons/static_module\n",
-        "stderr": ""
-    }
+    check_result = {"success": True, "exit_code": 0, "stdout": "/odoo/addons/static_module\n", "stderr": ""}
 
     analyze_result = {
         "success": True,
@@ -205,9 +183,10 @@ async def test_get_module_structure_with_static_assets() -> None:
         },
         "manifest": {"name": "Static Module"}
     }""",
-        "stderr": ""
+        "stderr": "",
     }
 
+    # noinspection PyUnusedLocal
     def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
@@ -231,12 +210,7 @@ async def test_get_module_structure_with_static_assets() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_with_tests() -> None:
-    check_result = {
-        "success": True,
-        "exit_code": 0,
-        "stdout": "/odoo/addons/tested_module\n",
-        "stderr": ""
-    }
+    check_result = {"success": True, "exit_code": 0, "stdout": "/odoo/addons/tested_module\n", "stderr": ""}
 
     analyze_result = {
         "success": True,
@@ -251,9 +225,10 @@ async def test_get_module_structure_with_tests() -> None:
         "tests": ["tests/test_model.py", "tests/test_workflow.py"],
         "manifest": {"name": "Tested Module"}
     }""",
-        "stderr": ""
+        "stderr": "",
     }
 
+    # noinspection PyUnusedLocal
     def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
@@ -293,12 +268,7 @@ async def test_get_module_structure_error_handling() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_with_pagination() -> None:
-    check_result = {
-        "success": True,
-        "exit_code": 0,
-        "stdout": "/odoo/addons/large_module\n",
-        "stderr": ""
-    }
+    check_result = {"success": True, "exit_code": 0, "stdout": "/odoo/addons/large_module\n", "stderr": ""}
 
     files_list = [f'"models/model_{i}.py"' for i in range(20)]
 
@@ -315,9 +285,10 @@ async def test_get_module_structure_with_pagination() -> None:
         "static": {{"js": [], "css": [], "xml": []}},
         "manifest": {{"name": "Large Module"}}
     }}""",
-        "stderr": ""
+        "stderr": "",
     }
 
+    # noinspection PyUnusedLocal
     def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result

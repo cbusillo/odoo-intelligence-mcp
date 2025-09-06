@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -20,7 +20,7 @@ async def test_find_files_basic_pattern() -> None:
                 "success": True,
                 "exit_code": 0,
                 "stdout": "/odoo/addons/sale/models/sale.py\n/odoo/addons/sale/models/sale_order.py",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await find_files("*.py")
@@ -47,7 +47,7 @@ async def test_find_files_with_file_type() -> None:
                 "success": True,
                 "exit_code": 0,
                 "stdout": "/odoo/addons/sale/views/sale_view.xml",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await find_files("sale_view", file_type="xml")
@@ -55,6 +55,7 @@ async def test_find_files_with_file_type() -> None:
             assert "results" in result
             # Check that file_type was added to pattern
             from unittest.mock import ANY
+
             mock_instance.exec_run.assert_called_with(ANY, ["find", "/odoo/addons", "-type", "f", "-name", "*sale_view*.xml"])
 
 
@@ -67,12 +68,7 @@ async def test_find_files_no_matches() -> None:
             mock_instance = mock_docker.return_value
             mock_instance.get_container.return_value = {"success": True}
 
-            mock_instance.exec_run.return_value = {
-                "success": True,
-                "exit_code": 0,
-                "stdout": "",
-                "stderr": ""
-            }
+            mock_instance.exec_run.return_value = {"success": True, "exit_code": 0, "stdout": "", "stderr": ""}
 
             result = await find_files("nonexistent.py")
 
@@ -104,12 +100,7 @@ async def test_find_files_with_pagination() -> None:
 
             # Create many file results
             files = [f"/odoo/addons/module{i}/file{i}.py" for i in range(20)]
-            mock_instance.exec_run.return_value = {
-                "success": True,
-                "exit_code": 0,
-                "stdout": "\n".join(files),
-                "stderr": ""
-            }
+            mock_instance.exec_run.return_value = {"success": True, "exit_code": 0, "stdout": "\n".join(files), "stderr": ""}
 
             pagination = PaginationParams(page_size=5)
             result = await find_files("*.py", pagination=pagination)

@@ -1,7 +1,5 @@
-from unittest.mock import MagicMock, patch, Mock
 import json
-
-import pytest
+from unittest.mock import Mock, patch
 
 from odoo_intelligence_mcp.utils.docker_utils import DockerClientManager
 
