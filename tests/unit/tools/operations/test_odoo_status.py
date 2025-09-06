@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +23,7 @@ async def test_odoo_status_all_running() -> None:
 
             # Mock get_container to return running containers
             # noinspection PyUnusedLocal
-            def mock_get_container(container_name, auto_start=False):
+            def mock_get_container(container_name: str, auto_start: bool = False) -> dict[str, Any]:
                 if container_name in container_names:
                     return {
                         "success": True,
@@ -91,7 +92,7 @@ async def test_odoo_status_some_stopped() -> None:
             containers = get_expected_container_names()
 
             # noinspection PyUnusedLocal
-            def mock_get_container(container_name, auto_start=False):
+            def mock_get_container(container_name: str, auto_start: bool = False) -> dict[str, Any]:
                 if container_name == containers["web"]:
                     return {
                         "success": True,
