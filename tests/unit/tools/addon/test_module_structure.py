@@ -7,15 +7,19 @@ from odoo_intelligence_mcp.tools.addon.module_structure import get_module_struct
 
 @pytest.mark.asyncio
 async def test_get_module_structure_complete() -> None:
-    mock_container = MagicMock()
+    # Mock the check for module existence (first exec_run call)
+    check_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": "/odoo/addons/test_module\n",
+        "stderr": ""
+    }
 
-    check_result = MagicMock()
-    check_result.exit_code = 0
-    check_result.output = b"/odoo/addons/test_module\n"
-
-    analyze_result = MagicMock()
-    analyze_result.exit_code = 0
-    analyze_result.output = b"""{"path": "/odoo/addons/test_module",
+    # Mock the analyze result (second exec_run call)
+    analyze_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": """{"path": "/odoo/addons/test_module",
         "models": ["models/sale.py", "models/product.py"],
         "views": ["views/sale_view.xml", "views/product_view.xml"],
         "controllers": ["controllers/main.py"],
@@ -23,19 +27,22 @@ async def test_get_module_structure_complete() -> None:
         "reports": [],
         "static": {"js": ["js/widget.js"], "css": ["css/style.css"], "xml": []},
         "manifest": {"name": "Test Module", "version": "1.0", "depends": ["base", "sale"]}
-    }"""
+    }""",
+        "stderr": ""
+    }
 
-    def exec_run_side_effect(cmd: object) -> MagicMock:
+    def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
         else:
             return analyze_result
 
-    mock_container.exec_run = MagicMock(side_effect=exec_run_side_effect)
-
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        # Mock get_container to return success
+        mock_docker_instance.get_container.return_value = {"success": True}
+        # Mock exec_run with our side effect
+        mock_docker_instance.exec_run = MagicMock(side_effect=exec_run_side_effect)
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
@@ -55,16 +62,20 @@ async def test_get_module_structure_complete() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_not_found() -> None:
-    mock_container = MagicMock()
-
-    check_result = MagicMock()
-    check_result.exit_code = 1
-    check_result.output = b""
-    mock_container.exec_run.return_value = check_result
+    # Mock exec_run to return failure (module not found)
+    check_result = {
+        "success": False,
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": ""
+    }
 
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        # Mock get_container to return success
+        mock_docker_instance.get_container.return_value = {"success": True}
+        # Mock exec_run to return the check_result
+        mock_docker_instance.exec_run.return_value = check_result
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
@@ -78,15 +89,17 @@ async def test_get_module_structure_not_found() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_empty_module() -> None:
-    mock_container = MagicMock()
+    check_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": "/odoo/addons/empty_module\n",
+        "stderr": ""
+    }
 
-    check_result = MagicMock()
-    check_result.exit_code = 0
-    check_result.output = b"/odoo/addons/empty_module\n"
-
-    analyze_result = MagicMock()
-    analyze_result.exit_code = 0
-    analyze_result.output = b"""{"path": "/odoo/addons/empty_module",
+    analyze_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": """{"path": "/odoo/addons/empty_module",
         "models": [],
         "views": [],
         "controllers": [],
@@ -94,19 +107,20 @@ async def test_get_module_structure_empty_module() -> None:
         "reports": [],
         "static": {"js": [], "css": [], "xml": []},
         "manifest": {"name": "Empty Module", "version": "1.0"}
-    }"""
+    }""",
+        "stderr": ""
+    }
 
-    def exec_run_side_effect(cmd: object) -> MagicMock:
+    def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
         else:
             return analyze_result
 
-    mock_container.exec_run = MagicMock(side_effect=exec_run_side_effect)
-
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        mock_docker_instance.get_container.return_value = {"success": True}
+        mock_docker_instance.exec_run = MagicMock(side_effect=exec_run_side_effect)
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
@@ -122,15 +136,17 @@ async def test_get_module_structure_empty_module() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_models_only() -> None:
-    mock_container = MagicMock()
+    check_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": "/odoo/addons/models_module\n",
+        "stderr": ""
+    }
 
-    check_result = MagicMock()
-    check_result.exit_code = 0
-    check_result.output = b"/odoo/addons/models_module\n"
-
-    analyze_result = MagicMock()
-    analyze_result.exit_code = 0
-    analyze_result.output = b"""{"path": "/odoo/addons/models_module",
+    analyze_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": """{"path": "/odoo/addons/models_module",
         "models": ["models/model1.py", "models/model2.py", "models/model3.py"],
         "views": [],
         "controllers": [],
@@ -138,19 +154,20 @@ async def test_get_module_structure_models_only() -> None:
         "reports": [],
         "static": {"js": [], "css": [], "xml": []},
         "manifest": {"name": "Models Module"}
-    }"""
+    }""",
+        "stderr": ""
+    }
 
-    def exec_run_side_effect(cmd: object) -> MagicMock:
+    def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
         else:
             return analyze_result
 
-    mock_container.exec_run = MagicMock(side_effect=exec_run_side_effect)
-
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        mock_docker_instance.get_container.return_value = {"success": True}
+        mock_docker_instance.exec_run = MagicMock(side_effect=exec_run_side_effect)
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
@@ -165,15 +182,17 @@ async def test_get_module_structure_models_only() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_with_static_assets() -> None:
-    mock_container = MagicMock()
+    check_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": "/odoo/addons/static_module\n",
+        "stderr": ""
+    }
 
-    check_result = MagicMock()
-    check_result.exit_code = 0
-    check_result.output = b"/odoo/addons/static_module\n"
-
-    analyze_result = MagicMock()
-    analyze_result.exit_code = 0
-    analyze_result.output = b"""{"path": "/odoo/addons/static_module",
+    analyze_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": """{"path": "/odoo/addons/static_module",
         "models": ["models/model.py"],
         "views": ["views/view.xml"],
         "controllers": [],
@@ -185,19 +204,20 @@ async def test_get_module_structure_with_static_assets() -> None:
             "xml": ["xml/template.xml"]
         },
         "manifest": {"name": "Static Module"}
-    }"""
+    }""",
+        "stderr": ""
+    }
 
-    def exec_run_side_effect(cmd: object) -> MagicMock:
+    def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
         else:
             return analyze_result
 
-    mock_container.exec_run = MagicMock(side_effect=exec_run_side_effect)
-
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        mock_docker_instance.get_container.return_value = {"success": True}
+        mock_docker_instance.exec_run = MagicMock(side_effect=exec_run_side_effect)
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
@@ -211,15 +231,17 @@ async def test_get_module_structure_with_static_assets() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_with_tests() -> None:
-    mock_container = MagicMock()
+    check_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": "/odoo/addons/tested_module\n",
+        "stderr": ""
+    }
 
-    check_result = MagicMock()
-    check_result.exit_code = 0
-    check_result.output = b"/odoo/addons/tested_module\n"
-
-    analyze_result = MagicMock()
-    analyze_result.exit_code = 0
-    analyze_result.output = b"""{"path": "/odoo/addons/tested_module",
+    analyze_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": """{"path": "/odoo/addons/tested_module",
         "models": ["models/model.py"],
         "views": ["views/view.xml"],
         "controllers": [],
@@ -228,19 +250,20 @@ async def test_get_module_structure_with_tests() -> None:
         "static": {"js": [], "css": [], "xml": []},
         "tests": ["tests/test_model.py", "tests/test_workflow.py"],
         "manifest": {"name": "Tested Module"}
-    }"""
+    }""",
+        "stderr": ""
+    }
 
-    def exec_run_side_effect(cmd: object) -> MagicMock:
+    def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
         else:
             return analyze_result
 
-    mock_container.exec_run = MagicMock(side_effect=exec_run_side_effect)
-
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        mock_docker_instance.get_container.return_value = {"success": True}
+        mock_docker_instance.exec_run = MagicMock(side_effect=exec_run_side_effect)
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
@@ -270,17 +293,19 @@ async def test_get_module_structure_error_handling() -> None:
 
 @pytest.mark.asyncio
 async def test_get_module_structure_with_pagination() -> None:
-    mock_container = MagicMock()
-
-    check_result = MagicMock()
-    check_result.exit_code = 0
-    check_result.output = b"/odoo/addons/large_module\n"
+    check_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": "/odoo/addons/large_module\n",
+        "stderr": ""
+    }
 
     files_list = [f'"models/model_{i}.py"' for i in range(20)]
 
-    analyze_result = MagicMock()
-    analyze_result.exit_code = 0
-    analyze_result.output = f"""{{
+    analyze_result = {
+        "success": True,
+        "exit_code": 0,
+        "stdout": f"""{{
         "path": "/odoo/addons/large_module",
         "models": [{", ".join(files_list)}],
         "views": [],
@@ -289,19 +314,20 @@ async def test_get_module_structure_with_pagination() -> None:
         "reports": [],
         "static": {{"js": [], "css": [], "xml": []}},
         "manifest": {{"name": "Large Module"}}
-    }}""".encode()
+    }}""",
+        "stderr": ""
+    }
 
-    def exec_run_side_effect(cmd: object) -> MagicMock:
+    def exec_run_side_effect(container_name: str, cmd: object) -> dict:
         if "for path in" in str(cmd):
             return check_result
         else:
             return analyze_result
 
-    mock_container.exec_run = MagicMock(side_effect=exec_run_side_effect)
-
     with patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager") as mock_docker_manager:
         mock_docker_instance = MagicMock()
-        mock_docker_instance.get_container.return_value = mock_container
+        mock_docker_instance.get_container.return_value = {"success": True}
+        mock_docker_instance.exec_run = MagicMock(side_effect=exec_run_side_effect)
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:

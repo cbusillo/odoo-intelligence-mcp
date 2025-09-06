@@ -16,10 +16,18 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
         ]
         status = {}
 
-        # Test Docker connection first
+        # Test Docker connection first by trying to run docker version
+        import subprocess
+
         try:
-            docker_manager.client.ping()
-        except Exception as e:
+            result = subprocess.run(["docker", "version"], capture_output=True, text=True, timeout=5)
+            if result.returncode != 0:
+                return ResponseBuilder.error(
+                    "Docker daemon is not available. Please ensure Docker is running.",
+                    "DockerConnectionError",
+                    details=result.stderr,
+                )
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
             return ResponseBuilder.error(
                 "Docker daemon is not available. Please ensure Docker is running.", "DockerConnectionError", details=str(e)
             )
@@ -28,29 +36,27 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
             # Auto-start containers that should be running
             container_result = docker_manager.get_container(container_name, auto_start=True)
 
-            if isinstance(container_result, dict):
+            if not container_result.get("success"):
                 status[container_name] = {"status": "not_found", "running": False}
             else:
-                container = container_result
+                # Get the container state from the result
+                state = container_result.get("state", {})
+                container_status = state.get("Status", "unknown")
+
                 container_info = {
-                    "status": container.status,
-                    "running": container.status == "running",
+                    "status": container_status,
+                    "running": container_status == "running",
                 }
 
                 if verbose:
                     verbose_info = {
-                        "state": container.attrs["State"],
-                        "id": container.short_id,
-                        "created": container.attrs["Created"],
+                        "state": state,
+                        "id": state.get("Id", "unknown")[:12] if state.get("Id") else "unknown",
+                        "created": state.get("Created", "unknown"),
                     }
 
-                    try:
-                        if container.image.tags:
-                            verbose_info["image"] = container.image.tags[0]
-                        else:
-                            verbose_info["image"] = container.attrs.get("Config", {}).get("Image", "unknown")
-                    except (AttributeError, TypeError, KeyError, IndexError):
-                        verbose_info["image"] = container.attrs.get("Config", {}).get("Image", "unknown")
+                    # Try to get image info
+                    verbose_info["image"] = state.get("Config", {}).get("Image", "unknown") if isinstance(state, dict) else "unknown"
 
                     container_info.update(verbose_info)
 

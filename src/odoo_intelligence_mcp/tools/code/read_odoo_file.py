@@ -2,10 +2,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from docker.errors import APIError, NotFound
-
 from ...core.env import load_env_config
-from ...utils.docker_utils import DockerClientManager
+from ...utils.docker_utils import DockerClientManager, NotFound, APIError
 
 
 async def read_odoo_file(
@@ -83,17 +81,17 @@ async def read_odoo_file(
     container_name = config.script_runner_container
 
     container_result = docker_manager.get_container(container_name)
-    if isinstance(container_result, dict):  # Error
+    if not container_result.get("success"):
         return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
 
     # Try as absolute path first
     if path.is_absolute():
         try:
-            exec_result = container_result.exec_run(["cat", str(path)], demux=True)
-            stdout = exec_result.output[0].decode("utf-8") if exec_result.output[0] else ""
-            stderr = exec_result.output[1].decode("utf-8") if exec_result.output[1] else ""
+            exec_result = docker_manager.exec_run(container_name, ["cat", str(path)])
+            stdout = exec_result.get("stdout", "")
+            stderr = exec_result.get("stderr", "")
 
-            if exec_result.exit_code == 0:
+            if exec_result.get("success"):
                 return process_content(stdout, str(path))
             else:
                 return {"success": False, "error": f"File not found or not readable: {stderr or path}"}
@@ -128,13 +126,13 @@ async def read_odoo_file(
     for potential_path in paths_to_try:
         try:
             # First check if file exists
-            test_result = container_result.exec_run(["test", "-f", potential_path])
-            if test_result.exit_code == 0:
+            test_result = docker_manager.exec_run(container_name, ["test", "-f", potential_path])
+            if test_result.get("exit_code") == 0:
                 # File exists, read it
-                exec_result = container_result.exec_run(["cat", potential_path], demux=True)
-                stdout = exec_result.output[0].decode("utf-8") if exec_result.output[0] else ""
+                exec_result = docker_manager.exec_run(container_name, ["cat", potential_path])
+                stdout = exec_result.get("stdout", "")
 
-                if exec_result.exit_code == 0:
+                if exec_result.get("success"):
                     return process_content(stdout, potential_path)
         except (APIError, NotFound, AttributeError, ValueError):
             continue

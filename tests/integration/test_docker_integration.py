@@ -98,24 +98,27 @@ async def test_host_odoo_environment_execute_code_error() -> None:
 @pytest.mark.integration
 @pytest.mark.docker
 async def test_docker_container_status_check() -> None:
-    with (
-        patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager") as mock_docker_manager_class,
-        patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_docker_manager_class2,
-    ):
-        # Mock Docker client manager and container
-        mock_docker_manager = MagicMock()
-        mock_docker_manager_class.return_value = mock_docker_manager
-        mock_docker_manager_class2.return_value = mock_docker_manager
+    with patch("subprocess.run") as mock_run:
+        # Mock docker version succeeds
+        mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
+        
+        with (
+            patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager") as mock_docker_manager_class,
+            patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_docker_manager_class2,
+        ):
+            # Mock Docker client manager and container
+            mock_docker_manager = MagicMock()
+            mock_docker_manager_class.return_value = mock_docker_manager
+            mock_docker_manager_class2.return_value = mock_docker_manager
 
-        # Mock successful ping
-        mock_docker_manager.client.ping.return_value = None
+            # Mock containers with running status
+            mock_docker_manager.get_container.return_value = {
+                "success": True,
+                "container": "test-container",
+                "state": {"Status": "running", "Id": "abc123", "Created": "", "Config": {}}
+            }
 
-        # Mock containers with running status - create multiple instances for each call
-        mock_container = MagicMock()
-        mock_container.status = "running"
-        mock_docker_manager.get_container.return_value = mock_container
-
-        result = await odoo_status()
+            result = await odoo_status()
 
         # Get expected values from config
         config = load_env_config()
@@ -157,51 +160,38 @@ async def test_docker_container_restart() -> None:
 @pytest.mark.integration
 @pytest.mark.docker
 async def test_docker_module_update() -> None:
-    with patch("docker.from_env") as mock_docker_from_env:
-        # Mock Docker client
-        mock_client = MagicMock()
-        mock_docker_from_env.return_value = mock_client
-
-        # Mock container
-        mock_container = MagicMock()
-        mock_client.containers.get.return_value = mock_container
-
-        # Mock successful exec_run
-        mock_exec_result = MagicMock()
-        mock_exec_result.exit_code = 0
-        mock_exec_result.output = (b"Module 'product_connect' updated successfully", b"")
-        mock_container.exec_run.return_value = mock_exec_result
+    with patch("subprocess.run") as mock_run:
+        # First call: docker inspect succeeds (container is running)
+        # Second call: docker exec with odoo-bin command succeeds
+        mock_run.side_effect = [
+            MagicMock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            MagicMock(returncode=0, stdout="Module 'product_connect' updated successfully", stderr=""),  # docker exec
+        ]
 
         result = await odoo_update_module("product_connect")
 
         assert result["success"] is True
         assert "modules" in result
         assert "product_connect" in result["modules"]
-        assert result["operation"] == "update"
+        assert result["operation"] == "updated"
 
-        # Verify container.exec_run was called
-        mock_container.exec_run.assert_called_once()
-        call_args = mock_container.exec_run.call_args[0][0]
-        assert "/odoo/odoo-bin" in call_args
-        assert "-u" in call_args
-        assert "product_connect" in call_args
+        # Verify subprocess.run was called twice
+        assert mock_run.call_count == 2
+        
+        # Check the docker exec call
+        exec_call = mock_run.call_args_list[1][0][0]
+        exec_command = " ".join(exec_call)
+        assert "/odoo/odoo-bin" in exec_command
+        assert "-u product_connect" in exec_command
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
 @pytest.mark.docker
 async def test_docker_connection_failure() -> None:
-    with (
-        patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager") as mock_docker_manager_class,
-        patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_docker_manager_class2,
-    ):
-        # Mock Docker client manager to raise connection error
-        mock_docker_manager = MagicMock()
-        mock_docker_manager_class.return_value = mock_docker_manager
-        mock_docker_manager_class2.return_value = mock_docker_manager
-
-        # Mock Docker client ping to fail
-        mock_docker_manager.client.ping.side_effect = Exception("Cannot connect to Docker")
+    with patch("subprocess.run") as mock_run:
+        # Mock docker version command failing
+        mock_run.side_effect = FileNotFoundError("docker command not found")
 
         result = await odoo_status()
 

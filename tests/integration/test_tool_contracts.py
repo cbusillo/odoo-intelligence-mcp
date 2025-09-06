@@ -244,7 +244,7 @@ class TestToolContracts:
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 1
                 mock_run.return_value.stdout = ""
-                mock_run.return_value.stderr = "Error"
+                mock_run.return_value.stderr = "No such container: not found"
 
                 for tool_name, args in dangerous_inputs:
                     result = await handle_call_tool(tool_name, args)

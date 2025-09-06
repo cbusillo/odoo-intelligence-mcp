@@ -277,7 +277,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 return response
 
         # Handle model_info queries
-        if "model._table" in code and "model._description" in code and "model._fields.items()" in code:
+        if "model._table" in code and "model._description" in code and "sorted(model._fields.keys())" in code:
             # Check for invalid model
             if "invalid.model" in code or "nonexistent.model" in code:
                 return {
@@ -298,17 +298,25 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 "name": model_name,
                 "model": model_name,
                 "table": model_name.replace(".", "_"),
-                "description": f"{model_name.split('.')[-1].title()} Model",
+                "description": f"{model_name.split('.')[-1].title().replace('_', ' ')} Model",
                 "rec_name": "name",
                 "order": "id",
+                "total_field_count": 3,
                 "fields": {
                     "id": {"type": "integer", "string": "ID", "required": False, "readonly": True, "store": True},
                     "name": {"type": "char", "string": "Name", "required": True, "readonly": False, "store": True},
                     "email": {"type": "char", "string": "Email", "required": False, "readonly": False, "store": True},
                 },
-                "field_count": 3,
-                "methods": ["create", "write", "unlink", "search", "read", "compute_display_name"],
-                "method_count": 6,
+                "displayed_field_count": 3,
+                "pagination": {
+                    "page": 1,
+                    "page_size": 25,
+                    "total_count": 3,
+                    "has_next": False,
+                    "has_previous": False
+                },
+                "methods_sample": ["create", "write", "unlink", "search", "read"],
+                "total_method_count": 20,
                 "_inherit": ["mail.thread", "mail.activity.mixin"] if model_name == "account.move" else [],
                 "decorators": {"api.depends": 2, "api.constrains": 1} if model_name == "product.template" else {},
             }

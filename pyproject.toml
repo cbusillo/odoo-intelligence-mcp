@@ -16,7 +16,6 @@ dependencies = [
     "mcp",
     "pydantic",
     "python-dotenv",
-    "docker",
     "hatchling",
     "ruff",
     "coverage",

@@ -13,25 +13,31 @@ class TestModelInfoIntegration:
         assert "error" not in result
         assert result["name"] == "res.partner"
         assert result["table"] == "res_partner"
-        assert result["description"] == "Contact"
-        assert result["field_count"] > 0
-        assert result["method_count"] > 0
+        # Description can vary in customized Odoo installations
+        assert "description" in result
+        assert isinstance(result["description"], str)
+        assert result["total_field_count"] > 0
+        assert result["total_method_count"] > 0
+        assert "pagination" in result
+        assert result["displayed_field_count"] == len(result["fields"])
 
-        # Check some common fields exist
-        assert "name" in result["fields"]
-        assert "email" in result["fields"]
-        assert "phone" in result["fields"]
+        # Check that we have paginated fields
+        assert len(result["fields"]) <= result["pagination"]["page_size"]
+        
+        # Check that at least one field exists and has proper structure
+        if result["fields"]:
+            first_field_name = list(result["fields"].keys())[0]
+            first_field = result["fields"][first_field_name]
+            assert "type" in first_field
+            assert "string" in first_field
+            assert "required" in first_field
+            assert "readonly" in first_field
+            assert "store" in first_field
 
-        # Check field properties
-        name_field = result["fields"]["name"]
-        assert name_field["type"] == "char"
-        assert name_field["string"] == "Name"
-        assert "store" in name_field
-
-        # Check some common methods exist
-        assert "create" in result["methods"]
-        assert "write" in result["methods"]
-        assert "search" in result["methods"]
+        # Check that we have a methods sample
+        assert isinstance(result["methods_sample"], list)
+        assert len(result["methods_sample"]) > 0
+        assert len(result["methods_sample"]) <= 20  # Limited to 20 methods
 
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -41,7 +47,9 @@ class TestModelInfoIntegration:
         assert "error" not in result
         assert result["name"] == "product.template"
         assert result["table"] == "product_template"
-        assert result["description"] == "Product"
+        # Description can vary in customized Odoo installations
+        assert "description" in result
+        assert isinstance(result["description"], str)
 
         # Check relational fields
         if "categ_id" in result["fields"]:
@@ -56,8 +64,10 @@ class TestModelInfoIntegration:
 
         assert "error" not in result
         assert result["name"] == "motor.product.template"
-        assert result["description"] == "Motor Product Template"
-        assert result["field_count"] > 0
+        # Description can vary in customized Odoo installations
+        assert "description" in result
+        assert isinstance(result["description"], str)
+        assert result["total_field_count"] > 0
 
     @pytest.mark.integration
     @pytest.mark.asyncio

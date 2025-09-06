@@ -13,14 +13,15 @@ async def test_find_files_basic_pattern() -> None:
             mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
 
             mock_instance = mock_docker.return_value
-            mock_container = MagicMock()
-            mock_instance.get_container.return_value = mock_container
+            mock_instance.get_container.return_value = {"success": True}
 
             # Mock find command output
-            mock_exec_result = MagicMock()
-            mock_exec_result.exit_code = 0
-            mock_exec_result.output = b"/odoo/addons/sale/models/sale.py\n/odoo/addons/sale/models/sale_order.py"
-            mock_container.exec_run.return_value = mock_exec_result
+            mock_instance.exec_run.return_value = {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "/odoo/addons/sale/models/sale.py\n/odoo/addons/sale/models/sale_order.py",
+                "stderr": ""
+            }
 
             result = await find_files("*.py")
 
@@ -40,19 +41,21 @@ async def test_find_files_with_file_type() -> None:
             mock_paths.return_value = ["/odoo/addons"]
 
             mock_instance = mock_docker.return_value
-            mock_container = MagicMock()
-            mock_instance.get_container.return_value = mock_container
+            mock_instance.get_container.return_value = {"success": True}
 
-            mock_exec_result = MagicMock()
-            mock_exec_result.exit_code = 0
-            mock_exec_result.output = b"/odoo/addons/sale/views/sale_view.xml"
-            mock_container.exec_run.return_value = mock_exec_result
+            mock_instance.exec_run.return_value = {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "/odoo/addons/sale/views/sale_view.xml",
+                "stderr": ""
+            }
 
             result = await find_files("sale_view", file_type="xml")
 
             assert "results" in result
             # Check that file_type was added to pattern
-            mock_container.exec_run.assert_called_with(["find", "/odoo/addons", "-type", "f", "-name", "*sale_view*.xml"])
+            from unittest.mock import ANY
+            mock_instance.exec_run.assert_called_with(ANY, ["find", "/odoo/addons", "-type", "f", "-name", "*sale_view*.xml"])
 
 
 @pytest.mark.asyncio
@@ -62,13 +65,14 @@ async def test_find_files_no_matches() -> None:
             mock_paths.return_value = ["/odoo/addons"]
 
             mock_instance = mock_docker.return_value
-            mock_container = MagicMock()
-            mock_instance.get_container.return_value = mock_container
+            mock_instance.get_container.return_value = {"success": True}
 
-            mock_exec_result = MagicMock()
-            mock_exec_result.exit_code = 0
-            mock_exec_result.output = b""
-            mock_container.exec_run.return_value = mock_exec_result
+            mock_instance.exec_run.return_value = {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "",
+                "stderr": ""
+            }
 
             result = await find_files("nonexistent.py")
 
@@ -81,7 +85,7 @@ async def test_find_files_no_matches() -> None:
 async def test_find_files_container_error() -> None:
     with patch("odoo_intelligence_mcp.tools.filesystem.find_files.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        mock_instance.get_container.return_value = {"error": "Container not found"}
+        mock_instance.get_container.return_value = {"success": False, "error": "Container not found"}
 
         result = await find_files("*.py")
 
@@ -96,15 +100,16 @@ async def test_find_files_with_pagination() -> None:
             mock_paths.return_value = ["/odoo/addons"]
 
             mock_instance = mock_docker.return_value
-            mock_container = MagicMock()
-            mock_instance.get_container.return_value = mock_container
+            mock_instance.get_container.return_value = {"success": True}
 
             # Create many file results
             files = [f"/odoo/addons/module{i}/file{i}.py" for i in range(20)]
-            mock_exec_result = MagicMock()
-            mock_exec_result.exit_code = 0
-            mock_exec_result.output = "\n".join(files).encode()
-            mock_container.exec_run.return_value = mock_exec_result
+            mock_instance.exec_run.return_value = {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "\n".join(files),
+                "stderr": ""
+            }
 
             pagination = PaginationParams(page_size=5)
             result = await find_files("*.py", pagination=pagination)

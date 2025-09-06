@@ -187,16 +187,15 @@ class TestServerHandlers:
         mock_env = AsyncMock()
 
         # Mock docker client
-        mock_container = MagicMock()
-        mock_exec_result = MagicMock()
-        mock_exec_result.exit_code = 0
-        mock_exec_result.output = (b"Module updated successfully", b"")
-        mock_container.exec_run.return_value = mock_exec_result
-
-        mock_client = MagicMock()
-        mock_client.containers.get.return_value = mock_container
-
-        with patch("docker.from_env", return_value=mock_client):
+        # Mock subprocess.run for the module update operation
+        with patch("subprocess.run") as mock_run:
+            # First call: docker inspect to check container
+            # Second call: docker exec to update module
+            mock_run.side_effect = [
+                MagicMock(returncode=0, stdout="running", stderr=""),  # docker inspect
+                MagicMock(returncode=0, stdout="Module updated successfully", stderr=""),  # docker exec
+            ]
+            
             with patch(
                 "odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env
             ):

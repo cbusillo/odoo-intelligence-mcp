@@ -81,9 +81,13 @@ class TestPathTraversalPrevention:
         for path in dangerous_paths:
             with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
                 mock_manager = MagicMock()
-                mock_container = MagicMock()
-                mock_container.exec_run.return_value = (1, b"File not found")
-                mock_manager.get_container.return_value = mock_container
+                mock_manager.get_container.return_value = {"success": True}
+                mock_manager.exec_run.return_value = {
+                    "success": False,
+                    "stdout": "",
+                    "stderr": "File not found",
+                    "exit_code": 1
+                }
                 mock_docker.return_value = mock_manager
 
                 result = await read_odoo_file(path)
@@ -100,9 +104,13 @@ class TestPathTraversalPrevention:
         for path in allowed_paths:
             with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
                 mock_manager = MagicMock()
-                mock_container = MagicMock()
-                mock_container.exec_run.return_value = (0, b"file content")
-                mock_manager.get_container.return_value = mock_container
+                mock_manager.get_container.return_value = {"success": True}
+                # First exec_run call will be for checking if file exists
+                # Second will be for reading the file
+                mock_manager.exec_run.side_effect = [
+                    {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
+                    {"success": True, "stdout": "file content", "stderr": "", "exit_code": 0}  # cat succeeds
+                ]
                 mock_docker.return_value = mock_manager
 
                 result = await read_odoo_file(path)
@@ -122,17 +130,21 @@ class TestCommandInjectionPrevention:
         ]
 
         for dangerous_input in dangerous_inputs:
-            with patch("docker.from_env") as mock_docker_client:
-                mock_client = MagicMock()
-                mock_container = MagicMock()
-                mock_container.exec_run = MagicMock(return_value=(0, b"Module updated"))
-                mock_client.containers.get.return_value = mock_container
-                mock_docker_client.return_value = mock_client
+            with patch("subprocess.run") as mock_run:
+                # Mock successful container check and module update
+                mock_run.side_effect = [
+                    MagicMock(returncode=0, stdout="running", stderr=""),  # docker inspect
+                    MagicMock(returncode=0, stdout="Module updated", stderr=""),  # docker exec
+                ]
 
                 result = await odoo_update_module(dangerous_input)
 
-                if mock_container.exec_run.called:
-                    cmd = mock_container.exec_run.call_args[0][0]
+                # Check that subprocess.run was called for the module update
+                if mock_run.call_count >= 2:
+                    # Get the docker exec call (second call)
+                    exec_call = mock_run.call_args_list[1]
+                    cmd = exec_call[0][0]  # First positional argument is the command list
+                    
                     # The module name should be sanitized - only the safe part should be used
                     # Check that the dangerous part was stripped
                     safe_module = dangerous_input.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()

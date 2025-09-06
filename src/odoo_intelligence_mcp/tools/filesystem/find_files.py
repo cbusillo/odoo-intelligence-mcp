@@ -23,9 +23,9 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
 
     docker_manager = DockerClientManager()
     config = load_env_config()
-    container = docker_manager.get_container(config.web_container)
-    if isinstance(container, dict):
-        return {"success": False, "error": f"Container error: {container.get('error', 'Unknown error')}"}
+    container_result = docker_manager.get_container(config.web_container)
+    if not container_result.get("success"):
+        return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
 
     addon_paths = await get_addon_paths_from_container()
     results = []
@@ -37,10 +37,10 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
     for addon_path in addon_paths:
         # Use find command to search for files
         find_cmd = ["find", addon_path, "-type", "f", "-name", pattern]
-        exec_result = container.exec_run(find_cmd)
+        exec_result = docker_manager.exec_run(config.web_container, find_cmd)
 
-        if exec_result.exit_code == 0 and exec_result.output:
-            file_paths = exec_result.output.decode("utf-8").strip().split("\n")
+        if exec_result.get("success") and exec_result.get("exit_code") == 0 and exec_result.get("stdout"):
+            file_paths = exec_result.get("stdout", "").strip().split("\n")
             for file_path in file_paths:
                 if file_path:  # Skip empty lines
                     # Get relative path from addon base

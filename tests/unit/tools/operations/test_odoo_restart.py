@@ -5,20 +5,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_restart import odoo_restart
-from tests.fixtures import (
-    create_mock_handle_operation_success,
-    get_expected_container_names,
-)
+from tests.fixtures import get_expected_container_names
 
 
 def create_mock_docker_manager(
-    handle_operation_func: Callable[[str, str, Any], dict[str, Any]] | None = None,
+    restart_func: Callable[[str], dict[str, Any]] | None = None,
 ) -> tuple[MagicMock, MagicMock]:
     mock_manager = MagicMock()
     mock_instance = MagicMock()
 
-    if handle_operation_func:
-        mock_instance.handle_container_operation.side_effect = handle_operation_func
+    if restart_func:
+        mock_instance.restart_container.side_effect = restart_func
 
     mock_manager.return_value = mock_instance
     return mock_manager, mock_instance
@@ -29,8 +26,10 @@ async def test_odoo_restart_default_services() -> None:
     containers = get_expected_container_names()
     expected_services = [containers["web"], containers["shell"], containers["script_runner"]]
 
-    mock_handle_operation = create_mock_handle_operation_success()
-    mock_manager, _ = create_mock_docker_manager(mock_handle_operation)
+    def mock_restart(container_name: str) -> dict[str, Any]:
+        return {"success": True, "operation": "restart", "container": container_name}
+    
+    mock_manager, _ = create_mock_docker_manager(mock_restart)
 
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager", mock_manager):
         result = await odoo_restart()
@@ -46,8 +45,10 @@ async def test_odoo_restart_specific_services() -> None:
     containers = get_expected_container_names()
     expected_services = [containers["web"]]
 
-    mock_handle_operation = create_mock_handle_operation_success()
-    mock_manager, _ = create_mock_docker_manager(mock_handle_operation)
+    def mock_restart(container_name: str) -> dict[str, Any]:
+        return {"success": True, "operation": "restart", "container": container_name}
+    
+    mock_manager, _ = create_mock_docker_manager(mock_restart)
 
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager", mock_manager):
         result = await odoo_restart(services="web-1")
@@ -62,7 +63,7 @@ async def test_odoo_restart_container_not_found() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
 
-        mock_instance.handle_container_operation.return_value = {
+        mock_instance.restart_container.return_value = {
             "success": False,
             "error": "Container not found",
             "error_type": "NotFound",
@@ -84,16 +85,13 @@ async def test_odoo_restart_partial_success() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
 
-        def mock_handle_operation(container_name: str, _operation: str, func: Any) -> dict[str, Any]:
+        def mock_restart(container_name: str) -> dict[str, Any]:
             if "web-1" in container_name:
-                mock_container = MagicMock()
-                mock_container.status = "running"
-                func(mock_container)
-                return {"success": True, "operation": _operation, "container": container_name, "data": {"status": "running"}}
+                return {"success": True, "operation": "restart", "container": container_name}
             else:
                 return {"success": False, "error": "Container not found", "container": container_name}
 
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
+        mock_instance.restart_container.side_effect = mock_restart
         mock_manager.return_value = mock_instance
 
         result = await odoo_restart(services="web-1,fake-service")
@@ -111,17 +109,11 @@ async def test_odoo_restart_exception_handling() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
 
-        def mock_handle_operation(container_name: str, _operation: str, func: Any) -> dict[str, Any]:
+        def mock_restart(container_name: str) -> dict[str, Any]:
             # Simulate exception in restart
-            mock_container = MagicMock()
-            mock_container.restart.side_effect = Exception("Docker API error")
-            try:
-                func(mock_container)
-                return {"success": True, "operation": _operation, "container": container_name, "data": {"status": "running"}}
-            except Exception as e:
-                return {"success": False, "error": str(e), "error_type": type(e).__name__, "container": container_name}
+            return {"success": False, "error": "Docker API error", "error_type": "Exception", "container": container_name}
 
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
+        mock_instance.restart_container.side_effect = mock_restart
         mock_manager.return_value = mock_instance
 
         result = await odoo_restart(services="web-1")
@@ -137,11 +129,11 @@ async def test_odoo_restart_service_name_sanitization() -> None:
 
         called_services = []
 
-        def mock_handle_operation(container_name: str, _operation: str, _func: Any) -> dict[str, Any]:
+        def mock_restart(container_name: str) -> dict[str, Any]:
             called_services.append(container_name)
-            return {"success": True, "operation": _operation, "container": container_name, "data": {"status": "running"}}
+            return {"success": True, "operation": "restart", "container": container_name}
 
-        mock_instance.handle_container_operation.side_effect = mock_handle_operation
+        mock_instance.restart_container.side_effect = mock_restart
         mock_manager.return_value = mock_instance
 
         # Test with extra spaces and mixed formats

@@ -17,9 +17,8 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
     container_name = config.script_runner_container
 
     container_result = docker_manager.get_container(container_name)
-    if isinstance(container_result, dict):
-        return container_result
-    container = container_result
+    if not container_result.get("success"):
+        return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
 
     # Get addon paths from the container
     container_paths = await get_addon_paths_from_container()
@@ -37,11 +36,11 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
         "exit 1",
     ]
 
-    exec_result = container.exec_run(check_cmd)
-    if exec_result.exit_code != 0:
+    exec_result = docker_manager.exec_run(container_name, check_cmd)
+    if not exec_result.get("success") or exec_result.get("exit_code") != 0:
         return {"error": f"Module {module_name} not found in addon paths: {container_paths}"}
 
-    module_path = exec_result.output.decode("utf-8").strip()
+    module_path = exec_result.get("stdout", "").strip()
 
     # Analyze module structure in container
     analyze_cmd = [
@@ -110,13 +109,13 @@ print(json.dumps(structure))
 """,
     ]
 
-    exec_result = container.exec_run(analyze_cmd)
-    if exec_result.exit_code != 0:
-        error_msg = exec_result.output.decode("utf-8") if exec_result.output else "Failed to analyze module structure"
+    exec_result = docker_manager.exec_run(container_name, analyze_cmd)
+    if not exec_result.get("success") or exec_result.get("exit_code") != 0:
+        error_msg = exec_result.get("stdout", "") or exec_result.get("stderr", "") or "Failed to analyze module structure"
         return {"error": f"Failed to analyze module {module_name}: {error_msg}"}
 
     try:
-        structure = json.loads(exec_result.output.decode("utf-8"))
+        structure = json.loads(exec_result.get("stdout", ""))
     except json.JSONDecodeError as e:
         return {"error": f"Failed to parse module structure: {e}"}
 

@@ -37,22 +37,26 @@ async def test_get_addon_dependencies_success() -> None:
         mock_docker_manager_class.return_value = mock_docker_manager
 
         # Mock container
-        mock_container = MagicMock()
-        mock_docker_manager.get_container.return_value = mock_container
+        mock_docker_manager.get_container.return_value = {"success": True}
 
         # Mock successful manifest read and empty dependent addons listing
-        def mock_exec_run(cmd: list[str]) -> MagicMock:
+        def mock_exec_run(container_name: str, cmd: list[str]) -> dict:
             if cmd == ["cat", "/opt/project/addons/test_addon/__manifest__.py"]:
-                mock_result = MagicMock()
-                mock_result.exit_code = 0
-                mock_result.output.decode.return_value = mock_manifest_content
-                return mock_result
+                return {
+                    "success": True,
+                    "exit_code": 0,
+                    "stdout": mock_manifest_content,
+                    "stderr": ""
+                }
             else:  # ls command for dependent addons
-                mock_result = MagicMock()
-                mock_result.exit_code = 1  # No other addons found
-                return mock_result
+                return {
+                    "success": False,
+                    "exit_code": 1,
+                    "stdout": "",
+                    "stderr": ""
+                }
 
-        mock_container.exec_run.side_effect = mock_exec_run
+        mock_docker_manager.exec_run.side_effect = mock_exec_run
 
         result = await get_addon_dependencies(addon_name)
 
@@ -104,22 +108,26 @@ async def test_get_addon_dependencies_basic_only() -> None:
         mock_docker_manager_class.return_value = mock_docker_manager
 
         # Mock container
-        mock_container = MagicMock()
-        mock_docker_manager.get_container.return_value = mock_container
+        mock_docker_manager.get_container.return_value = {"success": True}
 
         # Mock successful manifest read and empty dependent addons listing
-        def mock_exec_run(cmd: list[str]) -> MagicMock:
+        def mock_exec_run(container_name: str, cmd: list[str]) -> dict:
             if cmd == ["cat", "/opt/project/addons/simple_addon/__manifest__.py"]:
-                mock_result = MagicMock()
-                mock_result.exit_code = 0
-                mock_result.output.decode.return_value = mock_manifest_content
-                return mock_result
+                return {
+                    "success": True,
+                    "exit_code": 0,
+                    "stdout": mock_manifest_content,
+                    "stderr": ""
+                }
             else:  # ls command for dependent addons
-                mock_result = MagicMock()
-                mock_result.exit_code = 1  # No other addons found
-                return mock_result
+                return {
+                    "success": False,
+                    "exit_code": 1,
+                    "stdout": "",
+                    "stderr": ""
+                }
 
-        mock_container.exec_run.side_effect = mock_exec_run
+        mock_docker_manager.exec_run.side_effect = mock_exec_run
 
         result = await get_addon_dependencies(addon_name)
 

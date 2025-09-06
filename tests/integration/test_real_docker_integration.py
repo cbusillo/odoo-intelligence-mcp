@@ -49,8 +49,8 @@ async def test_docker_timeout_handling(mock_docker_run: type[MockDockerRun]) -> 
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_docker_command_not_found() -> None:
-    with patch("odoo_intelligence_mcp.utils.docker_utils.docker") as mock_docker:
-        mock_docker.from_env.side_effect = FileNotFoundError("docker command not found")
+    with patch("subprocess.run") as mock_run:
+        mock_run.side_effect = FileNotFoundError("docker command not found")
         result = await handle_call_tool("odoo_status", {})
 
         # Should handle gracefully and return error

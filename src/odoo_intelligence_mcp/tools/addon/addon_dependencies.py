@@ -15,13 +15,13 @@ def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
     try:
         docker_manager = DockerClientManager()
         config = load_env_config()
-        container = docker_manager.get_container(config.web_container)
-        if isinstance(container, dict):
+        container_result = docker_manager.get_container(config.web_container)
+        if not container_result.get("success"):
             return None
 
-        exec_result = container.exec_run(["cat", manifest_path])
-        if exec_result.exit_code == 0:
-            manifest_content = exec_result.output.decode("utf-8")
+        exec_result = docker_manager.exec_run(config.web_container, ["cat", manifest_path])
+        if exec_result.get("success") and exec_result.get("exit_code") == 0:
+            manifest_content = exec_result.get("stdout", "")
             return ast.literal_eval(manifest_content)
     except (SyntaxError, ValueError):
         return None
@@ -65,17 +65,17 @@ def _find_dependent_addons(addon_name: str, addon_paths: list[str]) -> list[dict
 
     docker_manager = DockerClientManager()
     config = load_env_config()
-    container = docker_manager.get_container(config.web_container)
-    if isinstance(container, dict):
+    container_result = docker_manager.get_container(config.web_container)
+    if not container_result.get("success"):
         return addons_depending_on_this
 
     for base_path in addon_paths:
         # List directories in base_path
-        list_result = container.exec_run(["ls", "-d", f"{base_path}/*/"])
-        if list_result.exit_code != 0:
+        list_result = docker_manager.exec_run(config.web_container, ["ls", "-d", f"{base_path}/*/"])
+        if not list_result.get("success") or list_result.get("exit_code") != 0:
             continue
 
-        addon_dirs = list_result.output.decode("utf-8").strip().split("\n")
+        addon_dirs = list_result.get("stdout", "").strip().split("\n")
 
         for addon_dir_raw in addon_dirs:
             addon_dir = addon_dir_raw.rstrip("/")

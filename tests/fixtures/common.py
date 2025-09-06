@@ -161,12 +161,14 @@ def assert_model_info_response(response: dict[str, Any], model_name: str) -> Non
     assert "description" in response
     assert "fields" in response
     assert isinstance(response["fields"], dict)
-    assert "field_count" in response
-    assert response["field_count"] == len(response["fields"])
-    assert "methods" in response
-    assert isinstance(response["methods"], list)
-    assert "method_count" in response
-    assert response["method_count"] == len(response["methods"])
+    assert "displayed_field_count" in response
+    assert response["displayed_field_count"] == len(response["fields"])
+    assert "total_field_count" in response
+    assert "methods_sample" in response
+    assert isinstance(response["methods_sample"], list)
+    assert "total_method_count" in response
+    assert response["total_method_count"] >= len(response["methods_sample"])
+    assert "pagination" in response
 
 
 def create_mock_registry(models: dict[str, MagicMock] | None = None) -> MagicMock:

@@ -23,6 +23,9 @@ async def test_get_model_info_basic(mock_odoo_env: MagicMock) -> None:
     assert result["rec_name"] == "name"
     assert "order" in result
     assert result["order"] == "id"
+    assert "pagination" in result
+    assert result["pagination"]["page"] == 1
+    assert result["pagination"]["page_size"] == 25
     assert_model_info_response(result, "res.partner")
 
 
@@ -76,15 +79,15 @@ async def test_get_model_info_with_methods(mock_odoo_env: MagicMock) -> None:
 
     result = await get_model_info(mock_odoo_env, model_name)
 
-    assert "methods" in result
-    assert isinstance(result["methods"], list)
-    assert len(result["methods"]) > 0
-    assert "method_count" in result
-    assert result["method_count"] == len(result["methods"])
+    assert "methods_sample" in result
+    assert isinstance(result["methods_sample"], list)
+    assert len(result["methods_sample"]) > 0
+    assert "total_method_count" in result
+    assert result["total_method_count"] >= len(result["methods_sample"])
 
     expected_methods = ["create", "write", "unlink", "search", "read"]
     for method in expected_methods:
-        assert method in result["methods"], f"Expected method '{method}' not found in methods"
+        assert method in result["methods_sample"], f"Expected method '{method}' not found in methods"
 
 
 @pytest.mark.asyncio
@@ -96,7 +99,7 @@ async def test_get_model_info_with_inheritance(mock_odoo_env: MagicMock) -> None
     assert "name" in result
     assert result["name"] == model_name
     assert "fields" in result
-    assert "methods" in result
+    assert "methods_sample" in result
     assert "_inherit" in result
     assert isinstance(result["_inherit"], list)
     assert len(result["_inherit"]) > 0

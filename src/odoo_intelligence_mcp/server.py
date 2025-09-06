@@ -53,11 +53,18 @@ odoo_env_manager = HostOdooEnvironmentManager()
 
 
 async def _handle_model_info(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
-    return await get_model_info(env, get_required(arguments, "model_name"))
+    pagination = PaginationParams.from_arguments(arguments)
+    # Use smaller default page size to prevent huge responses
+    if pagination.page_size == 100 and "page_size" not in arguments:
+        pagination.page_size = 25
+    return await get_model_info(env, get_required(arguments, "model_name"), pagination)
 
 
 async def _handle_search_models(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
+    # Use smaller default page size to prevent huge responses
+    if pagination.page_size == 100 and "page_size" not in arguments:
+        pagination.page_size = 25
     return await search_models(env, get_required(arguments, "pattern"), pagination)
 
 
@@ -79,6 +86,9 @@ async def _handle_performance_analysis(env: CompatibleEnvironment, arguments: di
 async def _handle_pattern_analysis(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pattern_type = get_optional_str(arguments, "pattern_type", "all")
     pagination = PaginationParams.from_arguments(arguments)
+    # Use smaller default page size to prevent huge responses
+    if pagination.page_size == 100 and "page_size" not in arguments:
+        pagination.page_size = 25
     return await analyze_patterns(env, pattern_type, pagination)
 
 
