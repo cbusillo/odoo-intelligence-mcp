@@ -80,7 +80,8 @@ class DockerClientManager:
         except Exception as e:
             return self._create_error_response(str(e), type(e).__name__, container_name)
 
-    def exec_run(self, container_name: str, cmd: list[str] | str, **kwargs: Any) -> dict[str, Any]:
+    @staticmethod
+    def exec_run(container_name: str, cmd: list[str] | str, **kwargs: Any) -> dict[str, Any]:
         try:
             # Build docker exec command
             if isinstance(cmd, str):

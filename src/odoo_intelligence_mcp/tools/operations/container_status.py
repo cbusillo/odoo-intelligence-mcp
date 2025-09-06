@@ -53,10 +53,8 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
                         "state": state,
                         "id": state.get("Id", "unknown")[:12] if state.get("Id") else "unknown",
                         "created": state.get("Created", "unknown"),
+                        "image": state.get("Config", {}).get("Image", "unknown") if isinstance(state, dict) else "unknown",
                     }
-
-                    # Try to get image info
-                    verbose_info["image"] = state.get("Config", {}).get("Image", "unknown") if isinstance(state, dict) else "unknown"
 
                     container_info.update(verbose_info)
 

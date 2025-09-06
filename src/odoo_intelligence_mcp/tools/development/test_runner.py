@@ -20,9 +20,9 @@ async def run_tests(
         config = load_env_config()
         container_name = config.script_runner_container
 
-        # Get container
+        # Check if container exists and is running
         container_result = docker_manager.get_container(container_name)
-        if isinstance(container_result, dict):
+        if not container_result.get("success", False):
             # Add helpful hint to the error response
             if "not found" in str(container_result.get("error", "")).lower():
                 container_result["hint"] = (
@@ -30,8 +30,6 @@ async def run_tests(
                     "or run 'docker compose up -d script-runner' to start the script-runner service"
                 )
             return container_result
-
-        container = container_result
 
         # Build test target specification
         test_target = module
@@ -68,17 +66,18 @@ async def run_tests(
             cmd.extend(["--test-tags", test_tags])
 
         # Execute command in container
-        exec_result = container.exec_run(
-            cmd,
-            demux=True,
-        )
+        exec_result = docker_manager.exec_run(container_name, cmd)
+        
+        if not exec_result.get("success", False):
+            return exec_result
 
-        exit_code = exec_result.exit_code
-        stdout, stderr = exec_result.output
+        exit_code = exec_result.get("exit_code", 1)
+        stdout = exec_result.get("stdout", "")
+        stderr = exec_result.get("stderr", "")
 
-        # Decode output
-        stdout_str = stdout.decode("utf-8") if stdout else ""
-        stderr_str = stderr.decode("utf-8") if stderr else ""
+        # Output is already strings from exec_run
+        stdout_str = stdout if stdout else ""
+        stderr_str = stderr if stderr else ""
 
         # Combine output
         output = stdout_str + "\n" + stderr_str

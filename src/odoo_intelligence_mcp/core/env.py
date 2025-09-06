@@ -155,7 +155,7 @@ def load_env_config() -> EnvConfig:
     # Pydantic BaseSettings will automatically load from env vars and .env file
     if env_file_path:
         # Create config with custom env file path
-        config = EnvConfig(_env_file=env_file_path)
+        config = EnvConfig()
         # Store the env file path for later access (for _get_project_directory)
         config.__dict__["_env_file"] = Path(env_file_path)
         return config
