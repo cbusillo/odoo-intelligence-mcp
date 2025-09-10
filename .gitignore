@@ -194,4 +194,4 @@ cython_debug/
 /test_*
 /temp_*
 
-
+*.local.*
