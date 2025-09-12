@@ -3,14 +3,46 @@ from typing import Any
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
 from ...type_defs.odoo_types import CompatibleEnvironment
 from ...utils.error_utils import handle_tool_error, validate_method_name
+from ..ast import build_ast_index
 
 
 @handle_tool_error
-async def find_method_implementations(env: CompatibleEnvironment, method_name: str, pagination: PaginationParams) -> dict[str, Any]:
+async def find_method_implementations(
+    env: CompatibleEnvironment, method_name: str, pagination: PaginationParams, mode: str = "auto"
+) -> dict[str, Any]:
     validate_method_name(method_name)
 
     # Use pagination page_size to limit collection
     max_results = pagination.page_size
+
+    if mode == "fs":
+        idx = await build_ast_index()
+        if not isinstance(idx, dict) or "models" not in idx:
+            return {"success": False, "error": "AST index unavailable", "error_type": "AstIndexError"}
+        implementations: list[dict[str, Any]] = []
+        for model_name, meta in idx["models"].items():
+            methods = meta.get("methods", [])
+            if method_name in methods:
+                implementations.append(
+                    {
+                        "model": model_name,
+                        "module": meta.get("module", ""),
+                        "signature": f"{method_name}(self, *args, **kwargs)",
+                        "doc": "",
+                        "source_preview": f"# static_ast: {meta.get('file', '')}",
+                        "has_super": False,
+                        "source": "static_ast",
+                    }
+                )
+        paginated_results = paginate_dict_list(implementations, pagination, search_fields=["model", "module", "signature"])
+        return validate_response_size(
+            {
+                "method_name": method_name,
+                "implementations": paginated_results.to_dict(),
+                "mode_used": "fs",
+                "data_quality": "approximate",
+            }
+        )
 
     code = (
         """
@@ -112,14 +144,19 @@ result = implementations  # Limited collection
 """
     )
 
-    implementations = await env.execute_code(code)
+    implementations: object = await env.execute_code(code)
 
     if isinstance(implementations, dict) and "error" in implementations:
         return implementations
 
+    # Validate and narrow type for static checkers
+    from typing import cast
+    if not isinstance(implementations, list):
+        return {"success": False, "error": "Unexpected response type from environment", "error_type": "TypeError"}
+    impl_list = cast(list[dict[str, Any]], implementations)
+
     # Apply pagination
-    assert isinstance(implementations, list)  # Type assertion for PyCharm
-    paginated_results = paginate_dict_list(implementations, pagination, search_fields=["model", "module", "signature"])
+    paginated_results = paginate_dict_list(impl_list, pagination, search_fields=["model", "module", "signature"])
 
     result = {"method_name": method_name, "implementations": paginated_results.to_dict()}
 

@@ -158,7 +158,7 @@ class OdooStaticAnalyzer:
 
         info["methods"][node.name] = method_info
 
-    def _analyze_decorator(self, node: ast.AST, source: str) -> dict[str, Any] | None:
+    def _analyze_decorator(self, node: ast.expr, source: str) -> dict[str, Any] | None:
         if isinstance(node, ast.Name):
             return {"name": node.id}
         elif isinstance(node, ast.Attribute):
