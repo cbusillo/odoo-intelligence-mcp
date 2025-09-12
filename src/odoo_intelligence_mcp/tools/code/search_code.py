@@ -1,92 +1,126 @@
 import re
 from typing import Any
 
+from ...core.env import load_env_config
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
+from ...utils.docker_utils import DockerClientManager
 
 
-async def search_code(pattern: str, file_type: str = "py", pagination: PaginationParams | None = None) -> dict[str, Any]:
+async def search_code(
+    pattern: str,
+    file_type: str = "py",
+    pagination: PaginationParams | None = None,
+    roots: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    FS-first code search that does NOT boot Odoo.
+
+    - Scans the filesystem inside the web container across provided roots or
+      ODOO_ADDONS_PATH directories.
+    - Returns up to 100 matches with file, line, match, and a short context.
+    """
+
     if pagination is None:
         pagination = PaginationParams()
 
     try:
-        # Validate regex pattern
         re.compile(pattern)
     except re.error as e:
-        return {"error": f"Invalid regex pattern: {e!s}"}
+        return {"success": False, "error": f"Invalid regex pattern: {e!s}", "error_type": "RegexError"}
 
-    # Use Python script execution in container for more reliable search
-    from ...core.env import HostOdooEnvironmentManager
+    # Pick search roots
+    config = load_env_config()
+    if roots:
+        search_roots = [p for p in roots if isinstance(p, str) and p.strip()]
+    else:
+        search_roots = [p.strip() for p in config.addons_path.split(",") if p.strip()]
 
-    env_manager = HostOdooEnvironmentManager()
-    env = await env_manager.get_environment()
+    if not search_roots:
+        return {
+            "success": False,
+            "error": "No search roots provided and ODOO_ADDONS_PATH is empty",
+            "error_type": "NoSearchRoots",
+        }
 
-    search_code_script = f"""
-import os
-import re
-import glob
+    # Build a container-side Python script to perform the search
+    # We prefer Python over grep to keep consistent context formatting and avoid shell escaping issues.
 
-pattern = {pattern!r}
-file_type = {file_type!r}
+    # noinspection SpellCheckingInspection
+    py = f"""
+import os, re, json
+pattern = re.compile({pattern!r})
+file_ext = {file_type!r}.lstrip('.')
+roots = {search_roots!r}
 results = []
 
-# Get addon paths from Odoo configuration
-addon_paths = []
-try:
-    import odoo.tools.config as odoo_config
-    for path in odoo_config.get('addons_path', '').split(','):
-        path = path.strip()
-        if os.path.exists(path):
-            addon_paths.append(path)
-except:
-    pass
-
-# If no addon paths from config, use default locations
-if not addon_paths:
-    default_paths = ['/opt/project/addons', '/odoo/addons', '/volumes/enterprise']
-    addon_paths = [p for p in default_paths if os.path.exists(p)]
-
-# Search for files and patterns
-for addon_path in addon_paths:
+def scan_file(path):
     try:
-        # Find all files with the specified extension
-        for file_path in glob.glob(os.path.join(addon_path, '**', f'*.{{file_type}}'), recursive=True):
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    lines = f.readlines()
-                    for line_num, line in enumerate(lines, 1):
-                        if re.search(pattern, line):
-                            results.append({{
-                                'file': file_path,
-                                'line': line_num,
-                                'match': line.strip(),
-                                'context': line.strip()
-                            }})
-                            if len(results) >= 100:  # Limit results
-                                break
-            except Exception:
-                continue
-            if len(results) >= 100:
-                break
+        with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+            for i, line in enumerate(f, 1):
+                if pattern.search(line):
+                    # Build a short inline context (trimmed line)
+                    results.append({{
+                        'file': path,
+                        'line': i,
+                        'match': line.strip()[:400]
+                    }})
+                    if len(results) >= 100:
+                        return True
     except Exception:
+        pass
+    return False
+
+for root in roots:
+    if not os.path.exists(root):
         continue
+    for dirpath, _dirnames, filenames in os.walk(root):
+        for fn in filenames:
+            if file_ext and not fn.lower().endswith('.' + file_ext.lower()):
+                continue
+            if scan_file(os.path.join(dirpath, fn)):
+                break
+        if len(results) >= 100:
+            break
     if len(results) >= 100:
         break
 
-result = results[:100]  # Ensure we don't exceed limits
+print(json.dumps(results))
 """
 
+    docker = DockerClientManager()
+    container = config.web_container
+
+    # Execute the search inside the web container
+    exec_result = docker.exec_run(container, ["python3", "-c", py], timeout=60)
+    if not exec_result.get("success"):
+        return {
+            "success": False,
+            "error": exec_result.get("stderr") or exec_result.get("output", "Search failed"),
+            "error_type": exec_result.get("error", "SearchError"),
+            "container": container,
+        }
+
     try:
-        output = await env.execute_code(search_code_script)
-
-        if isinstance(output, dict) and "error" in output:
-            return output
-
-        results = output if isinstance(output, list) else []
-
-        # Apply pagination
-        paginated_results = paginate_dict_list(results, pagination, search_fields=["file", "match", "context"])
-
-        return validate_response_size(paginated_results.to_dict())
-
+        raw = exec_result.get("stdout", "[]").strip() or "[]"
+        results = __import__("json").loads(raw)
     except Exception as e:
-        return {"success": False, "error": str(e), "error_type": type(e).__name__, "pattern": pattern, "file_type": file_type}
+        return {
+            "success": False,
+            "error": f"Failed to parse results: {e!s}",
+            "error_type": type(e).__name__,
+            "container": container,
+        }
+
+    # Apply pagination
+    paginated = paginate_dict_list(results, pagination, search_fields=["file", "match"])
+    return validate_response_size(
+        {
+            "success": True,
+            "pattern": pattern,
+            "file_type": file_type,
+            "roots": search_roots,
+            "results": paginated.to_dict(),
+            "mode_used": "fs",
+            "data_quality": "approximate",
+        }
+    )

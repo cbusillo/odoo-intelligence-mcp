@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -8,53 +8,42 @@ from odoo_intelligence_mcp.tools.code.search_code import search_code
 
 @pytest.mark.asyncio
 async def test_search_code_basic_pattern() -> None:
-    # Mock environment with search results
-    mock_env = MagicMock()
-    mock_env.execute_code = AsyncMock(
-        return_value=[
-            {
-                "file": "/addons/test_module/models/test_model.py",
-                "line": 5,
-                "match": "    def test_method(self):",
-                "context": "    def test_method(self):",
-            }
-        ]
+    # Mock container exec result
+    mock_stdout = (
+        "[{'file': '/addons/test_module/models/test_model.py', 'line': 5,"
+        " 'match': '    def test_method(self):'}]".replace("'", '"')
     )
 
-    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
-        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
+        mock_exec.return_value = {"success": True, "stdout": mock_stdout, "stderr": "", "exit_code": 0}
 
         result = await search_code("test_method")
 
-    assert "items" in result
-    assert "pagination" in result
-    assert len(result["items"]) == 1
-    assert result["items"][0]["line"] == 5
-    assert "test_method" in result["items"][0]["match"]
+    assert "results" in result and "items" in result["results"]
+    assert "pagination" in result["results"]
+    assert len(result["results"]["items"]) == 1
+    assert result["results"]["items"][0]["line"] == 5
+    assert "test_method" in result["results"]["items"][0]["match"]
 
 
 @pytest.mark.asyncio
 async def test_search_code_xml_files() -> None:
-    # Mock environment with XML search results
-    mock_env = MagicMock()
-    mock_env.execute_code = AsyncMock(
-        return_value=[
-            {
-                "file": "/addons/module/views/view.xml",
-                "line": 5,
-                "match": '        <field name="model">test.model</field>',
-                "context": '        <field name="model">test.model</field>',
-            }
-        ]
-    )
+    import json
+    mock_stdout = json.dumps([
+        {
+            "file": "/addons/module/views/view.xml",
+            "line": 5,
+            "match": '        <field name="model">test.model</field>',
+        }
+    ])
 
-    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
-        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
+        mock_exec.return_value = {"success": True, "stdout": mock_stdout, "stderr": "", "exit_code": 0}
 
         result = await search_code("test\\.model", "xml")
 
-    assert "items" in result
-    assert "pagination" in result
+    assert "results" in result and "items" in result["results"]
+    assert "pagination" in result["results"]
 
 
 @pytest.mark.asyncio
@@ -71,34 +60,28 @@ async def test_search_code_with_pagination() -> None:
             }
         )
 
-    mock_env = MagicMock()
-    mock_env.execute_code = AsyncMock(return_value=mock_results)
-
-    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
-        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+    mock_json = str(mock_results).replace("'", '"')
+    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
+        mock_exec.return_value = {"success": True, "stdout": mock_json, "stderr": "", "exit_code": 0}
 
         pagination = PaginationParams(limit=10, offset=0)
         result = await search_code("test_method", pagination=pagination)
 
-    assert "items" in result
-    assert "pagination" in result
-    assert result["pagination"]["page_size"] == 10
+    assert "results" in result and "items" in result["results"]
+    assert "pagination" in result["results"]
+    assert result["results"]["pagination"]["page_size"] == 10
 
 
 @pytest.mark.asyncio
 async def test_search_code_no_matches() -> None:
-    # Mock environment with no results
-    mock_env = MagicMock()
-    mock_env.execute_code = AsyncMock(return_value=[])
-
-    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
-        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
+        mock_exec.return_value = {"success": True, "stdout": "[]", "stderr": "", "exit_code": 0}
 
         result = await search_code("nonexistent_pattern")
 
-    assert "items" in result
-    assert len(result["items"]) == 0
-    assert result["pagination"]["total_count"] == 0
+    assert "results" in result and "items" in result["results"]
+    assert len(result["results"]["items"]) == 0
+    assert result["results"]["pagination"]["total_count"] == 0
 
 
 @pytest.mark.asyncio
@@ -112,12 +95,14 @@ async def test_search_code_invalid_regex() -> None:
 
 @pytest.mark.asyncio
 async def test_search_code_file_read_error() -> None:
-    # Mock environment that returns an error
-    mock_env = MagicMock()
-    mock_env.execute_code = AsyncMock(return_value={"error": "Failed to read file", "error_type": "IOError"})
-
-    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
-        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
+        mock_exec.return_value = {
+            "success": False,
+            "stdout": "",
+            "stderr": "Failed to read file",
+            "error": "IOError",
+            "exit_code": 1,
+        }
 
         result = await search_code("test_pattern")
 
@@ -127,25 +112,17 @@ async def test_search_code_file_read_error() -> None:
 
 @pytest.mark.asyncio
 async def test_search_code_javascript_files() -> None:
-    # Mock environment with JS search results
-    mock_env = MagicMock()
-    mock_env.execute_code = AsyncMock(
-        return_value=[
-            {
-                "file": "/addons/module/static/src/js/widget.js",
-                "line": 15,
-                "match": "    testFunction: function() {",
-                "context": "    testFunction: function() {",
-            }
-        ]
+    mock_stdout = (
+        "[{'file': '/addons/module/static/src/js/widget.js', 'line': 15,"
+        " 'match': '    testFunction: function() {'}]".replace("'", '"')
     )
 
-    with patch("odoo_intelligence_mcp.core.env.HostOdooEnvironmentManager") as mock_manager:
-        mock_manager.return_value.get_environment = AsyncMock(return_value=mock_env)
+    with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
+        mock_exec.return_value = {"success": True, "stdout": mock_stdout, "stderr": "", "exit_code": 0}
 
         result = await search_code("testFunction", "js")
 
-    assert "items" in result
-    assert len(result["items"]) == 1
-    assert result["items"][0]["file"].endswith(".js")
-    assert "testFunction" in result["items"][0]["match"]
+    assert "results" in result and "items" in result["results"]
+    assert len(result["results"]["items"]) == 1
+    assert result["results"]["items"][0]["file"].endswith(".js")
+    assert "testFunction" in result["results"]["items"][0]["match"]

@@ -60,7 +60,10 @@ class OdooAnalyzer(BaseService):
                     "summary": {"total_files": 0, "total_matches": 0},
                 }
 
-            organized_results = OdooAnalyzer._organize_search_results(search_results["results"])
+            # Handle both legacy (list) and paginated dict shapes
+            raw_matches = search_results["results"]
+            match_items = raw_matches.get("items") if isinstance(raw_matches, dict) else raw_matches
+            organized_results = OdooAnalyzer._organize_search_results(match_items or [])
 
             return {
                 "pattern": pattern,

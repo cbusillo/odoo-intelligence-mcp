@@ -2,10 +2,11 @@ from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
 from ...type_defs.odoo_types import CompatibleEnvironment
+from ..ast import build_ast_index
 
 
 async def search_decorators(
-    env: CompatibleEnvironment, decorator: str, pagination: PaginationParams | None = None
+    env: CompatibleEnvironment, decorator: str, pagination: PaginationParams | None = None, mode: str = "auto"
 ) -> dict[str, Any]:
     code = f"""
 import inspect
@@ -68,6 +69,33 @@ for model_name in model_names:
 
 result = {{"results": results}}
 """
+
+    if mode == "fs":
+        idx = await build_ast_index()
+        if not isinstance(idx, dict) or "models" not in idx:
+            return {"success": False, "error": "AST index unavailable", "error_type": "AstIndexError"}
+
+        results = []
+        for model_name, meta in idx["models"].items():
+            decs = meta.get("decorators", {})
+            matches = []
+            for method, lst in decs.items():
+                for d in lst:
+                    if d.get("type") == decorator:
+                        matches.append(
+                            {
+                                "method": method,
+                                "signature": f"{method}(self, *args, **kwargs)",
+                            }
+                        )
+                        break
+            if matches:
+                results.append({"model": model_name, "description": meta.get("description") or "", "methods": matches})
+
+        if pagination:
+            paginated_result = paginate_dict_list(results, pagination, ["model", "description"])
+            return {"decorator": decorator, "results": paginated_result.to_dict(), "mode_used": "fs", "data_quality": "approximate"}
+        return {"decorator": decorator, "results": results, "mode_used": "fs", "data_quality": "approximate"}
 
     try:
         result = await env.execute_code(code)

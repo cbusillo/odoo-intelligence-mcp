@@ -51,6 +51,16 @@ Containers are automatically derived from the prefix:
 - Web: `{prefix}-web-1` (file operations, logs)
 - Shell: `{prefix}-shell-1` (available for shell access)
 
+### Modes and fallbacks
+
+Many tools accept an optional `mode` parameter:
+- `auto` (default): normal behavior, may fall back to FS mode when available
+- `fs`: Odoo-less static analysis using AST over `ODOO_ADDONS_PATH`
+- `registry`: force runtime via Odoo shell/registry
+- `db`: reserved for future DB-only fallbacks (field_query)
+
+Enable structured error payloads when the registry fails by setting `ODOO_MCP_ENHANCED_ERRORS=true`.
+
 ### Using with Different Projects
 
 **Important**: Launch Claude Code from your Odoo project directory so the MCP server can find your `.env` file.

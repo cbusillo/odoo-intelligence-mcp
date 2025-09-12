@@ -31,6 +31,8 @@ class EnvConfig(BaseSettings):
     db_host: str = PydanticField(default="database", alias="ODOO_DB_HOST")
     db_port: str = PydanticField(default="5432", alias="ODOO_DB_PORT")
     addons_path: str = PydanticField(default="/opt/project/addons,/odoo/addons,/volumes/enterprise", alias="ODOO_ADDONS_PATH")
+    # Feature flags
+    enhanced_errors: bool = PydanticField(default=False, alias="ODOO_MCP_ENHANCED_ERRORS")
 
     @property
     def container_name(self) -> str:

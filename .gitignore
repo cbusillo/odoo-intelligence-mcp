@@ -194,4 +194,7 @@ cython_debug/
 /test_*
 /temp_*
 
-*.local.*
+*.local.*# Ignore IDE config
+.idea/
+# Ignore IDE config
+.idea/
