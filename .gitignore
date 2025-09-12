@@ -196,7 +196,5 @@ cython_debug/
 
 *.local.*# Ignore IDE config
 .idea/
-# Ignore IDE config
-.idea/
 
 *.local.*
