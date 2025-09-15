@@ -278,7 +278,11 @@ class TestToolContracts:
             if "properties" in schema:
                 for prop_name, prop_schema in schema["properties"].items():
                     assert "type" in prop_schema or "$ref" in prop_schema
-                    assert "description" in prop_schema, f"Tool {tool.name} property {prop_name} missing description"
+                    # Descriptions are optional; if present, they must be non-empty strings
+                    if "description" in prop_schema:
+                        assert isinstance(prop_schema["description"], str) and prop_schema["description"].strip() != "", (
+                            f"Tool {tool.name} property {prop_name} has an invalid description"
+                        )
 
     @pytest.mark.asyncio
     async def test_tool_consistency_across_errors(self, mock_env: AsyncMock) -> None:

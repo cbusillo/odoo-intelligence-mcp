@@ -9,9 +9,8 @@ from odoo_intelligence_mcp.tools.code.search_code import search_code
 @pytest.mark.asyncio
 async def test_search_code_basic_pattern() -> None:
     # Mock container exec result
-    mock_stdout = (
-        "[{'file': '/addons/test_module/models/test_model.py', 'line': 5,"
-        " 'match': '    def test_method(self):'}]".replace("'", '"')
+    mock_stdout = "[{'file': '/addons/test_module/models/test_model.py', 'line': 5, 'match': '    def test_method(self):'}]".replace(
+        "'", '"'
     )
 
     with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
@@ -29,13 +28,16 @@ async def test_search_code_basic_pattern() -> None:
 @pytest.mark.asyncio
 async def test_search_code_xml_files() -> None:
     import json
-    mock_stdout = json.dumps([
-        {
-            "file": "/addons/module/views/view.xml",
-            "line": 5,
-            "match": '        <field name="model">test.model</field>',
-        }
-    ])
+
+    mock_stdout = json.dumps(
+        [
+            {
+                "file": "/addons/module/views/view.xml",
+                "line": 5,
+                "match": '        <field name="model">test.model</field>',
+            }
+        ]
+    )
 
     with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:
         mock_exec.return_value = {"success": True, "stdout": mock_stdout, "stderr": "", "exit_code": 0}
@@ -113,8 +115,9 @@ async def test_search_code_file_read_error() -> None:
 @pytest.mark.asyncio
 async def test_search_code_javascript_files() -> None:
     mock_stdout = (
-        "[{'file': '/addons/module/static/src/js/widget.js', 'line': 15,"
-        " 'match': '    testFunction: function() {'}]".replace("'", '"')
+        "[{'file': '/addons/module/static/src/js/widget.js', 'line': 15, 'match': '    testFunction: function() {'}]".replace(
+            "'", '"'
+        )
     )
 
     with patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager.exec_run") as mock_exec:

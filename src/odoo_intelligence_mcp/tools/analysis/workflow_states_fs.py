@@ -33,9 +33,18 @@ async def analyze_workflow_states_fs(model_name: str, pagination: PaginationPara
     for method, lst in decs.items():
         for d in lst:
             if d.get("type") == "onchange":
-                button_actions.append({"method": method, "affects_field": "state", "signature": f"{method}(...)", "decorators": ["@api.onchange"]})
+                button_actions.append(
+                    {"method": method, "affects_field": "state", "signature": f"{method}(...)", "decorators": ["@api.onchange"]}
+                )
             if d.get("type") in ("depends", "constrains"):
-                automated_transitions.append({"method": method, "affects_field": "state", "signature": f"{method}(...)", "decorators": [f"@api.{d.get('type')}"]})
+                automated_transitions.append(
+                    {
+                        "method": method,
+                        "affects_field": "state",
+                        "signature": f"{method}(...)",
+                        "decorators": [f"@api.{d.get('type')}"],
+                    }
+                )
 
     paginated_transitions = paginate_dict_list(transitions, pagination, ["method"]) if transitions else None
     paginated_buttons = paginate_dict_list(button_actions, pagination, ["method"]) if button_actions else None

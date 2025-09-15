@@ -8,13 +8,13 @@ from ...utils.error_utils import handle_tool_error, validate_model_name
 @handle_tool_error
 async def get_model_info(env: CompatibleEnvironment, model_name: str, pagination: PaginationParams | None = None) -> dict[str, Any]:
     validate_model_name(model_name)
-    
+
     if pagination is None:
         pagination = PaginationParams(page_size=25)
-    
+
     start_idx = pagination.offset
     end_idx = start_idx + pagination.page_size
-    
+
     code = f"""
 model_name = {model_name!r}
 start_idx = {start_idx}

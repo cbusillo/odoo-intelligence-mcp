@@ -28,7 +28,7 @@ async def test_odoo_restart_default_services() -> None:
 
     def mock_restart(container_name: str) -> dict[str, Any]:
         return {"success": True, "operation": "restart", "container": container_name}
-    
+
     mock_manager, _ = create_mock_docker_manager(mock_restart)
 
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager", mock_manager):
@@ -47,7 +47,7 @@ async def test_odoo_restart_specific_services() -> None:
 
     def mock_restart(container_name: str) -> dict[str, Any]:
         return {"success": True, "operation": "restart", "container": container_name}
-    
+
     mock_manager, _ = create_mock_docker_manager(mock_restart)
 
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager", mock_manager):

@@ -97,8 +97,7 @@ def _enhance_registry_failure(env: CompatibleEnvironment, tool_name: str, result
 
         text_to_scan = error_msg + "\n" + _re.sub(r"\\s+", " ", str(result.get("stderr", "")))
         culprit_files = [
-            {"path": m.group(1), "line": (m.group(2) or "")}
-            for m in _re.finditer(r"(/[^:\s]+\.py)(?::(\d+))?", text_to_scan)
+            {"path": m.group(1), "line": (m.group(2) or "")} for m in _re.finditer(r"(/[^:\s]+\.py)(?::(\d+))?", text_to_scan)
         ]
 
         guidance = {
@@ -432,38 +431,27 @@ TOOL_HANDLERS = {
 }
 
 
+# noinspection Annotator
 @app.list_tools()
 async def handle_list_tools() -> list[Tool]:
-    # noinspection PyDataclass,Annotator
     return [
         Tool(
             name="addon_dependencies",
             description="Get addon dependencies",
             inputSchema=add_pagination_to_schema(
-                {
-                    "type": "object",
-                    "properties": {"addon_name": {"type": "string", "description": "Name of the addon to get dependencies for"}},
-                    "required": ["addon_name"],
-                }
+                {"type": "object", "properties": {"addon_name": {"type": "string"}}, "required": ["addon_name"]}
             ),
         ),
         Tool(
             name="search_code",
-            description="Regex search in addons (fs)",
+            description="Regex search (fs)",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
-                        "pattern": {
-                            "type": "string",
-                            "description": "Regex pattern",
-                        },
-                        "file_type": {"type": "string", "description": "File extension filter"},
-                        "roots": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of container directories to search; defaults to ODOO_ADDONS_PATH",
-                        },
+                        "pattern": {"type": "string"},
+                        "file_type": {"type": "string", "default": "py"},
+                        "roots": {"type": "array", "items": {"type": "string"}},
                     },
                     "required": ["pattern"],
                 }
@@ -471,50 +459,26 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="find_files",
-            description="Find files",
+            description="Find files (fs)",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
-                    "properties": {
-                        "pattern": {
-                            "type": "string",
-                            "description": "File pattern",
-                        },
-                        "file_type": {
-                            "type": "string",
-                            "description": "File extension filter",
-                        },
-                    },
+                    "properties": {"pattern": {"type": "string"}, "file_type": {"type": "string"}},
                     "required": ["pattern"],
                 }
             ),
         ),
         Tool(
             name="read_odoo_file",
-            description="Read files",
+            description="Read file (range/pattern)",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "File path",
-                    },
-                    "start_line": {
-                        "type": "integer",
-                        "description": "Start line",
-                    },
-                    "end_line": {
-                        "type": "integer",
-                        "description": "End line",
-                    },
-                    "pattern": {
-                        "type": "string",
-                        "description": "Search pattern",
-                    },
-                    "context_lines": {
-                        "type": "integer",
-                        "description": "Context lines",
-                    },
+                    "file_path": {"type": "string"},
+                    "start_line": {"type": "integer"},
+                    "end_line": {"type": "integer"},
+                    "pattern": {"type": "string"},
+                    "context_lines": {"type": "integer", "default": 5},
                 },
                 "required": ["file_path"],
             },
@@ -523,11 +487,7 @@ async def handle_list_tools() -> list[Tool]:
             name="module_structure",
             description="Get module structure",
             inputSchema=add_pagination_to_schema(
-                {
-                    "type": "object",
-                    "properties": {"module_name": {"type": "string", "description": "Name of the module to analyze"}},
-                    "required": ["module_name"],
-                }
+                {"type": "object", "properties": {"module_name": {"type": "string"}}, "required": ["module_name"]}
             ),
         ),
         Tool(
@@ -537,12 +497,8 @@ async def handle_list_tools() -> list[Tool]:
                 {
                     "type": "object",
                     "properties": {
-                        "method_name": {"type": "string", "description": "Name of the method to find"},
-                        "mode": {
-                            "type": "string",
-                            "description": "Execution mode",
-                            "enum": ["auto", "fs", "registry"],
-                        },
+                        "method_name": {"type": "string"},
+                        "mode": {"type": "string", "enum": ["auto", "fs", "registry"], "default": "auto"},
                     },
                     "required": ["method_name"],
                 }
@@ -555,16 +511,8 @@ async def handle_list_tools() -> list[Tool]:
                 {
                     "type": "object",
                     "properties": {
-                        "decorator": {
-                            "type": "string",
-                            "description": "Type of decorator to search for",
-                            "enum": ["depends", "constrains", "onchange", "create_multi"],
-                        },
-                        "mode": {
-                            "type": "string",
-                            "description": "Execution mode",
-                            "enum": ["auto", "fs", "registry"],
-                        },
+                        "decorator": {"type": "string", "enum": ["depends", "constrains", "onchange", "create_multi"]},
+                        "mode": {"type": "string", "enum": ["auto", "fs", "registry"], "default": "auto"},
                     },
                     "required": ["decorator"],
                 }
@@ -572,91 +520,53 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="execute_code",
-            description="Execute code",
-            inputSchema={
-                "type": "object",
-                "properties": {"code": {"type": "string", "description": "Python code to execute in Odoo environment"}},
-                "required": ["code"],
-            },
+            description="Execute Python (use sparingly)",
+            inputSchema={"type": "object", "properties": {"code": {"type": "string"}}, "required": ["code"]},
         ),
         Tool(
             name="permission_checker",
-            description="Check permissions",
+            description="Check CRUD permissions",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "user": {"type": "string", "description": "Username to check permissions for"},
-                    "model": {"type": "string", "description": "Model name to check permissions on"},
-                    "operation": {
-                        "type": "string",
-                        "description": "Operation to check permission for",
-                        "enum": ["read", "write", "create", "unlink"],
-                    },
-                    "record_id": {"type": "integer", "description": "Optional record ID to check specific record permissions"},
+                    "user": {"type": "string"},
+                    "model": {"type": "string"},
+                    "operation": {"type": "string", "enum": ["read", "write", "create", "unlink"]},
+                    "record_id": {"type": "integer"},
                 },
                 "required": ["user", "model", "operation"],
             },
         ),
         Tool(
             name="odoo_update_module",
-            description="Update modules",
+            description="Update/install modules",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "modules": {
-                        "type": "string",
-                        "description": "Module names",
-                    },
-                    "force_install": {
-                        "type": "boolean",
-                        "description": "Force install",
-                    },
-                },
+                "properties": {"modules": {"type": "string"}, "force_install": {"type": "boolean", "default": False}},
                 "required": ["modules"],
             },
         ),
         Tool(
             name="odoo_status",
-            description="Get status",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "verbose": {
-                        "type": "boolean",
-                        "description": "Show details",
-                    }
-                },
-                "required": [],
-            },
+            description="Show container/service status",
+            inputSchema={"type": "object", "properties": {"verbose": {"type": "boolean", "default": False}}, "required": []},
         ),
         Tool(
             name="odoo_restart",
             description="Restart containers",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "services": {
-                        "type": "string",
-                        "description": "Services",
-                    }
-                },
-            },
+            inputSchema={"type": "object", "properties": {"services": {"type": "string"}}},
         ),
         Tool(
             name="model_query",
-            description="Models: search|info|relationships|inheritance|view_usage (alias: list→search)",
+            description="Models: search|info|rels|inherit|view_usage",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
-                        "operation": {
-                            "type": "string",
-                            "description": "Type of query operation to perform",
-                            "enum": ["info", "search", "relationships", "inheritance", "view_usage", "list"],
-                        },
-                        "model_name": {"type": "string", "description": "Name of the model to query"},
-                        "pattern": {"type": "string", "description": "Search pattern for model search"},
-                        "mode": {"type": "string", "description": "Execution mode", "enum": ["auto", "fs", "registry"]},
+                        "operation": {"type": "string", "enum": ["info", "search", "relationships", "inheritance", "view_usage"]},
+                        "model_name": {"type": "string"},
+                        "pattern": {"type": "string"},
+                        "mode": {"type": "string", "enum": ["auto", "fs", "registry"], "default": "auto"},
                     },
                     "required": ["operation"],
                 }
@@ -664,14 +574,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="field_query",
-            description="Fields: usages|analyze_values|resolve_dynamic|dependencies|search_properties|search_type (alias: list→fields of model)",
+            description="Fields: usages|values|dynamic|deps|properties|type",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Type of field query operation to perform",
                             "enum": [
                                 "usages",
                                 "analyze_values",
@@ -679,18 +588,15 @@ async def handle_list_tools() -> list[Tool]:
                                 "dependencies",
                                 "search_properties",
                                 "search_type",
-                                "list",
                             ],
                         },
-                        "model": {"type": "string", "description": "Model name (deprecated, use model_name)"},
-                        "model_name": {"type": "string", "description": "Name of the model containing the field"},
-                        "field": {"type": "string", "description": "Field name (deprecated, use field_name)"},
-                        "field_name": {"type": "string", "description": "Name of the field to query"},
-                        "property": {"type": "string", "description": "Field property to search for"},
-                        "field_type": {"type": "string", "description": "Type of field to search for"},
-                        "domain": {"type": "array", "description": "Domain filter for field search"},
-                        "sample_size": {"type": "integer", "description": "Number of sample values to analyze"},
-                        "mode": {"type": "string", "description": "Execution mode", "enum": ["auto", "fs", "registry", "db"]},
+                        "model_name": {"type": "string"},
+                        "field_name": {"type": "string"},
+                        "property": {"type": "string"},
+                        "field_type": {"type": "string"},
+                        "domain": {"type": "array"},
+                        "sample_size": {"type": "integer", "default": 1000},
+                        "mode": {"type": "string", "enum": ["auto", "fs", "registry", "db"], "default": "auto"},
                     },
                     "required": ["operation"],
                 }
@@ -698,19 +604,15 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="analysis_query",
-            description="Analysis: performance|patterns|workflow (alias: inheritance→model_query)",
+            description="Analysis: performance|patterns|workflow",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
-                        "analysis_type": {
-                            "type": "string",
-                            "description": "Type of analysis to perform",
-                            "enum": ["performance", "patterns", "workflow", "inheritance"],
-                        },
-                        "model_name": {"type": "string", "description": "Name of the model to analyze"},
-                        "pattern_type": {"type": "string", "description": "Type of pattern to analyze"},
-                        "mode": {"type": "string", "description": "Execution mode", "enum": ["auto", "fs", "registry"]},
+                        "analysis_type": {"type": "string", "enum": ["performance", "patterns", "workflow", "inheritance"]},
+                        "model_name": {"type": "string"},
+                        "pattern_type": {"type": "string"},
+                        "mode": {"type": "string", "enum": ["auto", "fs", "registry"], "default": "auto"},
                     },
                     "required": ["analysis_type"],
                 }
@@ -768,6 +670,15 @@ async def run_server() -> None:
                 server_name="odoo-intelligence",
                 server_version="0.1.0",
                 capabilities=ServerCapabilities(tools=ToolsCapability()),
+                instructions=(
+                    "Use: model_query, field_query, analysis_query.\n"
+                    "Start: model_query.search → info/relationships/view_usage.\n"
+                    "Fields: field_query. Analyses: analysis_query.\n"
+                    "Modes: auto|fs|registry (auto default).\n"
+                    "Size: page/page_size, filter (large replies may truncate).\n"
+                    "If registry errors: odoo_status → read_odoo_file/search_code → odoo_restart.\n"
+                    "execute_code sparingly."
+                ),
             ),
         )
 

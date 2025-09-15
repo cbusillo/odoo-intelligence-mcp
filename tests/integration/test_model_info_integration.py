@@ -23,7 +23,7 @@ class TestModelInfoIntegration:
 
         # Check that we have paginated fields
         assert len(result["fields"]) <= result["pagination"]["page_size"]
-        
+
         # Check that at least one field exists and has proper structure
         if result["fields"]:
             first_field_name = list(result["fields"].keys())[0]

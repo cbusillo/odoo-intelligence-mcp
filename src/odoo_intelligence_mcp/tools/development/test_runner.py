@@ -67,7 +67,7 @@ async def run_tests(
 
         # Execute command in container
         exec_result = docker_manager.exec_run(container_name, cmd)
-        
+
         if not exec_result.get("success", False):
             return exec_result
 

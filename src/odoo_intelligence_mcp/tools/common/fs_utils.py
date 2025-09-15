@@ -29,4 +29,3 @@ def fs_enrich(payload: dict[str, Any]) -> dict[str, Any]:
 
 def paginate_items(items: list[dict[str, Any]], pagination: PaginationParams, search_fields: list[str]) -> dict[str, Any]:
     return paginate_dict_list(items, pagination, search_fields).to_dict()
-

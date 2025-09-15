@@ -32,17 +32,12 @@ line 5"""
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         result = await read_odoo_file("/odoo/addons/sale/models/sale.py")
 
@@ -59,17 +54,12 @@ async def test_read_with_line_range() -> None:
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         result = await read_odoo_file("/odoo/addons/test.py", start_line=10, end_line=20)
 
@@ -94,17 +84,12 @@ async def test_read_with_pattern_search() -> None:
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         result = await read_odoo_file("/odoo/addons/test.py", pattern="total")
 
@@ -119,16 +104,16 @@ async def test_read_file_not_found() -> None:
     """Test file not found error."""
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return file not found
         mock_instance.exec_run.return_value = {
             "success": False,
             "stdout": "",
             "stderr": "cat: /nonexistent.py: No such file or directory",
-            "exit_code": 1
+            "exit_code": 1,
         }
 
         result = await read_odoo_file("/nonexistent.py")
@@ -144,17 +129,12 @@ async def test_read_with_invalid_regex() -> None:
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         result = await read_odoo_file("/test.py", pattern="[invalid(regex")
 
@@ -169,17 +149,12 @@ async def test_read_with_context_lines() -> None:
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         result = await read_odoo_file("/test.py", pattern="line 10", context_lines=2)
 
@@ -196,17 +171,12 @@ async def test_read_large_file_no_line_numbers() -> None:
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         result = await read_odoo_file("/test.py")
 
@@ -239,15 +209,20 @@ async def test_read_file_with_relative_path_search() -> None:
             mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
 
             mock_instance = mock_docker.return_value
-            
+
             # Mock get_container to return success
             mock_instance.get_container.return_value = {"success": True}
-            
+
             # Setup sequence of exec_run calls
             mock_instance.exec_run.side_effect = [
                 {"success": False, "exit_code": 1, "stdout": "", "stderr": "not found"},  # First try (absolute path) fails
                 {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
-                {"success": True, "exit_code": 0, "stdout": "# Product module code\nclass Product:\n    pass", "stderr": ""},  # cat succeeds
+                {
+                    "success": True,
+                    "exit_code": 0,
+                    "stdout": "# Product module code\nclass Product:\n    pass",
+                    "stderr": "",
+                },  # cat succeeds
             ]
 
             result = await read_odoo_file("product/models/product.py")
@@ -266,10 +241,10 @@ async def test_read_file_with_addon_prefix_path() -> None:
             mock_paths.return_value = ["/odoo/addons", "/volumes/enterprise"]
 
             mock_instance = mock_docker.return_value
-            
+
             # Mock get_container to return success
             mock_instance.get_container.return_value = {"success": True}
-            
+
             # Setup sequence of exec_run calls
             mock_instance.exec_run.side_effect = [
                 {"success": False, "exit_code": 1, "stdout": "", "stderr": "not found"},  # First try (absolute path) fails
@@ -290,17 +265,12 @@ async def test_read_with_out_of_range_start_line() -> None:
 
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         mock_instance = mock_docker.return_value
-        
+
         # Mock get_container to return success
         mock_instance.get_container.return_value = {"success": True}
-        
+
         # Mock exec_run to return the file content
-        mock_instance.exec_run.return_value = {
-            "success": True,
-            "stdout": test_content,
-            "stderr": "",
-            "exit_code": 0
-        }
+        mock_instance.exec_run.return_value = {"success": True, "stdout": test_content, "stderr": "", "exit_code": 0}
 
         # Test with start_line > total lines
         result = await read_odoo_file("/test.py", start_line=20, end_line=25)

@@ -4,11 +4,11 @@ Comprehensive Model Context Protocol (MCP) server providing deep code analysis a
 
 ## Features
 
-- 15 registered tools exposing 30+ capabilities
+- 15 tools exposing 30+ capabilities
 - Model/field/analysis queries with pagination and filtering
-- Persistent Odoo environment connection (Docker exec + Odoo shell)
+- Docker-connected Odoo environment (exec into containers)
 - Structured errors with optional enhanced diagnostics
-- Safe JSON serialization and automatic large-response protection
+- Large-response protection with pagination and truncation
 
 ## Installation
 
@@ -47,10 +47,10 @@ Derived containers from prefix:
 ### Modes and Fallbacks
 
 Many operations accept `mode`:
-- `auto` (default): normal behavior (falls back to FS when possible)
-- `fs`: static AST analysis over `ODOO_ADDONS_PATH` (no running Odoo)
-- `registry`: force runtime via Odoo registry
-- `db`: reserved (for future DB-only fallbacks)
+- `auto` (default)
+- `fs` (static scan over `ODOO_ADDONS_PATH`)
+- `registry` (runtime via Odoo registry)
+- `db` (reserved)
 
 Enable enhanced error payloads: `ODOO_MCP_ENHANCED_ERRORS=true`.
 
@@ -64,36 +64,40 @@ export ODOO_DB_NAME="mydb"
 export ODOO_ADDONS_PATH="/custom/addons,/odoo/addons"
 ```
 
-## Registered Tools
+## Operations (Tools)
 
-The server exposes these MCP tools (names and input schemas match the implementation):
+- `search_code(pattern, file_type=py, roots?[])` → hits[]
+- `find_method(method_name, mode=auto|fs|registry)` → locations[]
+- `model_query(operation: info|search|relationships|inheritance|view_usage, model_name?, pattern?, page?, page_size?, mode=auto)`
+- `field_query(operation: usages|dependencies|analyze_values|resolve_dynamic|search_properties|search_type, model_name, field_name?, field_type?, property?, sample_size=1000, page?, page_size?, mode=auto)`
+- `addon_dependencies(addon_name)` → deps[]
+- `module_structure(module_name)` → files[], manifest, meta
+- `execute_code(code)` → stdout, stderr, exit_code
+- `permission_checker(user, model, operation, record_id?)` → allowed: true|false, rationale
+- `odoo_update_module(modules, force_install=false)` → result
+- `odoo_status(verbose=false)` → containers[], services[]
+- `odoo_restart(services?)` → result
 
-- `addon_dependencies` – Get addon dependencies
-- `search_code` – Regex search in addons (fs; optional `file_type`, `roots`)
-- `find_files` – Find files by pattern (optional `file_type`)
-- `read_odoo_file` – Read source file ranges with optional pattern/context
-- `module_structure` – Analyze module directory structure
-- `find_method` – Find method implementations (`mode`: auto|fs|registry)
-- `search_decorators` – Find decorated methods (`depends|constrains|onchange|create_multi`; `mode` supported)
-- `execute_code` – Run Python in Odoo shell context (Docker exec)
-- `permission_checker` – Check access rights and record rules
-- `odoo_update_module` – Update modules (`force_install` optional)
-- `odoo_status` – Container health/status (`verbose` optional)
-- `odoo_restart` – Restart containers (optional `services`)
-- `model_query` – Models: `info|search|relationships|inheritance|view_usage` (alias: `list→search`)
-- `field_query` – Fields: `usages|analyze_values|resolve_dynamic|dependencies|search_properties|search_type` (alias: `list`)
-- `analysis_query` – Analysis: `performance|patterns|workflow|inheritance`
+Parameters
+- `mode` (where supported): `auto` (default), `fs`, `registry`
+- Pagination: `page`, `page_size` (max 1000) or `offset`, `limit`
+- Filters: `filter` (client‑side contains), `roots`
 
-Notes:
-- Former standalone tools like `model_info`, `search_models`, `workflow_states`, etc. are now accessed via the consolidated `model_query`, `field_query`, and `analysis_query` tools.
-- There is no separate `odoo_shell` or `odoo_logs` tool registered; use `execute_code` and `odoo_status/odoo_restart` respectively.
+Examples
+- Search Python for a pattern:
+  `search_code { "pattern": "def _compute", "file_type": "py", "roots": ["/volumes/addons"] }`
+- Model info:
+  `model_query { "operation": "info", "model_name": "sale.order" }`
+- Field dependencies:
+  `field_query { "operation": "dependencies", "model_name": "sale.order", "field_name": "amount_total" }`
 
-### Example Calls (conceptual)
+## Responses & Schema
 
-- Model info: `model_query { operation: "info", model_name: "sale.order" }`
-- Search models: `model_query { operation: "search", pattern: "product", page: 1, page_size: 25 }`
-- Field usages: `field_query { operation: "usages", model_name: "sale.order", field_name: "partner_id" }`
-- Patterns: `analysis_query { analysis_type: "patterns", pattern_type: "computed_fields", page_size: 50 }`
+Conventions
+- Paginated results: `{ "items": [...], "pagination": { page, page_size, total_count, total_pages, has_next_page, has_previous_page, filter_applied } }`
+- Single‑object results: plain objects with relevant fields and optional `success`/`error` keys
+
+<!-- Removed deprecated View Migration Helper section; use search_code/read_odoo_file/model_query for migrations. -->
 
 ## Pagination
 

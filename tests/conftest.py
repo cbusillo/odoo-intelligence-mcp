@@ -308,13 +308,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                     "email": {"type": "char", "string": "Email", "required": False, "readonly": False, "store": True},
                 },
                 "displayed_field_count": 3,
-                "pagination": {
-                    "page": 1,
-                    "page_size": 25,
-                    "total_count": 3,
-                    "has_next": False,
-                    "has_previous": False
-                },
+                "pagination": {"page": 1, "page_size": 25, "total_count": 3, "has_next": False, "has_previous": False},
                 "methods_sample": ["create", "write", "unlink", "search", "read"],
                 "total_method_count": 20,
                 "_inherit": ["mail.thread", "mail.activity.mixin"] if model_name == "account.move" else [],

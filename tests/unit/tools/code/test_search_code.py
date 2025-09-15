@@ -16,9 +16,9 @@ async def test_search_code_basic() -> None:
     mock_stdout = (
         "[\n"
         "  {\n"
-        "    \"file\": \"/odoo/addons/test_module/models/test_model.py\",\n"
-        "    \"line\": 5,\n"
-        "    \"match\": \"    def test_pattern_method(self):\"\n"
+        '    "file": "/odoo/addons/test_module/models/test_model.py",\n'
+        '    "line": 5,\n'
+        '    "match": "    def test_pattern_method(self):"\n'
         "  }\n"
         "]\n"
     )

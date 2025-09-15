@@ -1,4 +1,3 @@
-
 from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
 from ...utils.response_utils import ResponseBuilder
@@ -9,7 +8,7 @@ async def odoo_restart(services: str = "web-1,shell-1,script-runner-1") -> dict:
         docker_manager = DockerClientManager()
         config = load_env_config()
         container_prefix = config.container_prefix
-        
+
         # Handle both formats: "web-1" and "odoo-web-1"
         service_list = []
         for s in services.split(","):

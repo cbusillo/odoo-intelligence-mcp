@@ -101,7 +101,7 @@ async def test_docker_container_status_check() -> None:
     with patch("subprocess.run") as mock_run:
         # Mock docker version succeeds
         mock_run.return_value = MagicMock(returncode=0, stdout="Docker version 20.10.0", stderr="")
-        
+
         with (
             patch("odoo_intelligence_mcp.utils.docker_utils.DockerClientManager") as mock_docker_manager_class,
             patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_docker_manager_class2,
@@ -115,7 +115,7 @@ async def test_docker_container_status_check() -> None:
             mock_docker_manager.get_container.return_value = {
                 "success": True,
                 "container": "test-container",
-                "state": {"Status": "running", "Id": "abc123", "Created": "", "Config": {}}
+                "state": {"Status": "running", "Id": "abc123", "Created": "", "Config": {}},
             }
 
             result = await odoo_status()
@@ -177,7 +177,7 @@ async def test_docker_module_update() -> None:
 
         # Verify subprocess.run was called twice
         assert mock_run.call_count == 2
-        
+
         # Check the docker exec call
         exec_call = mock_run.call_args_list[1][0][0]
         exec_command = " ".join(exec_call)

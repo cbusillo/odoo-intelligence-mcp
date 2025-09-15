@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from ...core.env import load_env_config
-from ...utils.docker_utils import DockerClientManager, NotFound, APIError
+from ...utils.docker_utils import APIError, DockerClientManager, NotFound
 
 
 async def read_odoo_file(

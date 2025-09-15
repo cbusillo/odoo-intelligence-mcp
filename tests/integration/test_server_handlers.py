@@ -195,7 +195,7 @@ class TestServerHandlers:
                 MagicMock(returncode=0, stdout="running", stderr=""),  # docker inspect
                 MagicMock(returncode=0, stdout="Module updated successfully", stderr=""),  # docker exec
             ]
-            
+
             with patch(
                 "odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env
             ):

@@ -291,14 +291,16 @@ class HostOdooEnvironment:
 
             if result.returncode != 0:
                 # First check if Docker is accessible at all
-                docker_check = subprocess.run(["docker", "version"], capture_output=True, text=True, timeout=2)
+                docker_check = subprocess.run(["/usr/bin/env", "docker", "version"], capture_output=True, text=True, timeout=2)
                 if docker_check.returncode != 0:
                     raise DockerConnectionError(
                         self.container_name, f"Cannot connect to Docker daemon. Is Docker running? Error: {docker_check.stderr}"
                     )
 
                 # Check Docker context
-                context_check = subprocess.run(["docker", "context", "show"], capture_output=True, text=True, timeout=2)
+                context_check = subprocess.run(
+                    ["/usr/bin/env", "docker", "context", "show"], capture_output=True, text=True, timeout=2
+                )
                 if context_check.returncode == 0:
                     logger.info(f"Current Docker context: {context_check.stdout.strip()}")
 
@@ -306,9 +308,9 @@ class HostOdooEnvironment:
                 if "permission denied" in result.stderr.lower():
                     raise DockerConnectionError(
                         self.container_name,
-                        f"Permission denied accessing Docker. Try running with appropriate permissions or check Docker socket access.",
+                        "Permission denied accessing Docker. Try running with appropriate permissions or check Docker socket access.",
                     )
-                elif "no such object" in result.stderr.lower() or "no such container" in result.stderr.lower():
+                if "no such object" in result.stderr.lower() or "no such container" in result.stderr.lower():
                     logger.info(f"Container {self.container_name} does not exist: {result.stderr}")
                 else:
                     # Unknown error - log it and try to continue
@@ -336,7 +338,7 @@ class HostOdooEnvironment:
                 essential_services = ["database", "script-runner", "shell", service_name]
                 # Remove duplicates while preserving order
                 services_to_start = list(dict.fromkeys(essential_services))
-                compose_cmd = ["docker", "compose", "up", "-d"] + services_to_start
+                compose_cmd = ["/usr/bin/env", "docker", "compose", "up", "-d", *services_to_start]
                 compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
 
                 if compose_result.returncode == 0:
@@ -375,7 +377,7 @@ class HostOdooEnvironment:
                     project_dir = self._get_project_directory(config)
 
                     if project_dir:
-                        compose_cmd = ["docker", "compose", "up", "-d"] + containers_to_start
+                        compose_cmd = ["/usr/bin/env", "docker", "compose", "up", "-d", *containers_to_start]
                         compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
                         if compose_result.returncode == 0:
                             logger.info(f"Successfully started containers: {containers_to_start}")
@@ -387,7 +389,7 @@ class HostOdooEnvironment:
 
             if status != "running":
                 logger.info(f"Container {self.container_name} is {status}. Starting it...")
-                start_cmd = ["docker", "start", self.container_name]
+                start_cmd = ["/usr/bin/env", "docker", "start", self.container_name]
                 start_result = subprocess.run(start_cmd, capture_output=True, text=True, timeout=10)
 
                 if start_result.returncode == 0:
@@ -397,11 +399,18 @@ class HostOdooEnvironment:
                     time.sleep(3)  # Give container more time to fully start
 
                     # Verify container is healthy after start
-                    health_check_cmd = ["docker", "inspect", self.container_name, "--format", "{{.State.Health.Status}}"]
+                    health_check_cmd = [
+                        "/usr/bin/env",
+                        "docker",
+                        "inspect",
+                        self.container_name,
+                        "--format",
+                        "{{.State.Health.Status}}",
+                    ]
                     health_result = subprocess.run(health_check_cmd, capture_output=True, text=True, timeout=5)
                     if "unhealthy" in health_result.stdout:
                         logger.warning(f"Container {self.container_name} is unhealthy, attempting restart...")
-                        restart_cmd = ["docker", "restart", self.container_name]
+                        restart_cmd = ["/usr/bin/env", "docker", "restart", self.container_name]
                         subprocess.run(restart_cmd, capture_output=True, text=True, timeout=15)
                         time.sleep(5)  # Wait for restart
                 # If docker start failed, try docker compose up
@@ -409,7 +418,7 @@ class HostOdooEnvironment:
                     logger.info(f"Container {self.container_name} doesn't exist. Attempting to create with docker compose...")
                     config = load_env_config()
                     service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
-                    compose_cmd = ["docker", "compose", "up", "-d", service_name]
+                    compose_cmd = ["/usr/bin/env", "docker", "compose", "up", "-d", service_name]
                     compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=30)
                     if compose_result.returncode == 0:
                         logger.info(f"Successfully created and started container {self.container_name} via compose")
@@ -497,7 +506,7 @@ class HostOdooEnvironment:
                 raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
             if process.returncode == 125:  # Docker run error
                 if "executable file not found" in process.stderr:
-                    error_msg = f"Odoo executable not found in container. Check if container has Odoo installed at /odoo/odoo-bin"
+                    error_msg = "Odoo executable not found in container. Check if container has Odoo installed at /odoo/odoo-bin"
                 elif "no such container" in process.stderr.lower():
                     error_msg = (
                         f"Container {self.container_name} not found. Ensure containers are running with: docker compose up -d"

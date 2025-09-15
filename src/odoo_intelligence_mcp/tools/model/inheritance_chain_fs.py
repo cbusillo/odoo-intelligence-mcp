@@ -28,7 +28,11 @@ async def analyze_inheritance_chain_fs(model_name: str, pagination: PaginationPa
         for inh in inherits:
             inh_fields = models.get(inh, {}).get("fields", {}) if inh in models else {}
             if fname in inh_fields:
-                inherited_fields[fname] = {"from_model": inh, "type": inh_fields[fname].get("type"), "string": inh_fields[fname].get("string")}
+                inherited_fields[fname] = {
+                    "from_model": inh,
+                    "type": inh_fields[fname].get("type"),
+                    "string": inh_fields[fname].get("string"),
+                }
                 break
 
     overridden_methods = []
