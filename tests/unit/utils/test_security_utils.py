@@ -1,5 +1,4 @@
 import ast
-from typing import cast
 
 import pytest
 
@@ -262,7 +261,9 @@ while True:
     if condition:
         break
 """)
-        while_node = cast("ast.While", tree.body[0])
+        first_stmt = tree.body[0]
+        assert isinstance(first_stmt, ast.While)
+        while_node = first_stmt
         assert SecurityValidator._has_break_condition(while_node) is True
 
     def test_has_break_condition_false(self) -> None:
@@ -270,7 +271,9 @@ while True:
 while True:
     print('infinite')
 """)
-        while_node = cast("ast.While", tree.body[0])
+        first_stmt = tree.body[0]
+        assert isinstance(first_stmt, ast.While)
+        while_node = first_stmt
         assert SecurityValidator._has_break_condition(while_node) is False
 
     def test_visit_import_dangerous(self) -> None:

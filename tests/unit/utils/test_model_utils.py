@@ -1,9 +1,12 @@
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from odoo_intelligence_mcp.type_defs.odoo_types import Field, Model
+from odoo_intelligence_mcp.type_defs.odoo_types import Field
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import Model
 from odoo_intelligence_mcp.utils.model_utils import (
     ModelIterator,
     extract_field_info,
@@ -27,7 +30,7 @@ class TestModelIterator:
     @pytest.mark.asyncio
     async def test_iter_models_excludes_system_models(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
         models = []
-        async for model_name, model in iterator.iter_models():
+        async for model_name, _model in iterator.iter_models():
             models.append(model_name)
 
         assert "sale.order" in models
@@ -39,7 +42,7 @@ class TestModelIterator:
     async def test_iter_models_include_system_models(self, mock_env: MagicMock) -> None:
         iterator = ModelIterator(mock_env, exclude_system_models=False)
         models = []
-        async for model_name, model in iterator.iter_models():
+        async for model_name, _model in iterator.iter_models():
             models.append(model_name)
 
         assert "sale.order" in models
@@ -53,7 +56,7 @@ class TestModelIterator:
             return "product" in name
 
         models = []
-        async for model_name, model in iterator.iter_models(filter_func):
+        async for model_name, _model in iterator.iter_models(filter_func):
             models.append(model_name)
 
         assert "product.product" in models
@@ -61,8 +64,8 @@ class TestModelIterator:
 
     @pytest.mark.asyncio
     async def test_iter_models_returns_model_objects(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
-        async for model_name, model in iterator.iter_models():
-            assert model._name == model_name
+        async for model_name, _model in iterator.iter_models():
+            assert _model._name == model_name
             break
 
     @staticmethod
