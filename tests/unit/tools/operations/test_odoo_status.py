@@ -7,6 +7,16 @@ from odoo_intelligence_mcp.tools.operations.container_status import odoo_status
 from tests.fixtures import get_expected_container_names
 
 
+def _managed_container_names(containers: dict[str, Any]) -> list[str]:
+    order = ("web", "shell", "script_runner", "database")
+    names: list[str] = []
+    for key in order:
+        value = containers.get(key)
+        if value and value not in names:
+            names.append(value)
+    return names
+
+
 # noinspection DuplicatedCode
 @pytest.mark.asyncio
 async def test_odoo_status_all_running() -> None:
@@ -17,7 +27,7 @@ async def test_odoo_status_all_running() -> None:
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             # Mock containers
             containers = get_expected_container_names()
-            container_names = [containers["web"], containers["shell"], containers["script_runner"]]
+            container_names = _managed_container_names(containers)
 
             mock_instance = MagicMock()
 
@@ -44,8 +54,9 @@ async def test_odoo_status_all_running() -> None:
 
             assert result["success"] is True
             assert result["data"]["overall_status"] == "healthy"
-            assert result["data"]["total_containers"] == 3
-            assert result["data"]["running_containers"] == 3
+            expected_total = len(container_names)
+            assert result["data"]["total_containers"] == expected_total
+            assert result["data"]["running_containers"] == expected_total
             assert all(c["running"] for c in result["data"]["containers"].values())
 
 
@@ -90,6 +101,7 @@ async def test_odoo_status_some_stopped() -> None:
         with patch("odoo_intelligence_mcp.tools.operations.container_status.DockerClientManager") as mock_manager:
             # Mock containers with different states
             containers = get_expected_container_names()
+            managed_names = _managed_container_names(containers)
 
             # noinspection PyUnusedLocal
             def mock_get_container(container_name: str, auto_start: bool = False) -> dict[str, Any]:
@@ -99,11 +111,17 @@ async def test_odoo_status_some_stopped() -> None:
                         "container": container_name,
                         "state": {"Status": "exited", "Id": "abc123", "Created": "", "Config": {}},
                     }
-                elif container_name in [containers["shell"], containers["script_runner"]]:
+                if container_name in [containers["shell"], containers["script_runner"]]:
                     return {
                         "success": True,
                         "container": container_name,
                         "state": {"Status": "running", "Id": "def456", "Created": "", "Config": {}},
+                    }
+                if containers.get("database") and container_name == containers["database"]:
+                    return {
+                        "success": True,
+                        "container": container_name,
+                        "state": {"Status": "running", "Id": "ghi789", "Created": "", "Config": {}},
                     }
                 return {"success": False}
 
@@ -114,11 +132,15 @@ async def test_odoo_status_some_stopped() -> None:
             result = await odoo_status()
 
             assert result["success"] is True
+            assert result["success"] is True
             assert result["data"]["overall_status"] == "unhealthy"
-            assert result["data"]["running_containers"] == 2
+            expected_running = len(managed_names) - 1
+            assert result["data"]["running_containers"] == expected_running
             containers = get_expected_container_names()
             assert not result["data"]["containers"][containers["web"]]["running"]
             assert result["data"]["containers"][containers["shell"]]["running"]
+            if containers.get("database"):
+                assert result["data"]["containers"][containers["database"]]["running"]
 
 
 @pytest.mark.asyncio

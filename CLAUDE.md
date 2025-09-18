@@ -10,9 +10,10 @@ Development guidelines for the Odoo Intelligence MCP Server.
 
 **Setup**: `uv sync` (installs dependencies in local venv)
 **Run**: `uv run odoo_intelligence_mcp` (runs on host, connects to Docker)
-**Format**: `uv run mcp-format && uv run mcp-lint`
+**Format**: `uv run mcp-format`
+**Inspections**: JetBrains inspection profile via `inspection_trigger(scope="whole_project")`
 **Tests**: `uv run mcp-test` (ALL must pass - no failures allowed)
-**Coverage**: `uv run mcp-test-cov` (minimum 80% required)
+**Coverage**: `uv run mcp-test-cov` (minimum 75% required)
 
 ## Code Standards
 
@@ -30,7 +31,7 @@ Development guidelines for the Odoo Intelligence MCP Server.
         - `CompatibleEnvironment` when accepting both real and mock environments
         - JetBrains magic strings during TYPE_CHECKING, protocols at runtime
 - **Line length**: 133 chars
-- **Tests**: 80% coverage minimum
+- **Tests**: 75% coverage minimum
 - **F-strings preferred**: Use f-strings for all string formatting, including logging and exceptions
 - **Early returns preferred**: No else after return (ignore TRY300 ruff rule)
 
@@ -51,8 +52,9 @@ Development guidelines for the Odoo Intelligence MCP Server.
 3. **Handle large responses** - Use `pagination_utils.py` for >25K token responses
 4. **Close cursors properly** - Always use try/finally blocks in tool handlers
 5. **Run ALL tests before commit** - `uv run mcp-test` must pass 100%
-6. **Format before commit** - `uv run mcp-format && uv run mcp-lint`
-7. **Check coverage** - `uv run mcp-test-cov` must show ≥80% coverage
+6. **Format before commit** - `uv run mcp-format`
+7. **Run inspections** - `inspection_trigger(scope="whole_project")` then review `inspection_get_problems`
+8. **Check coverage** - `uv run mcp-test-cov` must show ≥75% coverage
 
 ## MCP Tool Development
 

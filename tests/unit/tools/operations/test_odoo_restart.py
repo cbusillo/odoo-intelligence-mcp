@@ -21,10 +21,20 @@ def create_mock_docker_manager(
     return mock_manager, mock_instance
 
 
+def _default_service_names(containers: dict[str, Any]) -> list[str]:
+    order = ("web", "shell", "script_runner", "database")
+    names: list[str] = []
+    for key in order:
+        value = containers.get(key)
+        if value and value not in names:
+            names.append(value)
+    return names
+
+
 @pytest.mark.asyncio
 async def test_odoo_restart_default_services() -> None:
     containers = get_expected_container_names()
-    expected_services = [containers["web"], containers["shell"], containers["script_runner"]]
+    expected_services = _default_service_names(containers)
 
     def mock_restart(container_name: str) -> dict[str, Any]:
         return {"success": True, "operation": "restart", "container": container_name}
@@ -36,7 +46,7 @@ async def test_odoo_restart_default_services() -> None:
 
         assert result["success"] is True
         assert result["data"]["services"] == expected_services
-        assert len(result["data"]["results"]) == 3
+        assert len(result["data"]["results"]) == len(expected_services)
         assert all(r["success"] for r in result["data"]["results"].values())
 
 

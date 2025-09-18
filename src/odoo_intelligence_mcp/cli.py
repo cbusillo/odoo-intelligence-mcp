@@ -28,13 +28,9 @@ def format_code() -> None:
     subprocess.run([sys.executable, "-m", "ruff", "format", "."])
 
 
-def lint() -> None:
-    subprocess.run([sys.executable, "-m", "ruff", "check", ".", "--fix"])
-
-
 def check() -> None:
     format_code()
-    lint()
+    subprocess.run([sys.executable, "-m", "ruff", "check", "."])
 
 
 def clean() -> None:

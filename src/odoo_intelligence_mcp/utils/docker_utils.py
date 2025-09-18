@@ -2,6 +2,8 @@ import json
 import subprocess
 from typing import Any
 
+COMPOSE_TIMEOUT = 600
+
 
 class DockerClientManager:
     def __init__(self) -> None:
@@ -59,8 +61,18 @@ class DockerClientManager:
 
             if result.returncode == 0:
                 return self._create_success_response("restart", container_name)
-            else:
-                return self._create_error_response(f"Failed to restart container: {result.stderr}", "RestartError", container_name)
+            stderr_lower = result.stderr.lower()
+            if "no such container" in stderr_lower or "not found" in stderr_lower:
+                started = self._auto_start_container(container_name)
+                if started:
+                    retry_result = subprocess.run(restart_cmd, capture_output=True, text=True, timeout=30)
+                    if retry_result.returncode == 0:
+                        return self._create_success_response("restart", container_name)
+                    container_state = self.get_container(container_name)
+                    if container_state.get("success"):
+                        data = container_state.get("state", {})
+                        return self._create_success_response("restart", container_name, data)
+            return self._create_error_response(f"Failed to restart container: {result.stderr}", "RestartError", container_name)
         except subprocess.TimeoutExpired:
             return self._create_error_response("Container restart timed out", "TimeoutError", container_name)
         except Exception as e:
@@ -162,7 +174,7 @@ class DockerClientManager:
                                     cwd=str(compose_dir),
                                     capture_output=True,
                                     text=True,
-                                    timeout=30,
+                                    timeout=COMPOSE_TIMEOUT,
                                 )
                                 if compose_result.returncode == 0:
                                     return True

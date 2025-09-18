@@ -14,6 +14,9 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
             config.shell_container,
             config.script_runner_container,
         ]
+        database_container = getattr(config, "database_container", None)
+        if database_container:
+            containers.append(database_container)
         status = {}
 
         # Test Docker connection first by trying to run docker version

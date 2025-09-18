@@ -89,7 +89,7 @@ def test_restart_container_success() -> None:
 def test_restart_container_failure() -> None:
     """Test failed container restart."""
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = Mock(returncode=1, stdout="", stderr="Error: No such container")
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="restart conflict")
 
         manager = DockerClientManager()
         result = manager.restart_container("test-container")
@@ -97,6 +97,24 @@ def test_restart_container_failure() -> None:
         assert result["success"] is False
         assert "Failed to restart" in result["error"]
         assert result["error_type"] == "RestartError"
+
+
+def test_restart_container_autostart_success() -> None:
+    with patch("subprocess.run") as mock_run:
+        container_state = {"State": {"Status": "running"}}
+        mock_run.side_effect = [
+            Mock(returncode=1, stdout="", stderr="Error: No such container"),
+            Mock(returncode=1, stdout="", stderr="Error: No such container"),
+            Mock(returncode=0, stdout="started", stderr=""),
+            Mock(returncode=0, stdout="restarted", stderr=""),
+            Mock(returncode=0, stdout=json.dumps(container_state), stderr=""),
+        ]
+
+        manager = DockerClientManager()
+        result = manager.restart_container("odoo-web-1")
+
+        assert result["success"] is True
+        assert result["operation"] == "restart"
 
 
 def test_get_container_logs_success() -> None:

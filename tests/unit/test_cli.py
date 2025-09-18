@@ -45,16 +45,11 @@ class TestCLIFunctions:
         mock_run.assert_called_once_with([sys.executable, "-m", "ruff", "format", "."])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_lint_function(self, mock_run: MagicMock) -> None:
-        cli.lint()
-        mock_run.assert_called_once_with([sys.executable, "-m", "ruff", "check", ".", "--fix"])
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_check_function(self, _mock_run: MagicMock) -> None:
-        with patch("odoo_intelligence_mcp.cli.format_code") as mock_format, patch("odoo_intelligence_mcp.cli.lint") as mock_lint:
+    def test_check_function(self, mock_run: MagicMock) -> None:
+        with patch("odoo_intelligence_mcp.cli.format_code") as mock_format:
             cli.check()
             mock_format.assert_called_once()
-            mock_lint.assert_called_once()
+            mock_run.assert_called_once_with([sys.executable, "-m", "ruff", "check", "."])
 
     @patch("odoo_intelligence_mcp.cli.Path")
     @patch("odoo_intelligence_mcp.cli.shutil.rmtree")
@@ -144,5 +139,5 @@ class TestCLIFunctions:
         cli.format_code()
         assert mock_run.call_args[0][0][0] == sys.executable
 
-        cli.lint()
+        cli.check()
         assert mock_run.call_args[0][0][0] == sys.executable

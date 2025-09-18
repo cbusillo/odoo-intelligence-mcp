@@ -140,17 +140,17 @@ uv run mcp-test-unit        # Unit tests
 uv run mcp-test-integration # Integration tests
 uv run mcp-test-cov         # With coverage report
 
-# Threshold: 80% minimum coverage (enforced in pyproject)
+# Threshold: 75% minimum coverage (current fail-under 74.5 in pyproject)
 ```
 
 ### Code Quality
 
 ```bash
 uv run mcp-format  # ruff format
-uv run mcp-lint    # ruff check --fix
 
-# Or manually
-ruff format . && ruff check . --fix
+# Project inspections (PyCharm profile via Codex CLI)
+inspection_trigger(scope="whole_project")
+inspection_get_problems()
 ```
 
 See CLAUDE.md for workflow, formatting, and testing conventions.

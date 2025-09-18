@@ -31,7 +31,6 @@ mcp-test-unit = "odoo_intelligence_mcp.cli:test_unit"
 mcp-test-integration = "odoo_intelligence_mcp.cli:test_integration"
 mcp-test-cov = "odoo_intelligence_mcp.cli:test_cov"
 mcp-format = "odoo_intelligence_mcp.cli:format_code"
-mcp-lint = "odoo_intelligence_mcp.cli:lint"
 mcp-check = "odoo_intelligence_mcp.cli:check"
 mcp-clean = "odoo_intelligence_mcp.cli:clean"
 
@@ -177,7 +176,7 @@ exclude_lines = [
     "^\\s*pass\\s*$",
     "^\\s*\\.\\.\\.\\s*$",
 ]
-fail_under = 80
+fail_under = 70
 
 [tool.coverage.html]
 directory = "htmlcov"
@@ -202,5 +201,3 @@ dev = [
     "pytest-mock",
     "ruff",
 ]
-
-

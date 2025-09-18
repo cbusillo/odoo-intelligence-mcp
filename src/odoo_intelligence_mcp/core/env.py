@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -53,6 +54,20 @@ class EnvConfig(BaseSettings):
     @property
     def database(self) -> str:
         return self.db_name
+
+    @property
+    def database_container(self) -> str | None:
+        host = (self.db_host or "").strip()
+        if not host:
+            return None
+        lowered = host.lower()
+        if lowered in {"localhost", "127.0.0.1"}:
+            return None
+        if "." in host:
+            return None
+        if not re.fullmatch(r"[a-zA-Z0-9_-]+", host):
+            return None
+        return f"{self.container_prefix}-{host}-1"
 
 
 class MockRegistry:
