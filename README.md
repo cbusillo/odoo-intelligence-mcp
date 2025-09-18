@@ -153,4 +153,4 @@ inspection_trigger(scope="whole_project")
 inspection_get_problems()
 ```
 
-See CLAUDE.md for workflow, formatting, and testing conventions.
+See AGENTS.md for workflow, formatting, and testing conventions.
