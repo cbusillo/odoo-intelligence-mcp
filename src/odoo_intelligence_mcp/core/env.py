@@ -221,13 +221,13 @@ def _resolve_stack_env_file_from_ops(start_dir: Path, project_name: str | None, 
         if info:
             infos.append(info)
 
-    def _match(ops_entry: dict[str, object], key: str | None) -> bool:
+    def _match(ops_record: dict[str, object], key: str | None) -> bool:
         if not key:
             return False
         return (
-            key == ops_entry.get("project_name")
-            or key == ops_entry.get("stack_name")
-            or key == ops_entry.get("compose_project")
+            key == ops_record.get("project_name")
+            or key == ops_record.get("stack_name")
+            or key == ops_record.get("compose_project")
         )
 
     if project_name:
