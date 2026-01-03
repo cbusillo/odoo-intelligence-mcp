@@ -789,13 +789,12 @@ async def run_server() -> None:
                 server_version="0.1.0",
                 capabilities=ServerCapabilities(tools=ToolsCapability()),
                 instructions=(
-                    "Use: model_query, field_query, analysis_query.\n"
-                    "Start: model_query.search → info/relationships/view_usage.\n"
-                    "Fields: field_query. Analyses: analysis_query.\n"
-                    "Modes: auto|fs|registry (auto default).\n"
-                    "Size: page/page_size, filter (large replies may truncate).\n"
-                    "If registry errors: odoo_status → read_odoo_file/search_code → odoo_restart.\n"
-                    "execute_code sparingly."
+                    "Primary: model_query/field_query/analysis_query (use operation=/analysis_type=).\n"
+                    "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage (requires model_name).\n"
+                    "field_query: usages/dependencies need model_name+field_name; search_type/search_properties need field_type/property.\n"
+                    "Modes: auto default; if registry fails, retry with mode=fs before odoo_restart.\n"
+                    "Page with page/page_size/filter.\n"
+                    "Files: search_code/read_odoo_file/find_method. execute_code sparingly."
                 ),
             ),
         )

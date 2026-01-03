@@ -274,8 +274,6 @@ def add_pagination_to_schema(base_schema: dict[str, Any]) -> dict[str, Any]:
     pagination_properties = {
         "page": {"type": "integer", "default": 1},
         "page_size": {"type": "integer", "default": 100, "maximum": 1000},
-        "limit": {"type": "integer", "maximum": 1000},
-        "offset": {"type": "integer"},
         "filter": {"type": "string"},
     }
 
