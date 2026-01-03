@@ -15,7 +15,7 @@ def create_mock_docker_manager(
     mock_instance = MagicMock()
 
     def mock_get_container(container_name: str, auto_start: bool = False) -> dict[str, Any]:
-        return {"success": True, "container": container_name}
+        return {"success": True, "container": container_name, "auto_start": auto_start}
 
     mock_instance.get_container.side_effect = mock_get_container
     if restart_func:
