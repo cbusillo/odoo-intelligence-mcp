@@ -163,10 +163,17 @@ except Exception:
 result = sorted(set(names))
 """
     result = await env.execute_code(code)
-    if isinstance(result, dict) and isinstance(result.get("result"), list):
-        return [name for name in result.get("result", []) if isinstance(name, str)]
+    return _extract_string_list(result)
+
+
+def _extract_string_list(result: object) -> list[str]:
+    if isinstance(result, dict):
+        values = result.get("result")
+        if isinstance(values, list):
+            return [item for item in values if isinstance(item, str)]
+        return []
     if isinstance(result, list):
-        return [name for name in result if isinstance(name, str)]
+        return [item for item in result if isinstance(item, str)]
     return []
 
 
@@ -214,11 +221,7 @@ result = [model for _, _, model in matches][:max(1, int({limit!r}))]
         result = await env.execute_code(code)
     except CodeExecutionError:
         return []
-    if isinstance(result, dict) and isinstance(result.get("result"), list):
-        return [name for name in result.get("result", []) if isinstance(name, str)]
-    if isinstance(result, list):
-        return [name for name in result if isinstance(name, str)]
-    return []
+    return _extract_string_list(result)
 
 
 def is_model_not_found_result(result: object) -> bool:
