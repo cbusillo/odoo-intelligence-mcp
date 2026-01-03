@@ -258,31 +258,31 @@ async def resolve_model_candidates(
     attempts: list[ModelCandidate] = []
     suggestions: list[str] = []
 
-    def _add_attempt(candidate: str, strategy: str) -> None:
-        if not candidate:
+    def _add_attempt(candidate_name: str, strategy: str) -> None:
+        if not candidate_name:
             return
-        if candidate == model_name:
+        if candidate_name == model_name:
             return
-        if any(existing.name == candidate for existing in attempts):
+        if any(existing.name == candidate_name for existing in attempts):
             return
-        attempts.append(ModelCandidate(candidate, strategy))
+        attempts.append(ModelCandidate(candidate_name, strategy))
 
     if allow_suffix:
-        for candidate in _fallback_candidates(model_name):
-            _add_attempt(candidate, "suffix")
+        for candidate_name in _fallback_candidates(model_name):
+            _add_attempt(candidate_name, "suffix")
 
     if allow_module:
         module_matches, module_suggestions = await _module_candidates(env, model_name)
-        for candidate in module_matches:
-            _add_attempt(candidate, "module_search")
+        for candidate_name in module_matches:
+            _add_attempt(candidate_name, "module_search")
         for suggestion in module_suggestions:
             if suggestion not in suggestions:
                 suggestions.append(suggestion)
 
     if allow_fuzzy:
         fuzzy_candidates = await _fuzzy_model_candidates(env, model_name, fuzzy_limit)
-        for candidate in fuzzy_candidates:
-            _add_attempt(candidate, "fuzzy")
+        for candidate_name in fuzzy_candidates:
+            _add_attempt(candidate_name, "fuzzy")
 
     return ModelResolutionPlan(attempts=attempts, suggestions=suggestions)
 
@@ -300,9 +300,9 @@ async def resolve_model_with_runner(
     include_candidates_on_success: bool = False,
     include_candidates_on_failure: bool = True,
 ) -> object:
-    async def _invoke(candidate: str) -> object:
+    async def _invoke(candidate_name: str) -> object:
         try:
-            return await runner(candidate)
+            return await runner(candidate_name)
         except CodeExecutionError as exc:
             return _error_payload_from_exception(exc)
 
