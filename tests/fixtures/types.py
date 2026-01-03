@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 from unittest.mock import MagicMock
 
 from odoo_intelligence_mcp.type_defs.odoo_types import Environment, Field, Model
@@ -176,15 +176,18 @@ class MockPath(Protocol):
 
 
 def as_environment(mock_environment: MagicMock) -> Environment:
-    return cast(Environment, cast(object, mock_environment))
+    # noinspection PyTypeChecker
+    return mock_environment
 
 
 def as_field(mock_field: MagicMock) -> Field:
-    return cast(Field, cast(object, mock_field))
+    # noinspection PyTypeChecker
+    return mock_field
 
 
 def as_model(mock_model: MagicMock) -> Model:
-    return cast(Model, cast(object, mock_model))
+    # noinspection PyTypeChecker
+    return mock_model
 
 
 class ConcreteModelMock:
