@@ -30,6 +30,7 @@ class ModelIterator:
             return
 
         model = self.env[model_name]
+        # noinspection PyProtectedMember
         for field_name, field in model._fields.items():
             if field_filter and not field_filter(field_name, field):
                 continue
@@ -55,6 +56,7 @@ def extract_field_info(field: Field) -> dict[str, Any]:
 
 
 def extract_model_info(model: Model) -> dict[str, Any]:
+    # noinspection PyProtectedMember
     return {
         "name": model._name,
         "description": getattr(model, "_description", ""),
@@ -255,14 +257,14 @@ async def resolve_model_candidates(
     attempts: list[ModelCandidate] = []
     suggestions: list[str] = []
 
-    def _add_attempt(candidate_name: str, strategy: str) -> None:
-        if not candidate_name:
+    def _add_attempt(attempt_name: str, strategy: str) -> None:
+        if not attempt_name:
             return
-        if candidate_name == model_name:
+        if attempt_name == model_name:
             return
-        if any(existing.name == candidate_name for existing in attempts):
+        if any(existing.name == attempt_name for existing in attempts):
             return
-        attempts.append(ModelCandidate(candidate_name, strategy))
+        attempts.append(ModelCandidate(attempt_name, strategy))
 
     if allow_suffix:
         for candidate_name in _fallback_candidates(model_name):
