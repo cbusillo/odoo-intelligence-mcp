@@ -30,10 +30,7 @@ class ModelIterator:
             return
 
         model = self.env[model_name]
-        fields_by_name = getattr(model, "_fields", {})
-        if not isinstance(fields_by_name, dict):
-            return
-        for field_name, field in fields_by_name.items():
+        for field_name, field in model._fields.items():
             if field_filter and not field_filter(field_name, field):
                 continue
             yield field_name, field
@@ -59,7 +56,7 @@ def extract_field_info(field: Field) -> dict[str, Any]:
 
 def extract_model_info(model: Model) -> dict[str, Any]:
     return {
-        "name": getattr(model, "_name", ""),
+        "name": model._name,
         "description": getattr(model, "_description", ""),
         "table": getattr(model, "_table", ""),
         "rec_name": getattr(model, "_rec_name", "name"),
