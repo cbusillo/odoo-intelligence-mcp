@@ -4,7 +4,7 @@ Development guidelines for running the Odoo Intelligence MCP server inside the C
 
 ## Project Snapshot
 
-- **Stack**: Python 3.12+, MCP SDK 1.9+, asyncio
+- **Stack**: Python 3.14+, MCP SDK 1.9+, asyncio
 - **Primary agent shell**: Codex CLI (tools: `Read`, `Edit`, `MultiEdit`, `Write`, inspections, etc.)
 
 ## Quick Command Reference

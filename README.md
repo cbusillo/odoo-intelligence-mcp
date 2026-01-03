@@ -12,7 +12,7 @@ Comprehensive Model Context Protocol (MCP) server providing deep code analysis a
 
 ## Installation
 
-- Prereqs: Python 3.12+ and `uv`
+- Prereqs: Python 3.14+ and `uv`
 - From the project directory: `uv sync`
 
 ## Configuration

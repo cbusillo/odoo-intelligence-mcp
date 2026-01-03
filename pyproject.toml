@@ -53,7 +53,7 @@ dev = [
 
 [tool.ruff]
 line-length = 133
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -109,10 +109,6 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.14"
-
-[[tool.mypy.overrides]]
-module = ["odoo_intelligence_mcp.type_defs.odoo_types"]
-disable_error_code = ["name-defined", "valid-type"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
