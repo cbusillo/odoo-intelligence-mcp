@@ -40,31 +40,36 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
 
             if not container_result.get("success"):
                 status[container_name] = {"status": "not_found", "running": False}
-            else:
-                resolved_name = container_result.get("container")
-                if resolved_name and resolved_name != container_name:
-                    status[container_name] = {"status": "not_found", "running": False, "resolved_container": resolved_name}
-                    continue
-                # Get the container state from the result
-                state = container_result.get("state", {})
-                container_status = state.get("Status", "unknown")
+                continue
 
-                container_info = {
-                    "status": container_status,
-                    "running": container_status == "running",
+            state = container_result.get("state", {})
+            state_data = state if isinstance(state, dict) else {}
+            container_status = state_data.get("Status", "unknown")
+
+            container_info = {
+                "status": container_status,
+                "running": container_status == "running",
+            }
+
+            resolved_name = container_result.get("container")
+            if resolved_name and resolved_name != container_name:
+                container_info["resolved_container"] = resolved_name
+
+            if verbose:
+                config_data = state_data.get("Config")
+                image_name = "unknown"
+                if isinstance(config_data, dict):
+                    image_name = config_data.get("Image", "unknown")
+                verbose_info = {
+                    "state": state_data,
+                    "id": state_data.get("Id", "unknown")[:12] if state_data.get("Id") else "unknown",
+                    "created": state_data.get("Created", "unknown"),
+                    "image": image_name,
                 }
 
-                if verbose:
-                    verbose_info = {
-                        "state": state,
-                        "id": state.get("Id", "unknown")[:12] if state.get("Id") else "unknown",
-                        "created": state.get("Created", "unknown"),
-                        "image": state.get("Config", {}).get("Image", "unknown") if isinstance(state, dict) else "unknown",
-                    }
+                container_info.update(verbose_info)
 
-                    container_info.update(verbose_info)
-
-                status[container_name] = container_info
+            status[container_name] = container_info
 
         all_running = all(c.get("running", False) for c in status.values())
 

@@ -162,9 +162,11 @@ async def test_docker_container_restart() -> None:
 async def test_docker_module_update() -> None:
     with patch("subprocess.run") as mock_run:
         # First call: docker inspect succeeds (container is running)
-        # Second call: docker exec with odoo-bin command succeeds
+        # Second call: module existence check succeeds
+        # Third call: docker exec with odoo-bin command succeeds
         mock_run.side_effect = [
             MagicMock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            MagicMock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
             MagicMock(returncode=0, stdout="Module 'product_connect' updated successfully", stderr=""),  # docker exec
         ]
 
@@ -175,11 +177,11 @@ async def test_docker_module_update() -> None:
         assert "product_connect" in result["modules"]
         assert result["operation"] == "updated"
 
-        # Verify subprocess.run was called twice
-        assert mock_run.call_count == 2
+        # Verify subprocess.run was called three times
+        assert mock_run.call_count == 3
 
         # Check the docker exec call
-        exec_call = mock_run.call_args_list[1][0][0]
+        exec_call = mock_run.call_args_list[2][0][0]
         exec_command = " ".join(exec_call)
         assert "/odoo/odoo-bin" in exec_command
         assert "-u product_connect" in exec_command

@@ -50,15 +50,15 @@ def test_get_container_not_found() -> None:
 
 def test_get_container_with_auto_start() -> None:
     """Test container auto-start when not found."""
-    with patch("subprocess.run") as mock_run:
-        # First call: container not found
-        # Second call: docker start succeeds
-        # Third call: docker inspect succeeds
+    with (
+        patch("subprocess.run") as mock_run,
+        patch("odoo_intelligence_mcp.utils.docker_utils.resolve_existing_container_name", return_value=None),
+    ):
         container_info = {"State": {"Status": "running", "Running": True}}
         mock_run.side_effect = [
-            Mock(returncode=1, stdout="", stderr="No such container"),  # inspect fails
-            Mock(returncode=0, stdout="test-container", stderr=""),  # start succeeds
-            Mock(returncode=0, stdout=json.dumps(container_info), stderr=""),  # inspect succeeds
+            Mock(returncode=1, stdout="", stderr="No such container"),
+            Mock(returncode=0, stdout="test-container", stderr=""),
+            Mock(returncode=0, stdout=json.dumps(container_info), stderr=""),
         ]
 
         manager = DockerClientManager()

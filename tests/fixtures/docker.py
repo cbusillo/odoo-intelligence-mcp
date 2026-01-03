@@ -77,6 +77,7 @@ def get_expected_container_names() -> dict[str, str | None]:
         "script_runner": config.script_runner_container,
         "database": getattr(config, "database_container", None),
         "container_name": config.container_name,
+        "container_prefix": config.container_prefix,
     }
 
 

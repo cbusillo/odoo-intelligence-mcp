@@ -190,9 +190,11 @@ class TestServerHandlers:
         # Mock subprocess.run for the module update operation
         with patch("subprocess.run") as mock_run:
             # First call: docker inspect to check container
-            # Second call: docker exec to update module
+            # Second call: module existence check
+            # Third call: docker exec to update module
             mock_run.side_effect = [
                 MagicMock(returncode=0, stdout="running", stderr=""),  # docker inspect
+                MagicMock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
                 MagicMock(returncode=0, stdout="Module updated successfully", stderr=""),  # docker exec
             ]
 

@@ -77,11 +77,12 @@ async def test_odoo_restart_container_not_found() -> None:
     with patch("odoo_intelligence_mcp.tools.operations.container_restart.DockerClientManager") as mock_manager:
         mock_instance = MagicMock()
 
+        container_prefix = get_expected_container_names().get("container_prefix") or "odoo"
         mock_instance.restart_container.return_value = {
             "success": False,
             "error": "Container not found",
             "error_type": "NotFound",
-            "container": f"{get_expected_container_names()['web'].split('-')[0]}-fake-service",
+            "container": f"{container_prefix}-fake-service",
         }
         mock_manager.return_value = mock_instance
 
@@ -90,7 +91,8 @@ async def test_odoo_restart_container_not_found() -> None:
         assert result["success"] is False
         assert "failed to restart" in result["error"]
         containers = get_expected_container_names()
-        expected_fake_service = f"{containers['web'].split('-')[0]}-fake-service"
+        container_prefix = containers.get("container_prefix") or containers["web"].split("-")[0]
+        expected_fake_service = f"{container_prefix}-fake-service"
         assert result["services"] == [expected_fake_service]
 
 
@@ -113,7 +115,8 @@ async def test_odoo_restart_partial_success() -> None:
         assert result["success"] is False  # Overall false due to partial failure
         assert len(result["results"]) == 2
         containers = get_expected_container_names()
-        expected_fake_service = f"{containers['web'].split('-')[0]}-fake-service"
+        container_prefix = containers.get("container_prefix") or containers["web"].split("-")[0]
+        expected_fake_service = f"{container_prefix}-fake-service"
         assert result["results"][containers["web"]]["success"] is True
         assert result["results"][expected_fake_service]["success"] is False
 

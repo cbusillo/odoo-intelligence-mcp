@@ -10,9 +10,11 @@ from odoo_intelligence_mcp.tools.operations.module_update import odoo_update_mod
 async def test_odoo_update_module_success() -> None:
     with patch("subprocess.run") as mock_run:
         # First call: docker inspect succeeds (container is running)
-        # Second call: docker exec with odoo-bin command succeeds
+        # Second call: module existence check succeeds
+        # Third call: docker exec with odoo-bin command succeeds
         mock_run.side_effect = [
             Mock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            Mock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
             Mock(returncode=0, stdout="Module 'sale' updated successfully", stderr=""),  # docker exec
         ]
 
@@ -24,8 +26,8 @@ async def test_odoo_update_module_success() -> None:
         assert "Module 'sale' updated successfully" in result["stdout"]
         assert result["exit_code"] == 0
 
-        # Check that subprocess.run was called twice
-        assert mock_run.call_count == 2
+        # Check that subprocess.run was called three times
+        assert mock_run.call_count == 3
 
         # Check the docker inspect call
         inspect_call = mock_run.call_args_list[0][0][0]
@@ -34,7 +36,7 @@ async def test_odoo_update_module_success() -> None:
         assert "--format" in " ".join(inspect_call)
 
         # Check the docker exec call
-        exec_call = mock_run.call_args_list[1][0][0]
+        exec_call = mock_run.call_args_list[2][0][0]
         assert exec_call[0] == "docker"
         assert exec_call[1] == "exec"
         assert "-u sale" in " ".join(exec_call)
@@ -45,6 +47,7 @@ async def test_odoo_update_multiple_modules() -> None:
     with patch("subprocess.run") as mock_run:
         mock_run.side_effect = [
             Mock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            Mock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
             Mock(returncode=0, stdout="3 modules updated", stderr=""),  # docker exec
         ]
 
@@ -60,6 +63,7 @@ async def test_odoo_update_module_with_force_install() -> None:
     with patch("subprocess.run") as mock_run:
         mock_run.side_effect = [
             Mock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            Mock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
             Mock(returncode=0, stdout="Module installed", stderr=""),  # docker exec
         ]
 
@@ -69,7 +73,7 @@ async def test_odoo_update_module_with_force_install() -> None:
         assert result["operation"] == "installed"
 
         # Check that -i flag was used instead of -u
-        exec_call = mock_run.call_args_list[1][0][0]
+        exec_call = mock_run.call_args_list[2][0][0]
         exec_command = " ".join(exec_call)
         assert "-i new_module" in exec_command
         assert "-u new_module" not in exec_command
@@ -80,6 +84,7 @@ async def test_odoo_update_module_failure() -> None:
     with patch("subprocess.run") as mock_run:
         mock_run.side_effect = [
             Mock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            Mock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
             Mock(returncode=1, stdout="", stderr="ERROR: Module 'invalid_module' not found"),  # docker exec fails
         ]
 
@@ -132,6 +137,7 @@ async def test_odoo_update_module_timeout() -> None:
 
         mock_run.side_effect = [
             Mock(returncode=0, stdout="running", stderr=""),  # docker inspect
+            Mock(returncode=0, stdout='{"missing": []}', stderr=""),  # module check
             subprocess.TimeoutExpired("docker exec", 300),  # docker exec times out
         ]
 
