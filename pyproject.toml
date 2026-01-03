@@ -36,6 +36,7 @@ mcp-clean = "odoo_intelligence_mcp.cli:clean"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/odoo_intelligence_mcp"]
+include = ["src/odoo_intelligence_mcp/py.typed"]
 
 [tool.hatch.build]
 exclude = ["tests", "*.md", ".*", "__pycache__", "*.pyc"]
