@@ -11,7 +11,7 @@ authors = [
 ]
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "mcp",
     "pydantic",
@@ -108,7 +108,7 @@ ignore = [
 "src/odoo_intelligence_mcp/tools/code/read_odoo_file.py" = ["C901", "PLR0911", "PLR0912", "PLR0915", "PLC0415", "S112", "E722", "PLR2004", "SIM108"]  # Complex file reading logic
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 
 [[tool.mypy.overrides]]
 module = ["odoo_intelligence_mcp.type_defs.odoo_types"]
