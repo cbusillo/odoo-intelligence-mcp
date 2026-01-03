@@ -9,7 +9,6 @@ import tomllib
 from collections.abc import AsyncIterator, Callable, Iterator
 from functools import lru_cache
 from pathlib import Path
-from typing import ClassVar
 
 from pydantic import Field as PydanticField
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -563,9 +562,8 @@ class EnvConfig(BaseSettings):
 
 
 class MockRegistry(Registry):
-    models: ClassVar[dict[str, type[Model]]] = {}
-
     def __init__(self) -> None:
+        self.models: dict[str, type[Model]] = {}
         self._models: dict[str, type[Model]] = {}
 
     def _get_models_dict(self) -> dict[str, type[Model]]:
