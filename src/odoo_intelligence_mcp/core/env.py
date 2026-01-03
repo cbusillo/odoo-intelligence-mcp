@@ -562,7 +562,7 @@ class EnvConfig(BaseSettings):
         return f"{self.container_prefix}-{host}-1"
 
 
-class MockRegistry:
+class MockRegistry(Registry):
     models: ClassVar[dict[str, type[Model]]] = {}
 
     def __init__(self) -> None:
