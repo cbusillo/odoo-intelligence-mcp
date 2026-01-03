@@ -6,7 +6,10 @@ from ._common import execute_and_paginate_results
 
 
 async def search_field_type(
-    env: CompatibleEnvironment, field_type: str, pagination: PaginationParams | None = None
+    env: CompatibleEnvironment,
+    field_type: str,
+    pagination: PaginationParams | None = None,
+    model_name: str | None = None,
 ) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
@@ -36,6 +39,11 @@ field_type = {field_type!r}
 
 # Get all model names from the registry
 model_names = list(env.registry.models.keys())
+if {bool(model_name)!r}:
+    if {model_name!r} in model_names:
+        model_names = [{model_name!r}]
+    else:
+        model_names = []
 
 results = []
 max_results = 100  # Limit results to prevent memory issues
