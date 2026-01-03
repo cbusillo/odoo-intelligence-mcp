@@ -109,6 +109,7 @@ def _enhance_registry_failure(env: CompatibleEnvironment, tool_name: str, result
             "error_type": error_type or "OdooRegistryError",
             "tool": tool_name,
             "next_tools": [
+                "search_code",
                 "read_odoo_file",
                 "find_files",
                 "addon_dependencies",
@@ -120,7 +121,6 @@ def _enhance_registry_failure(env: CompatibleEnvironment, tool_name: str, result
                 "Inspect the failing file via read_odoo_file using an absolute container path.",
                 "Search occurrences with search_code (fs) or find_files if paths are unknown.",
                 "Check container health with odoo_status; if needed use odoo_restart.",
-                "Temporarily disable module auto-updates (ODOO_UPDATE) while debugging.",
             ],
             "telemetry": {
                 "container": container,
@@ -333,7 +333,10 @@ async def _handle_search_field_type(env: CompatibleEnvironment, arguments: dict[
 async def _handle_search_decorators(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
-    return await search_decorators(env, get_required(arguments, "decorator"), pagination, mode)
+    decorator = get_required(arguments, "decorator")
+    if decorator == "create_multi":
+        decorator = "model_create_multi"
+    return await search_decorators(env, decorator, pagination, mode)
 
 
 async def _handle_field_dependencies(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -412,6 +415,10 @@ async def _handle_odoo_restart(_env: CompatibleEnvironment, arguments: dict[str,
 
 async def _handle_model_query(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     operation = get_required(arguments, "operation")
+    if operation == "rels":
+        operation = "relationships"
+    elif operation == "inherit":
+        operation = "inheritance"
 
     if operation == "info":
         return await _handle_model_info(env, arguments)
@@ -432,6 +439,16 @@ async def _handle_model_query(env: CompatibleEnvironment, arguments: dict[str, o
 
 async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     operation = get_required(arguments, "operation")
+    if operation == "values":
+        operation = "analyze_values"
+    elif operation == "dynamic":
+        operation = "resolve_dynamic"
+    elif operation == "deps":
+        operation = "dependencies"
+    elif operation == "properties":
+        operation = "search_properties"
+    elif operation == "type":
+        operation = "search_type"
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
 
     if operation == "usages":
@@ -482,6 +499,8 @@ async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, o
 
 async def _handle_analysis_query(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     analysis_type = get_required(arguments, "analysis_type")
+    if analysis_type == "inherit":
+        analysis_type = "inheritance"
 
     async def _run(run_args: dict[str, object]) -> object:
         if analysis_type == "performance":
@@ -555,14 +574,12 @@ async def handle_list_tools() -> list[Tool]:
     return [
         Tool(
             name="addon_dependencies",
-            description="Get addon dependencies",
-            inputSchema=add_pagination_to_schema(
-                {"type": "object", "properties": {"addon_name": {"type": "string"}}, "required": ["addon_name"]}
-            ),
+            description="Addon manifest dependencies",
+            inputSchema={"type": "object", "properties": {"addon_name": {"type": "string"}}, "required": ["addon_name"]},
         ),
         Tool(
             name="search_code",
-            description="Regex search (fs)",
+            description="Regex search in container",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -577,7 +594,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="find_files",
-            description="Find files (fs)",
+            description="Find files by name in container",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -603,14 +620,12 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="module_structure",
-            description="Get module structure",
-            inputSchema=add_pagination_to_schema(
-                {"type": "object", "properties": {"module_name": {"type": "string"}}, "required": ["module_name"]}
-            ),
+            description="Addon structure",
+            inputSchema={"type": "object", "properties": {"module_name": {"type": "string"}}, "required": ["module_name"]},
         ),
         Tool(
             name="find_method",
-            description="Find method",
+            description="Find model methods",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -624,12 +639,15 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_decorators",
-            description="Search decorators",
+            description="Model decorators",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
-                        "decorator": {"type": "string", "enum": ["depends", "constrains", "onchange", "create_multi"]},
+                        "decorator": {
+                            "type": "string",
+                            "enum": ["depends", "constrains", "onchange", "model_create_multi"],
+                        },
                         "mode": {"type": "string", "enum": ["auto", "fs", "registry"], "default": "auto"},
                     },
                     "required": ["decorator"],
@@ -638,7 +656,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="execute_code",
-            description="Execute Python (use sparingly)",
+            description="Execute Python in Odoo container",
             inputSchema={"type": "object", "properties": {"code": {"type": "string"}}, "required": ["code"]},
         ),
         Tool(
@@ -676,7 +694,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="model_query",
-            description="Models: search|info|rels|inherit|view_usage",
+            description="Models: search|info|relationships|inheritance|view_usage",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -692,7 +710,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="field_query",
-            description="Fields: usages|values|dynamic|deps|properties|type",
+            description="Fields: usages|analyze_values|resolve_dynamic|dependencies|search_properties|search_type",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -714,7 +732,7 @@ async def handle_list_tools() -> list[Tool]:
                         "field_type": {"type": "string"},
                         "domain": {"type": "array"},
                         "sample_size": {"type": "integer", "default": 1000},
-                        "mode": {"type": "string", "enum": ["auto", "fs", "registry", "db"], "default": "auto"},
+                        "mode": {"type": "string", "enum": ["auto", "fs", "registry"], "default": "auto"},
                     },
                     "required": ["operation"],
                 }
@@ -722,7 +740,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="analysis_query",
-            description="Analysis: performance|patterns|workflow",
+            description="Analysis: performance|patterns|workflow|inheritance",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -790,11 +808,12 @@ async def run_server() -> None:
                 capabilities=ServerCapabilities(tools=ToolsCapability()),
                 instructions=(
                     "Primary: model_query/field_query/analysis_query (use operation=/analysis_type=).\n"
-                    "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage (requires model_name).\n"
-                    "field_query: usages/dependencies need model_name+field_name; search_type/search_properties need field_type/property.\n"
-                    "Modes: auto default; if registry fails, retry with mode=fs before odoo_restart.\n"
-                    "Page with page/page_size/filter.\n"
-                    "Files: search_code/read_odoo_file/find_method. execute_code sparingly."
+                    "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage/inheritance (requires model_name).\n"
+                    "field_query: usages/dependencies need model_name+field_name; analyze_values needs model_name+field_name; search_type/search_properties need field_type/property.\n"
+                    "analysis_query: performance/workflow/inheritance need model_name; patterns uses pattern_type.\n"
+                    "Modes (where supported): auto (default; registry), fs (filesystem only), registry (live Odoo only).\n"
+                    "Page with page/page_size/filter; model_query(search/info) and analysis_query(patterns) default to page_size=25.\n"
+                    "Files (container fs): search_code/read_odoo_file/find_method. execute_code sparingly."
                 ),
             ),
         )

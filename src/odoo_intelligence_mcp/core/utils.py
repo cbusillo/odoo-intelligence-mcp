@@ -179,7 +179,7 @@ class ResponseSizeError(Exception):
         self.max_tokens = max_tokens
         super().__init__(
             f"MCP tool response ({estimated_tokens} tokens) exceeds maximum allowed tokens ({max_tokens}). "
-            f"Please use pagination, filtering, or limit parameters to reduce the response size."
+            f"Please use page/page_size/filter to reduce the response size."
         )
 
 
@@ -203,11 +203,11 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
                 data["meta"] = {}
             data["meta"]["size_warning"] = {
                 "estimated_tokens": estimated_tokens,
-                "message": "Large response detected. Consider using pagination, filtering, or limit parameters.",
+                "message": "Large response detected. Consider using page/page_size/filter.",
                 "recommendations": [
-                    "Use pagination.page_size to limit results",
-                    "Apply filter_text to narrow results",
-                    "Use specific limit parameters where available",
+                    "Use page_size to limit results",
+                    "Apply filter to narrow results",
+                    "Use page to fetch more results",
                 ],
             }
 
@@ -249,7 +249,7 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
                 data["truncation_info"] = {
                     "estimated_tokens": estimated_tokens,
                     "max_tokens": max_tokens,
-                    "message": "Response truncated due to size. Use pagination or filtering to get complete data.",
+                    "message": "Response truncated due to size. Use page/page_size/filter to get complete data.",
                 }
 
                 # Try to intelligently truncate large fields

@@ -19,10 +19,14 @@ Development guidelines for running the Odoo Intelligence MCP server inside the C
 ## Code Standards
 
 - Avoid docstrings/comments; code must be self-documenting (pyproject comments allowed)
-- Use descriptive, unabbreviated identifiers
+- Use descriptive, unabbreviated identifiers; avoid short or ambiguous locals (especially 1–3 character abbreviations like
+  `idx`, `cfg`, `tmp`, `obj`, `val`, `res`, `ctx`). Allow only explicit tokens (`id`, `db`, `api`, `orm`, `env`,
+  `io`, `url`, `ui`, `ux`, `ip`, `http`, `json`, `xml`, `sql`) and math-only contexts.
+- Functions as verbs; objects as nouns. Keep one responsibility per function.
 - Type everything (`list[str]` style); leverage `type_defs.odoo_types`
 - Line length 133 characters max
 - Use f-strings for formatting/logging
+- Do not run Python directly; use `uv run` for scripts/tests.
 - Prefer early returns (ignore TRY300) and shallow nesting
 - Maintain ≥75 % coverage before shipping
 
