@@ -1,4 +1,5 @@
 import asyncio
+import os
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,23 @@ from .fixtures import mock_docker_run, real_odoo_env_if_available  # noqa: F401
 @pytest.fixture
 def env_config() -> EnvConfig:
     return load_env_config()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_container_prefix() -> Generator[None, None, None]:
+    explicit = any(
+        os.getenv(key)
+        for key in ("ODOO_PROJECT_NAME", "ODOO_CONTAINER_NAME", "ODOO_SCRIPT_RUNNER_CONTAINER", "ODOO_WEB_CONTAINER")
+    )
+    if explicit:
+        yield
+        return
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setenv("ODOO_PROJECT_NAME", "odoo")
+    try:
+        yield
+    finally:
+        monkeypatch.undo()
 
 
 @pytest.fixture

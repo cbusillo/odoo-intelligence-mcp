@@ -41,6 +41,10 @@ class InvalidArgumentError(OdooMCPError):
         self.actual_value = actual_value
 
 
+class EnvironmentResolutionError(OdooMCPError):
+    pass
+
+
 def create_error_response(error: Exception, include_type: bool = True) -> dict[str, Any]:
     response = {
         "success": False,

@@ -8,7 +8,7 @@ from tests.fixtures import get_expected_container_names
 
 
 def _managed_container_names(containers: dict[str, Any]) -> list[str]:
-    order = ("web", "shell", "script_runner", "database")
+    order = ("web", "script_runner", "database")
     names: list[str] = []
     for key in order:
         value = containers.get(key)
@@ -111,7 +111,7 @@ async def test_odoo_status_some_stopped() -> None:
                         "container": container_name,
                         "state": {"Status": "exited", "Id": "abc123", "Created": "", "Config": {}},
                     }
-                if container_name in [containers["shell"], containers["script_runner"]]:
+                if container_name == containers["script_runner"]:
                     return {
                         "success": True,
                         "container": container_name,
@@ -138,7 +138,7 @@ async def test_odoo_status_some_stopped() -> None:
             assert result["data"]["running_containers"] == expected_running
             containers = get_expected_container_names()
             assert not result["data"]["containers"][containers["web"]]["running"]
-            assert result["data"]["containers"][containers["shell"]]["running"]
+            assert result["data"]["containers"][containers["script_runner"]]["running"]
             if containers.get("database"):
                 assert result["data"]["containers"][containers["database"]]["running"]
 

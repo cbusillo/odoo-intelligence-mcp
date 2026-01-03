@@ -11,7 +11,6 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
         config = load_env_config()
         containers = [
             config.web_container,
-            config.shell_container,
             config.script_runner_container,
         ]
         database_container = getattr(config, "database_container", None)
@@ -42,6 +41,10 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
             if not container_result.get("success"):
                 status[container_name] = {"status": "not_found", "running": False}
             else:
+                resolved_name = container_result.get("container")
+                if resolved_name and resolved_name != container_name:
+                    status[container_name] = {"status": "not_found", "running": False, "resolved_container": resolved_name}
+                    continue
                 # Get the container state from the result
                 state = container_result.get("state", {})
                 container_status = state.get("Status", "unknown")

@@ -31,18 +31,32 @@ Restart Claude after configuration changes.
 ### Environment
 
 `.env` resolution order:
-1) Current working directory (where Claude was launched)
-2) This MCP server directory (fallback)
+1) `ODOO_ENV_FILE` (explicit)
+2) `ODOO_STATE_ROOT/.compose.env` or `~/odoo-ai/<stack>/.compose.env` (via `ODOO_PROJECT_NAME` or `ODOO_STACK_NAME`)
+   - When `docker/config/ops.toml` exists (found via `ODOO_PROJECT_DIR` or current dir), MCP uses
+     `uv run ops local info <target> --json` to resolve the correct `.compose.env`.
+3) Current working directory (where Claude was launched)
+4) This MCP server directory (fallback)
+
+Override discovery by setting `ODOO_ENV_FILE` to the target project's `.env` path or `ODOO_PROJECT_DIR` for compose resolution. Use `ODOO_ENV_PRIORITY=process` to let process env vars override `.compose.env` values.
+
+Optional container overrides:
+- `ODOO_CONTAINER_NAME` (primary exec container)
+- `ODOO_SCRIPT_RUNNER_CONTAINER`
+- `ODOO_WEB_CONTAINER`
+
+If the script-runner container is missing, MCP will try `{prefix}-web-1`, `{prefix}-odoo-1`, and `{prefix}-app-1`.
+
+Compose files can be supplied via `ODOO_COMPOSE_FILES` or inherited from `DEPLOY_COMPOSE_FILES`/`COMPOSE_FILE` in the target env.
 
 Defaults (override via environment or `.env`):
 - Database: `odoo` (`ODOO_DB_NAME`)
 - Addons Path: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (`ODOO_ADDONS_PATH`)
-- Container Prefix: `odoo` (`ODOO_PROJECT_NAME`)
+- Container Prefix: required (`ODOO_PROJECT_NAME`) unless container overrides are set
 
 Derived containers from prefix:
 - Script Runner: `{prefix}-script-runner-1`
 - Web: `{prefix}-web-1`
-- Shell: `{prefix}-shell-1`
 
 ### Modes and Fallbacks
 

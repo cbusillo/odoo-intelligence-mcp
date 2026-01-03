@@ -14,6 +14,10 @@ def create_mock_docker_manager(
     mock_manager = MagicMock()
     mock_instance = MagicMock()
 
+    def mock_get_container(container_name: str, auto_start: bool = False) -> dict[str, Any]:
+        return {"success": True, "container": container_name}
+
+    mock_instance.get_container.side_effect = mock_get_container
     if restart_func:
         mock_instance.restart_container.side_effect = restart_func
 
@@ -22,7 +26,7 @@ def create_mock_docker_manager(
 
 
 def _default_service_names(containers: dict[str, Any]) -> list[str]:
-    order = ("web", "shell", "script_runner", "database")
+    order = ("web", "script_runner", "database")
     names: list[str] = []
     for key in order:
         value = containers.get(key)
@@ -147,10 +151,10 @@ async def test_odoo_restart_service_name_sanitization() -> None:
         mock_manager.return_value = mock_instance
 
         # Test with extra spaces and mixed formats
-        result = await odoo_restart(services=" web-1 , shell-1 ")
+        result = await odoo_restart(services=" web-1 , script-runner-1 ")
 
         containers = get_expected_container_names()
-        expected_services = [containers["web"], containers["shell"]]
+        expected_services = [containers["web"], containers["script_runner"]]
         assert result["data"]["services"] == expected_services
         assert containers["web"] in called_services
-        assert containers["shell"] in called_services
+        assert containers["script_runner"] in called_services

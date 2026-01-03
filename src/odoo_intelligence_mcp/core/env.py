@@ -2,10 +2,13 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import textwrap
+import tomllib
 from collections.abc import AsyncIterator, Callable, Iterator
+from functools import lru_cache
 from pathlib import Path
 from typing import ClassVar
 
@@ -13,9 +16,480 @@ from pydantic import Field as PydanticField
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ..type_defs.odoo_types import Field, Model, Registry
-from ..utils.error_utils import CodeExecutionError, DockerConnectionError
+from ..utils.error_utils import CodeExecutionError, DockerConnectionError, EnvironmentResolutionError
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_env_file_override() -> Path | None:
+    override = os.getenv("ODOO_ENV_FILE")
+    if not override:
+        return None
+    candidate = Path(override).expanduser()
+    if candidate.is_dir():
+        candidate /= ".env"
+    if candidate.exists():
+        return candidate
+    logger.warning("ODOO_ENV_FILE does not exist: %s", candidate)
+    return None
+
+
+def _parse_env_line(line: str) -> tuple[str, str] | None:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    if stripped.startswith("export "):
+        stripped = stripped[7:].lstrip()
+    if "=" not in stripped:
+        return None
+    key, value = stripped.split("=", 1)
+    key = key.strip()
+    if not key:
+        return None
+    value = value.strip()
+    if value and value[0] in {"\"", "'"} and value[-1:] == value[:1]:
+        value = value[1:-1]
+    else:
+        if "#" in value:
+            value = value.split("#", 1)[0].rstrip()
+    return key, value
+
+
+@lru_cache(maxsize=8)
+def _load_env_file_values(env_path_text: str) -> dict[str, str]:
+    env_path = Path(env_path_text)
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    values: dict[str, str] = {}
+    for line in lines:
+        parsed = _parse_env_line(line)
+        if not parsed:
+            continue
+        key, value = parsed
+        values[key] = value
+    return values
+
+
+def _get_env_value(config: "EnvConfig", key: str) -> str | None:
+    env_file_path = getattr(config, "_env_file", None)
+    env_priority = getattr(config, "_env_priority", None)
+    if env_priority == "env_file" and env_file_path:
+        env_values = _load_env_file_values(str(env_file_path))
+        if key in env_values:
+            return env_values[key]
+    if key in os.environ:
+        return os.environ[key]
+    if not env_file_path:
+        return None
+    return _load_env_file_values(str(env_file_path)).get(key)
+
+
+def _split_env_list(raw: str) -> list[str]:
+    if not raw:
+        return []
+    parts = [segment.strip() for segment in re.split(r"[,:]", raw) if segment.strip()]
+    return parts
+
+
+def _expand_path(raw: str | Path) -> Path:
+    expanded = os.path.expandvars(os.path.expanduser(str(raw)))
+    return Path(expanded)
+
+
+def _find_ops_repo_root(start_dir: Path) -> Path | None:
+    current = start_dir.resolve()
+    while True:
+        ops_path = current / "docker" / "config" / "ops.toml"
+        if ops_path.exists():
+            return current
+        if current.parent == current:
+            return None
+        current = current.parent
+
+
+def _get_ops_root(config: "EnvConfig") -> Path | None:
+    project_dir = config.project_dir or _get_env_value(config, "ODOO_PROJECT_DIR")
+    if project_dir:
+        candidate = _expand_path(project_dir)
+        if candidate.exists():
+            return _find_ops_repo_root(candidate)
+    env_file_path = getattr(config, "_env_file", None)
+    if env_file_path:
+        return _find_ops_repo_root(Path(env_file_path).parent)
+    return _find_ops_repo_root(Path.cwd())
+
+
+def should_allow_autostart(config: "EnvConfig") -> bool:
+    ops_root = _get_ops_root(config)
+    if not ops_root:
+        return True
+    env_file_path = getattr(config, "_env_file", None)
+    if not env_file_path:
+        return False
+    env_path = Path(env_file_path)
+    if env_path.name == ".compose.env":
+        return True
+    if env_path.parent.name == "stack-env":
+        return True
+    override = os.getenv("ODOO_ENV_FILE")
+    if override:
+        candidate = Path(override).expanduser()
+        if candidate.is_dir():
+            candidate /= ".env"
+        return candidate.exists()
+    return False
+
+
+def _load_ops_targets(repo_root: Path) -> list[str]:
+    ops_path = repo_root / "docker" / "config" / "ops.toml"
+    try:
+        data = tomllib.loads(ops_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    targets = data.get("targets", {})
+    if not isinstance(targets, dict):
+        return []
+    return [key for key in targets.keys() if isinstance(key, str) and key]
+
+
+def _extract_json_payload(raw_text: str) -> dict[str, object] | None:
+    if not raw_text:
+        return None
+    start = raw_text.find("{")
+    end = raw_text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        payload = json.loads(raw_text[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+@lru_cache(maxsize=16)
+def _run_ops_info(repo_root_text: str, target: str) -> dict[str, object] | None:
+    if not shutil.which("uv"):
+        return None
+    repo_root = Path(repo_root_text)
+    cmd = ["uv", "run", "ops", "local", "info", target, "--json"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=repo_root)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    return _extract_json_payload(result.stdout)
+
+
+def _select_ops_targets(targets: list[str], project_name: str | None, stack_name: str | None) -> list[str]:
+    desired: list[str] = []
+
+    def _add(value: str | None) -> None:
+        if not value:
+            return
+        if value not in desired:
+            desired.append(value)
+
+    _add(stack_name)
+    if stack_name:
+        _add(stack_name.split("-", 1)[0])
+        if stack_name.endswith("-local"):
+            _add(stack_name.removesuffix("-local"))
+
+    _add(project_name)
+    if project_name:
+        if project_name.startswith("odoo-"):
+            _add(project_name.removeprefix("odoo-"))
+        _add(project_name.split("-", 1)[-1])
+
+    candidates = [target for target in desired if target in targets]
+    return candidates or targets
+
+
+def _resolve_stack_env_file_from_ops(start_dir: Path, project_name: str | None, stack_name: str | None) -> Path | None:
+    repo_root = _find_ops_repo_root(start_dir)
+    if not repo_root:
+        return None
+    if not project_name and not stack_name:
+        return None
+    targets = _load_ops_targets(repo_root)
+    if not targets:
+        return None
+    infos: list[dict[str, object]] = []
+    for target in _select_ops_targets(targets, project_name, stack_name):
+        info = _run_ops_info(str(repo_root), target)
+        if info:
+            infos.append(info)
+
+    def _match(info: dict[str, object], key: str | None) -> bool:
+        if not key:
+            return False
+        return key == info.get("project_name") or key == info.get("stack_name") or key == info.get("compose_project")
+
+    if project_name:
+        for info in infos:
+            if _match(info, project_name):
+                env_file = info.get("env_file")
+                if isinstance(env_file, str):
+                    candidate = Path(env_file)
+                    if candidate.exists():
+                        return candidate
+
+    if stack_name:
+        for info in infos:
+            if info.get("stack_name") == stack_name:
+                env_file = info.get("env_file")
+                if isinstance(env_file, str):
+                    candidate = Path(env_file)
+                    if candidate.exists():
+                        return candidate
+    return None
+
+
+def _resolve_stack_env_file() -> Path | None:
+    cwd_env = Path.cwd() / ".env"
+    cwd_env_values = _load_env_file_values(str(cwd_env)) if cwd_env.exists() else {}
+    stack_name = os.getenv("ODOO_STACK_NAME") or os.getenv("ODOO_STACK") or os.getenv("ODOO_ENV_NAME")
+    if not stack_name:
+        stack_name = cwd_env_values.get("ODOO_STACK_NAME") or cwd_env_values.get("ODOO_STACK") or cwd_env_values.get(
+            "ODOO_ENV_NAME"
+        )
+
+    project_name = os.getenv("ODOO_PROJECT_NAME") or cwd_env_values.get("ODOO_PROJECT_NAME")
+
+    state_root = os.getenv("ODOO_STATE_ROOT") or cwd_env_values.get("ODOO_STATE_ROOT")
+    if state_root:
+        candidate = _expand_path(state_root) / ".compose.env"
+        if candidate.exists():
+            return candidate
+
+    project_dir = os.getenv("ODOO_PROJECT_DIR") or cwd_env_values.get("ODOO_PROJECT_DIR")
+    ops_start_dir = _expand_path(project_dir) if project_dir else Path.cwd()
+    ops_env = _resolve_stack_env_file_from_ops(ops_start_dir, project_name, stack_name)
+    if ops_env:
+        return ops_env
+
+    if project_name:
+        candidate = Path.home() / "odoo-ai" / project_name / ".compose.env"
+        if candidate.exists():
+            return candidate
+        fallback = Path.home() / ".odoo-ai" / "stack-env" / f"{project_name}.env"
+        if fallback.exists():
+            return fallback
+    base = Path.home() / "odoo-ai"
+    if base.exists():
+        matches = [path / ".compose.env" for path in base.iterdir() if path.is_dir() and (path / ".compose.env").exists()]
+        if len(matches) == 1:
+            return matches[0]
+        if project_name:
+            for candidate in matches:
+                values = _load_env_file_values(str(candidate))
+                if values.get("ODOO_PROJECT_NAME") == project_name:
+                    return candidate
+
+    if stack_name:
+        candidate = Path.home() / "odoo-ai" / stack_name / ".compose.env"
+        if candidate.exists():
+            return candidate
+        fallback = Path.home() / ".odoo-ai" / "stack-env" / f"{stack_name}.env"
+        if fallback.exists():
+            return fallback
+    fallback_dir = Path.home() / ".odoo-ai" / "stack-env"
+    if fallback_dir.exists():
+        candidates = [path for path in fallback_dir.iterdir() if path.is_file() and path.suffix == ".env"]
+        if len(candidates) == 1:
+            return candidates[0]
+    return None
+
+
+def _sanitize_container_name(container_name: str) -> str:
+    safe_name = container_name.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()
+    if not re.fullmatch(r"^[a-zA-Z0-9_\-.]+$", safe_name):
+        return "odoo-script-runner-1"
+    return safe_name
+
+
+def _container_candidates(config: "EnvConfig", requested: str | None = None) -> list[str]:
+    candidates = [
+        requested or "",
+        config.container_name,
+        config.script_runner_container,
+        config.web_container,
+    ]
+    if config.container_prefix:
+        candidates.extend(
+            [
+                f"{config.container_prefix}-odoo-1",
+                f"{config.container_prefix}-app-1",
+            ]
+        )
+    unique: list[str] = []
+    for candidate in candidates:
+        normalized = candidate.strip()
+        if not normalized or normalized in unique:
+            continue
+        unique.append(normalized)
+    return unique
+
+
+def resolve_existing_container_name(config: "EnvConfig", requested: str) -> str | None:
+    for candidate in _container_candidates(config, requested):
+        safe_candidate = _sanitize_container_name(candidate)
+        check_cmd = ["docker", "inspect", safe_candidate, "--format", "{{.State.Status}}"]
+        result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=3)
+        if result.returncode == 0:
+            return safe_candidate
+    return None
+
+
+def resolve_compose_env_file(config: "EnvConfig") -> Path | None:
+    env_file_path = getattr(config, "_env_file", None)
+    if env_file_path and Path(env_file_path).exists():
+        return Path(env_file_path)
+    return None
+
+
+def resolve_compose_files(config: "EnvConfig") -> list[str]:
+    raw = config.compose_files
+    if not raw:
+        raw = _get_env_value(config, "DEPLOY_COMPOSE_FILES")
+    if not raw:
+        raw = _get_env_value(config, "COMPOSE_FILE")
+    if not raw:
+        return []
+    return _split_env_list(raw)
+
+
+def _compose_files_exist(base: Path, compose_files: list[str]) -> bool:
+    if not compose_files:
+        return (base / "docker-compose.yml").exists() or (base / "compose.yml").exists()
+    for entry in compose_files:
+        path = _expand_path(entry)
+        if path.is_absolute():
+            if not path.exists():
+                return False
+        else:
+            if not (base / path).exists():
+                return False
+    return True
+
+
+def _scan_compose_roots(root: Path, compose_files: list[str], max_depth: int) -> Path | None:
+    if max_depth < 0:
+        return None
+    if _compose_files_exist(root, compose_files):
+        return root
+    if max_depth == 0:
+        return None
+    try:
+        entries = list(root.iterdir())
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.is_dir():
+            continue
+        resolved = _scan_compose_roots(entry, compose_files, max_depth - 1)
+        if resolved:
+            return resolved
+    return None
+
+
+
+def resolve_compose_project_directory(config: "EnvConfig", compose_files: list[str]) -> Path | None:
+    override = config.project_dir or _get_env_value(config, "ODOO_PROJECT_DIR")
+    if override:
+        candidate = _expand_path(override)
+        if candidate.exists():
+            return candidate
+    env_file_path = getattr(config, "_env_file", None)
+    if env_file_path:
+        env_parent = Path(env_file_path).parent
+        for candidate in [env_parent, *env_parent.parents]:
+            if _compose_files_exist(candidate, compose_files):
+                return candidate
+    cwd = Path.cwd()
+    for candidate in [cwd, cwd.parent]:
+        if _compose_files_exist(candidate, compose_files):
+            return candidate
+    absolute_paths = [path for path in (_expand_path(entry) for entry in compose_files) if path.is_absolute()]
+    if absolute_paths:
+        return absolute_paths[0].parent
+    home = Path.home()
+    for root in [home / "Developer", home / "dev", home / "projects", home / "src"]:
+        if not root.exists():
+            continue
+        found = _scan_compose_roots(root, compose_files, 1)
+        if found:
+            return found
+    return None
+
+
+def build_compose_up_command(config: "EnvConfig", services: list[str]) -> tuple[list[str], Path | None]:
+    compose_files = resolve_compose_files(config)
+    project_dir = resolve_compose_project_directory(config, compose_files)
+    env_file_path = resolve_compose_env_file(config)
+    resolved_compose_files: list[Path] = []
+    if project_dir:
+        for entry in compose_files:
+            resolved = _expand_path(entry)
+            if not resolved.is_absolute():
+                resolved = (project_dir / resolved).resolve()
+            else:
+                resolved = resolved.resolve()
+            resolved_compose_files.append(resolved)
+
+        base_candidates = [project_dir / "docker-compose.yml", project_dir / "compose.yml"]
+        base_file = next((candidate.resolve() for candidate in base_candidates if candidate.exists()), None)
+        override_file = (project_dir / "docker-compose.override.yml").resolve()
+        merged: list[Path] = []
+        seen: set[Path] = set()
+
+        for candidate in [base_file, override_file if override_file.exists() else None]:
+            if candidate and candidate not in seen:
+                merged.append(candidate)
+                seen.add(candidate)
+
+        for candidate in resolved_compose_files:
+            if candidate not in seen:
+                merged.append(candidate)
+                seen.add(candidate)
+
+        resolved_compose_files = merged
+    else:
+        resolved_compose_files = [_expand_path(entry) for entry in compose_files]
+
+    command = ["/usr/bin/env", "docker", "compose"]
+    if env_file_path:
+        command += ["--env-file", str(env_file_path)]
+    for entry in resolved_compose_files:
+        command += ["-f", str(entry)]
+    command += ["up", "-d", *services]
+    return command, project_dir
+
+
+
+def _resolve_container_env(container_name: str) -> dict[str, str]:
+    try:
+        inspect_cmd = ["docker", "inspect", container_name, "--format", "{{json .Config.Env}}"]
+        result = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=3)
+        if result.returncode != 0:
+            return {}
+        raw = json.loads(result.stdout)
+        if not isinstance(raw, list):
+            return {}
+        env_vars: dict[str, str] = {}
+        for entry in raw:
+            if not isinstance(entry, str) or "=" not in entry:
+                continue
+            key, value = entry.split("=", 1)
+            env_vars[key] = value
+        return env_vars
+    except (json.JSONDecodeError, subprocess.TimeoutExpired, OSError):
+        return {}
 
 
 class EnvConfig(BaseSettings):
@@ -27,29 +501,48 @@ class EnvConfig(BaseSettings):
         extra="ignore",
     )
 
-    container_prefix: str = PydanticField(default="odoo", alias="ODOO_PROJECT_NAME")
+    container_prefix: str | None = PydanticField(default=None, alias="ODOO_PROJECT_NAME")
     db_name: str = PydanticField(default="odoo", alias="ODOO_DB_NAME")
     db_host: str = PydanticField(default="database", alias="ODOO_DB_HOST")
     db_port: str = PydanticField(default="5432", alias="ODOO_DB_PORT")
     addons_path: str = PydanticField(default="/opt/project/addons,/odoo/addons,/volumes/enterprise", alias="ODOO_ADDONS_PATH")
+    project_dir: str | None = PydanticField(default=None, alias="ODOO_PROJECT_DIR")
+    stack_name: str | None = PydanticField(default=None, alias="ODOO_STACK_NAME")
+    compose_files: str | None = PydanticField(default=None, alias="ODOO_COMPOSE_FILES")
+    container_name_override: str | None = PydanticField(default=None, alias="ODOO_CONTAINER_NAME")
+    script_runner_container_override: str | None = PydanticField(default=None, alias="ODOO_SCRIPT_RUNNER_CONTAINER")
+    web_container_override: str | None = PydanticField(default=None, alias="ODOO_WEB_CONTAINER")
     # Feature flags
     enhanced_errors: bool = PydanticField(default=False, alias="ODOO_MCP_ENHANCED_ERRORS")
 
     @property
     def container_name(self) -> str:
-        return f"{self.container_prefix}-script-runner-1"
+        return self.script_runner_container
 
     @property
     def script_runner_container(self) -> str:
+        if self.script_runner_container_override:
+            return self.script_runner_container_override
+        if self.container_name_override:
+            return self.container_name_override
+        if not self.container_prefix:
+            raise EnvironmentResolutionError(
+                "ODOO_PROJECT_NAME is required to build container names. Set it in .env or pass ODOO_CONTAINER_NAME/"
+                "ODOO_SCRIPT_RUNNER_CONTAINER to override."
+            )
         return f"{self.container_prefix}-script-runner-1"
 
     @property
     def web_container(self) -> str:
+        if self.web_container_override:
+            return self.web_container_override
+        if self.container_name_override:
+            return self.container_name_override
+        if not self.container_prefix:
+            raise EnvironmentResolutionError(
+                "ODOO_PROJECT_NAME is required to build container names. Set it in .env or pass ODOO_WEB_CONTAINER to override."
+            )
         return f"{self.container_prefix}-web-1"
-
-    @property
-    def shell_container(self) -> str:
-        return f"{self.container_prefix}-shell-1"
 
     @property
     def database(self) -> str:
@@ -66,6 +559,8 @@ class EnvConfig(BaseSettings):
         if "." in host:
             return None
         if not re.fullmatch(r"[a-zA-Z0-9_-]+", host):
+            return None
+        if not self.container_prefix:
             return None
         return f"{self.container_prefix}-{host}-1"
 
@@ -131,6 +626,30 @@ result = list(env.registry.models.keys())
         return False
 
 
+def _has_container_targets(config: EnvConfig) -> bool:
+    candidates = [
+        config.container_prefix,
+        config.container_name_override,
+        config.script_runner_container_override,
+        config.web_container_override,
+    ]
+    return any(value and str(value).strip() for value in candidates)
+
+
+def _validate_required_env(config: EnvConfig, env_file_path: Path | None) -> None:
+    if _has_container_targets(config):
+        return
+    if env_file_path:
+        raise EnvironmentResolutionError(
+            f"Missing ODOO_PROJECT_NAME in {env_file_path}. Set it in the env file or pass ODOO_CONTAINER_NAME/"
+            "ODOO_SCRIPT_RUNNER_CONTAINER/ODOO_WEB_CONTAINER to override."
+        )
+    raise EnvironmentResolutionError(
+        "No .env file could be resolved. Set ODOO_ENV_FILE, run from the target repo root, or set ODOO_PROJECT_NAME (or container "
+        "overrides) in the environment."
+    )
+
+
 def load_env_config() -> EnvConfig:
     # Detect if we're running in test mode
     is_testing = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
@@ -139,9 +658,12 @@ def load_env_config() -> EnvConfig:
     logger.debug("MCP server looking for .env file from working directory: %s", Path.cwd())
 
     # Find the .env file to use
-    env_file_path = None
+    env_file_path = _resolve_env_file_override()
 
-    if is_testing:
+    if not env_file_path:
+        env_file_path = _resolve_stack_env_file()
+
+    if not env_file_path and is_testing:
         # For testing: Look for target project's .env file (../odoo-ai/.env)
         developer_dir = Path(__file__).parent.parent.parent.parent.parent  # Go up to Developer/ directory
         target_env_path = developer_dir / "odoo-ai" / ".env"
@@ -171,58 +693,119 @@ def load_env_config() -> EnvConfig:
 
     # Pydantic BaseSettings will automatically load from env vars and .env file
     if env_file_path:
-        # Create config with custom env file path
-        config = EnvConfig()
-        # Store the env file path for later access (for _get_project_directory)
+        env_priority = os.getenv("ODOO_ENV_PRIORITY")
+        if not env_priority and Path(env_file_path).name == ".compose.env":
+            env_priority = "env_file"
+        if not env_priority:
+            env_priority = "process"
+
+        config = EnvConfig(_env_file=env_file_path)
+        env_values = _load_env_file_values(str(env_file_path))
+        if env_priority == "env_file" and env_values:
+            overrides: dict[str, object] = {}
+            mapping = [
+                ("container_prefix", "ODOO_PROJECT_NAME"),
+                ("db_name", "ODOO_DB_NAME"),
+                ("db_host", "ODOO_DB_HOST"),
+                ("db_port", "ODOO_DB_PORT"),
+                ("addons_path", "ODOO_ADDONS_PATH"),
+                ("project_dir", "ODOO_PROJECT_DIR"),
+                ("stack_name", "ODOO_STACK_NAME"),
+                ("compose_files", "ODOO_COMPOSE_FILES"),
+                ("container_name_override", "ODOO_CONTAINER_NAME"),
+                ("script_runner_container_override", "ODOO_SCRIPT_RUNNER_CONTAINER"),
+                ("web_container_override", "ODOO_WEB_CONTAINER"),
+                ("enhanced_errors", "ODOO_MCP_ENHANCED_ERRORS"),
+            ]
+            for field_name, env_key in mapping:
+                if env_key in env_values:
+                    overrides[field_name] = env_values[env_key]
+            if overrides:
+                config = config.model_copy(update=overrides)
+
         config.__dict__["_env_file"] = Path(env_file_path)
+        config.__dict__["_env_priority"] = env_priority
+        _validate_required_env(config, Path(env_file_path))
         return config
     else:
         logger.info("No .env file found, using defaults and environment variables")
-        return EnvConfig()
+        config = EnvConfig()
+        _validate_required_env(config, None)
+        return config
 
 
 # noinspection PyMethodMayBeStatic
 class HostOdooEnvironmentManager:
-    def __init__(self, container_name: str | None = None, database: str | None = None) -> None:
-        config = load_env_config()
-        self.container_name = container_name or config.container_name
-        self.database = database or config.database
+    def __init__(self, container_name: str | None = None, database: str | None = None, *, lazy: bool = False) -> None:
+        self._container_name_override = container_name
+        self._database_override = database
+        self._config: EnvConfig | None = None
+        if not lazy:
+            self._config = load_env_config()
+            self._refresh_cached(self._config)
+
+    def _get_config(self) -> EnvConfig:
+        if self._config is None:
+            self._config = load_env_config()
+        return self._config
+
+    def _refresh_cached(self, config: EnvConfig) -> None:
+        self.container_name = self._container_name_override or config.container_name
+        self.database = self._database_override or config.database
         self.addons_path = config.addons_path
         self.db_host = config.db_host
         self.db_port = config.db_port
+        self.addons_path_explicit = _get_env_value(config, "ODOO_ADDONS_PATH") is not None
 
     async def get_environment(self) -> "HostOdooEnvironment":
-        return HostOdooEnvironment(self.container_name, self.database, self.addons_path, self.db_host, self.db_port)
+        config = self._get_config()
+        self._refresh_cached(config)
+        return HostOdooEnvironment(
+            self.container_name,
+            self.database,
+            self.addons_path,
+            self.db_host,
+            self.db_port,
+            addons_path_explicit=self.addons_path_explicit,
+        )
 
     def invalidate_environment_cache(self) -> None:
         logger.info("Cache invalidation called (no-op for Docker exec)")
+        self._config = None
 
 
 # noinspection PyMethodMayBeStatic
 class HostOdooEnvironment:
-    def __init__(self, container_name: str, database: str, addons_path: str, db_host: str, db_port: str) -> None:
-        # Sanitize container name to prevent command injection
-        import re
-
-        # Remove dangerous shell characters
-        safe_name = container_name.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()
-        # Only allow alphanumeric, underscore, dash, and dot
-        safe_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
-        if not safe_pattern.match(safe_name):
-            # If still not safe, use a default
-            safe_name = "odoo-script-runner-1"
-        self.container_name = safe_name
+    def __init__(
+        self,
+        container_name: str,
+        database: str,
+        addons_path: str,
+        db_host: str,
+        db_port: str,
+        *,
+        addons_path_explicit: bool = False,
+    ) -> None:
+        self.container_name = _sanitize_container_name(container_name)
         self.database = database
         self.addons_path = addons_path
         self.db_host = db_host
         self.db_port = db_port
         self._registry: Registry | None = None
+        self.addons_path_explicit = addons_path_explicit
 
     def __getitem__(self, model_name: str) -> "ModelProxy":
         return ModelProxy(self, model_name)
 
     def __call__(self, *, _user: int | None = None, _context: dict[str, object] | None = None) -> "HostOdooEnvironment":
-        return HostOdooEnvironment(self.container_name, self.database, self.addons_path, self.db_host, self.db_port)
+        return HostOdooEnvironment(
+            self.container_name,
+            self.database,
+            self.addons_path,
+            self.db_host,
+            self.db_port,
+            addons_path_explicit=self.addons_path_explicit,
+        )
 
     def __contains__(self, model_name: str) -> bool:
         # For synchronous access, we assume the model exists
@@ -285,24 +868,34 @@ class HostOdooEnvironment:
         return model_name in model_names
 
     def _get_project_directory(self, config: EnvConfig) -> str | None:
-        project_dir = None
-        # noinspection PyProtectedMember
-        if hasattr(config, "_env_file") and config._env_file:
-            # noinspection PyProtectedMember
-            project_dir = str(Path(config._env_file).parent)
-        else:
-            # Fallback: try to find compose files relative to this package
-            developer_dir = Path(__file__).parent.parent.parent.parent.parent
-            potential_project_dir = developer_dir / "odoo-ai"
-            if (potential_project_dir / "docker-compose.yml").exists():
-                project_dir = str(potential_project_dir)
-        return project_dir
+        compose_files = resolve_compose_files(config)
+        project_dir = resolve_compose_project_directory(config, compose_files)
+        if project_dir:
+            return str(project_dir)
+        return None
 
     def ensure_container_running(self) -> None:
         try:
             # Check container status with health information
             check_cmd = ["docker", "inspect", self.container_name, "--format", "{{.State.Status}}"]
             result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
+
+            if result.returncode != 0:
+                stderr_lower = result.stderr.lower()
+                missing_container = "no such object" in stderr_lower or "no such container" in stderr_lower
+                if missing_container:
+                    config = load_env_config()
+                    if not should_allow_autostart(config):
+                        raise DockerConnectionError(
+                            self.container_name,
+                            "Auto-start disabled until stack env is resolved. Set ODOO_PROJECT_NAME/ODOO_STACK_NAME or ODOO_ENV_FILE.",
+                        )
+                    resolved_container = resolve_existing_container_name(config, self.container_name)
+                    if resolved_container and resolved_container != self.container_name:
+                        logger.info(f"Container {self.container_name} not found. Using {resolved_container}.")
+                        self.container_name = resolved_container
+                        check_cmd = ["docker", "inspect", self.container_name, "--format", "{{.State.Status}}"]
+                        result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
 
             if result.returncode != 0:
                 # First check if Docker is accessible at all
@@ -320,12 +913,13 @@ class HostOdooEnvironment:
                     logger.info(f"Current Docker context: {context_check.stdout.strip()}")
 
                 # Check if it's a permission issue or container doesn't exist
-                if "permission denied" in result.stderr.lower():
+                stderr_lower = result.stderr.lower()
+                if "permission denied" in stderr_lower:
                     raise DockerConnectionError(
                         self.container_name,
                         "Permission denied accessing Docker. Try running with appropriate permissions or check Docker socket access.",
                     )
-                if "no such object" in result.stderr.lower() or "no such container" in result.stderr.lower():
+                if "no such object" in stderr_lower or "no such container" in stderr_lower:
                     logger.info(f"Container {self.container_name} does not exist: {result.stderr}")
                 else:
                     # Unknown error - log it and try to continue
@@ -339,21 +933,29 @@ class HostOdooEnvironment:
 
                 # Container doesn't exist, try to create it with docker compose
                 config = load_env_config()
+                if not should_allow_autostart(config):
+                    raise DockerConnectionError(
+                        self.container_name,
+                        "Auto-start disabled until stack env is resolved. Set ODOO_PROJECT_NAME/ODOO_STACK_NAME or ODOO_ENV_FILE.",
+                    )
+                if not config.container_prefix:
+                    raise DockerConnectionError(
+                        self.container_name,
+                        "Auto-start requires ODOO_PROJECT_NAME so compose service names can be resolved.",
+                    )
                 service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
                 logger.info(f"Attempting to create container {self.container_name} via docker compose service '{service_name}'...")
 
-                # Get the project directory from the config's .env file path
-                project_dir = self._get_project_directory(config)
+                # Start essential services: database, script-runner, and the requested service
+                # This ensures all dependencies and related services are available
+                essential_services = ["database", "script-runner", service_name]
+                # Remove duplicates while preserving order
+                services_to_start = list(dict.fromkeys(essential_services))
+                compose_cmd, project_dir = build_compose_up_command(config, services_to_start)
 
                 if not project_dir:
                     raise DockerConnectionError(self.container_name, "Cannot determine project directory for docker compose")
 
-                # Start all essential services: database, script-runner, shell, and the requested service
-                # This ensures all dependencies and related services are available
-                essential_services = ["database", "script-runner", "shell", service_name]
-                # Remove duplicates while preserving order
-                services_to_start = list(dict.fromkeys(essential_services))
-                compose_cmd = ["/usr/bin/env", "docker", "compose", "up", "-d", *services_to_start]
                 compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
 
                 if compose_result.returncode == 0:
@@ -371,28 +973,33 @@ class HostOdooEnvironment:
             # Even if main container is running, check all essential dependencies
             if status == "running":
                 config = load_env_config()
+                if not config.container_prefix:
+                    return
                 essential_containers = [
                     f"{config.container_prefix}-database-1",
                     f"{config.container_prefix}-script-runner-1",
-                    f"{config.container_prefix}-shell-1",
                 ]
 
                 containers_to_start = []
                 for container in essential_containers:
                     check_cmd = ["docker", "inspect", container, "--format", "{{.State.Status}}"]
                     result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
-                    if result.returncode != 0 or result.stdout.strip() != "running":
-                        # Extract service name from container name
+                    if result.returncode != 0:
+                        stderr_lower = result.stderr.lower()
+                        if "no such container" in stderr_lower or "no such object" in stderr_lower:
+                            continue
+                        service = container.replace(f"{config.container_prefix}-", "").replace("-1", "")
+                        containers_to_start.append(service)
+                        continue
+                    if result.stdout.strip() != "running":
                         service = container.replace(f"{config.container_prefix}-", "").replace("-1", "")
                         containers_to_start.append(service)
 
                 if containers_to_start:
                     logger.info(f"Essential containers not running: {containers_to_start}. Starting them...")
-                    # Get the project directory from the config's .env file path
-                    project_dir = self._get_project_directory(config)
+                    compose_cmd, project_dir = build_compose_up_command(config, containers_to_start)
 
                     if project_dir:
-                        compose_cmd = ["/usr/bin/env", "docker", "compose", "up", "-d", *containers_to_start]
                         compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=60, cwd=project_dir)
                         if compose_result.returncode == 0:
                             logger.info(f"Successfully started containers: {containers_to_start}")
@@ -432,9 +1039,20 @@ class HostOdooEnvironment:
                 elif "No such container" in start_result.stderr or "not found" in start_result.stderr:
                     logger.info(f"Container {self.container_name} doesn't exist. Attempting to create with docker compose...")
                     config = load_env_config()
+                    if not config.container_prefix:
+                        raise DockerConnectionError(
+                            self.container_name,
+                            "Auto-start requires ODOO_PROJECT_NAME so compose service names can be resolved.",
+                        )
                     service_name = self.container_name.replace(f"{config.container_prefix}-", "").replace("-1", "")
-                    compose_cmd = ["/usr/bin/env", "docker", "compose", "up", "-d", service_name]
-                    compose_result = subprocess.run(compose_cmd, capture_output=True, text=True, timeout=30)
+                    compose_cmd, project_dir = build_compose_up_command(config, [service_name])
+                    compose_result = subprocess.run(
+                        compose_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                        cwd=project_dir,
+                    )
                     if compose_result.returncode == 0:
                         logger.info(f"Successfully created and started container {self.container_name} via compose")
                     else:
@@ -446,9 +1064,27 @@ class HostOdooEnvironment:
         except FileNotFoundError as e:
             raise DockerConnectionError(self.container_name, f"Docker command not found: {e}") from e
 
-    async def execute_code(self, code: str) -> dict[str, object] | str | int | float | bool | None:
-        self.ensure_container_running()
+    def _maybe_refresh_addons_path_from_container(self) -> None:
+        if self.addons_path_explicit:
+            return
+        env_vars = _resolve_container_env(self.container_name)
+        container_addons_path = env_vars.get("ODOO_ADDONS_PATH")
+        if container_addons_path and container_addons_path != self.addons_path:
+            logger.info("Using ODOO_ADDONS_PATH from container %s", self.container_name)
+            self.addons_path = container_addons_path
 
+    def _parse_json_output(self, output: str, code: str) -> dict[str, object] | str | int | float | bool | None:
+        output_lines = output.strip().split("\n")
+        json_output = output_lines[-1] if output_lines else "{}"
+        try:
+            result = json.loads(json_output)
+            if isinstance(result, dict) and "error" in result:
+                raise CodeExecutionError(code, result["error"])
+            return result
+        except json.JSONDecodeError:
+            return {"output": output, "raw": True}
+
+    async def execute_code(self, code: str) -> dict[str, object] | str | int | float | bool | None:
         wrapped_code = textwrap.dedent(
             f"""
             import json
@@ -487,6 +1123,10 @@ class HostOdooEnvironment:
                 print(json.dumps({{"error": str(e), "error_type": type(e).__name__}}))
         """
         )
+
+        self.ensure_container_running()
+
+        self._maybe_refresh_addons_path_from_container()
 
         docker_cmd = [
             "docker",
@@ -542,18 +1182,7 @@ class HostOdooEnvironment:
                     error_msg = f"Command failed with return code {process.returncode}: {process.stderr}"
                 raise DockerConnectionError(self.container_name, error_msg)  # noqa: TRY301
 
-            output_lines = process.stdout.strip().split("\n")
-            json_output = output_lines[-1] if output_lines else "{}"
-
-            try:
-                result = json.loads(json_output)
-                # Check if the code execution returned an error
-                if isinstance(result, dict) and "error" in result:
-                    raise CodeExecutionError(code, result["error"])
-                return result
-            except json.JSONDecodeError:
-                # If we can't parse JSON, return the raw output
-                return {"output": process.stdout, "raw": True}
+            return self._parse_json_output(process.stdout, code)
 
         except subprocess.TimeoutExpired:
             raise DockerConnectionError(self.container_name, "Command execution timed out after 30 seconds") from None

@@ -230,7 +230,7 @@ class MockDockerRun:
             config = load_env_config()
             result.returncode = 125
             result.stdout = ""
-            result.stderr = f"Error: No such container: {config.shell_container}"
+            result.stderr = f"Error: No such container: {config.script_runner_container}"
         elif self.scenario == "docker_not_running":
             raise FileNotFoundError("docker command not found")
         else:

@@ -74,7 +74,6 @@ def get_expected_container_names() -> dict[str, str | None]:
     config = get_test_config()
     return {
         "web": config.web_container,
-        "shell": config.shell_container,
         "script_runner": config.script_runner_container,
         "database": getattr(config, "database_container", None),
         "container_name": config.container_name,

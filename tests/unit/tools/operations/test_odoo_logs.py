@@ -41,10 +41,10 @@ async def test_odoo_logs_custom_parameters() -> None:
         mock_container.status = "exited"
 
         containers = get_expected_container_names()
-        result = await odoo_logs(container=containers["shell"], lines=50)
+        result = await odoo_logs(container=containers["script_runner"], lines=50)
 
         assert result["success"] is True
-        assert result["container"] == containers["shell"]
+        assert result["container"] == containers["script_runner"]
         assert result["data"]["lines_requested"] == 50
         assert result["data"]["status"] == "exited"
         mock_container.logs.assert_called_once_with(tail=50)

@@ -2,6 +2,8 @@ import json
 import subprocess
 from typing import Any
 
+from ..core.env import build_compose_up_command, load_env_config, resolve_existing_container_name, should_allow_autostart
+
 COMPOSE_TIMEOUT = 600
 
 
@@ -16,20 +18,33 @@ class DockerClientManager:
             result = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=5)
 
             if result.returncode != 0:
+                stderr_lower = result.stderr.lower()
+                missing_container = "no such container" in stderr_lower or "no such object" in stderr_lower
+                if missing_container:
+                    config = load_env_config()
+                    resolved_container = resolve_existing_container_name(config, container_name)
+                    if resolved_container and resolved_container != container_name:
+                        inspect_cmd = ["docker", "inspect", resolved_container, "--format", "{{json .}}"]
+                        result = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            container_info = json.loads(result.stdout)
+                            return {
+                                "success": True,
+                                "container": resolved_container,
+                                "state": container_info.get("State", {}),
+                            }
+
                 if auto_start:
                     success = self._auto_start_container(container_name)
                     if success:
-                        # Try again after starting
                         result = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=5)
                         if result.returncode == 0:
                             container_info = json.loads(result.stdout)
                             return {"success": True, "container": container_name, "state": container_info.get("State", {})}
 
-                # Container not found
-                if "no such container" in result.stderr.lower() or "no such object" in result.stderr.lower():
+                if missing_container:
                     return self._create_error_response(f"Container '{container_name}' not found", "NotFound", container_name)
-                else:
-                    return self._create_error_response(f"Docker error: {result.stderr}", "DockerError", container_name)
+                return self._create_error_response(f"Docker error: {result.stderr}", "DockerError", container_name)
 
             # Container exists, parse the JSON output
             container_info = json.loads(result.stdout)
@@ -141,6 +156,9 @@ class DockerClientManager:
     @staticmethod
     def _auto_start_container(container_name: str) -> bool:
         try:
+            config = load_env_config()
+            if not should_allow_autostart(config):
+                return False
             # First try docker start (for existing stopped containers)
             start_result = subprocess.run(["docker", "start", container_name], capture_output=True, text=True, timeout=10)
 
@@ -149,29 +167,20 @@ class DockerClientManager:
 
             # If container doesn't exist, try docker compose
             if "no such container" in start_result.stderr.lower() or "not found" in start_result.stderr.lower():
-                # Extract service name from container name (e.g., "odoo-shell-1" -> "shell")
+                # Extract service name from container name (e.g., "odoo-web-1" -> "web")
                 if "-" in container_name:
                     parts = container_name.split("-")
-                    if len(parts) >= 3:  # e.g., ["odoo", "shell", "1"]
-                        service_name = parts[-2]  # Get "shell" from "odoo-shell-1"
+                    if len(parts) >= 3:  # e.g., ["odoo", "web", "1"]
+                        service_name = parts[-2]  # Get "web" from "odoo-web-1"
 
                         # Try to find the compose file directory
-                        # First try current working directory
-                        from pathlib import Path
-
-                        compose_dirs = [Path.cwd(), Path.cwd().parent, Path("../odoo-ai")]
-
-                        for compose_dir in compose_dirs:
-                            if not compose_dir.exists():
-                                continue
-                            compose_file = compose_dir / "docker-compose.yml"
-                            if not compose_file.exists():
-                                continue
-
+                        config = load_env_config()
+                        compose_cmd, project_dir = build_compose_up_command(config, [service_name])
+                        if project_dir:
                             try:
                                 compose_result = subprocess.run(
-                                    ["docker", "compose", "up", "-d", service_name],
-                                    cwd=str(compose_dir),
+                                    compose_cmd,
+                                    cwd=str(project_dir),
                                     capture_output=True,
                                     text=True,
                                     timeout=COMPOSE_TIMEOUT,
@@ -179,7 +188,7 @@ class DockerClientManager:
                                 if compose_result.returncode == 0:
                                     return True
                             except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-                                continue
+                                return False
 
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pass

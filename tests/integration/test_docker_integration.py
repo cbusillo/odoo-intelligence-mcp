@@ -134,7 +134,7 @@ async def test_docker_container_status_check() -> None:
         assert result["data"]["containers"][expected_web_container]["status"] == "running"
 
         # Verify get_container was called for each container
-        assert mock_docker_manager.get_container.call_count >= 3  # web, shell, script-runner
+        assert mock_docker_manager.get_container.call_count >= 2  # web, script-runner
 
 
 @pytest.mark.asyncio

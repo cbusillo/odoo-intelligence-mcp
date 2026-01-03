@@ -1,5 +1,7 @@
+import json
 import re
 import subprocess
+import textwrap
 from typing import Any
 
 from ...core.env import load_env_config
@@ -57,6 +59,60 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
                 "error": f"Container '{container_name}' is {status}, not running",
                 "modules": modules,
                 "hint": "Use the 'odoo_restart' tool to restart the container",
+            }
+
+        check_code = textwrap.dedent(
+            f"""
+            import json
+            import odoo.modules.module as module
+
+            modules = {safe_modules!r}
+            found = env['ir.module.module'].search([('name', 'in', modules)]).mapped('name')
+            missing = sorted(set(modules) - set(found))
+            if missing:
+                missing = [name for name in missing if not module.get_module_path(name)]
+            print(json.dumps({{"missing": missing}}))
+            """
+        )
+
+        check_cmd = [
+            "docker",
+            "exec",
+            "-i",
+            container_name,
+            "/odoo/odoo-bin",
+            "shell",
+            "--database",
+            database,
+            "--db_host",
+            config.db_host,
+            "--db_port",
+            config.db_port,
+            "--no-http",
+        ]
+
+        check_result = subprocess.run(check_cmd, input=check_code, capture_output=True, text=True, timeout=60)
+        if check_result.returncode != 0:
+            return {
+                "success": False,
+                "error": f"Module existence check failed: {check_result.stderr}",
+                "modules": modules,
+            }
+
+        check_lines = check_result.stdout.strip().split("\n")
+        if check_lines:
+            try:
+                check_payload = json.loads(check_lines[-1])
+            except json.JSONDecodeError:
+                check_payload = {}
+        else:
+            check_payload = {}
+        missing = check_payload.get("missing", []) if isinstance(check_payload, dict) else []
+        if missing:
+            return {
+                "success": False,
+                "error": f"Modules not found: {', '.join(missing)}",
+                "modules": modules,
             }
 
         # Build the odoo-bin command
