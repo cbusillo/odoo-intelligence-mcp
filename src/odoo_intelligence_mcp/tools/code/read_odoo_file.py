@@ -101,7 +101,7 @@ async def read_odoo_file(
     # For relative paths, search in addon paths
     from ..addon.get_addon_paths import get_addon_paths_from_container
 
-    addon_paths = await get_addon_paths_from_container()
+    addon_paths = await get_addon_paths_from_container(container_name)
 
     # Build list of paths to try
     paths_to_try = []

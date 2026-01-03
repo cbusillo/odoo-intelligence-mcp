@@ -7,8 +7,8 @@ from ...utils.docker_utils import DockerClientManager
 from .get_addon_paths import get_addon_paths_from_container
 
 
-async def _get_addon_paths() -> list[str]:
-    return await get_addon_paths_from_container()
+async def _get_addon_paths(container_name: str | None = None) -> list[str]:
+    return await get_addon_paths_from_container(container_name)
 
 
 def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
@@ -102,8 +102,8 @@ def _find_dependent_addons(addon_name: str, addon_paths: list[str]) -> list[dict
 async def get_addon_dependencies(addon_name: str, pagination: PaginationParams | None = None) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
-
-    addon_paths = await _get_addon_paths()
+    config = load_env_config()
+    addon_paths = await _get_addon_paths(config.web_container)
 
     manifest_data, addon_path = _find_addon_manifest(addon_name, addon_paths)
 

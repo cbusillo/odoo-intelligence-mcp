@@ -21,7 +21,7 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
         return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
 
     # Get addon paths from the container
-    container_paths = await get_addon_paths_from_container()
+    container_paths = await get_addon_paths_from_container(container_name)
 
     # Check if module exists in any addon path
     check_cmd = [

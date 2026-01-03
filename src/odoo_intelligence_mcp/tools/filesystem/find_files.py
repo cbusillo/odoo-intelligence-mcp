@@ -27,7 +27,7 @@ async def find_files(pattern: str, file_type: str | None = None, pagination: Pag
     if not container_result.get("success"):
         return {"success": False, "error": f"Container error: {container_result.get('error', 'Unknown error')}"}
 
-    addon_paths = await get_addon_paths_from_container()
+    addon_paths = await get_addon_paths_from_container(config.web_container)
     results = []
 
     # Add file extension to pattern if file_type is specified
