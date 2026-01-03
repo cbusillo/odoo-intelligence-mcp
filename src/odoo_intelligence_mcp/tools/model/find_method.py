@@ -149,12 +149,9 @@ result = implementations  # Limited collection
     if isinstance(implementations, dict) and "error" in implementations:
         return implementations
 
-    # Validate and narrow type for static checkers
-    from typing import cast
-
     if not isinstance(implementations, list):
         return {"success": False, "error": "Unexpected response type from environment", "error_type": "TypeError"}
-    impl_list = cast("list[dict[str, Any]]", implementations)
+    impl_list = implementations
 
     # Apply pagination
     paginated_results = paginate_dict_list(impl_list, pagination, search_fields=["model", "module", "signature"])
