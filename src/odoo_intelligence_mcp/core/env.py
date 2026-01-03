@@ -221,28 +221,28 @@ def _resolve_stack_env_file_from_ops(start_dir: Path, project_name: str | None, 
         if info:
             infos.append(info)
 
-    def _match(info_data: dict[str, object], key: str | None) -> bool:
+    def _match(candidate_data: dict[str, object], key: str | None) -> bool:
         if not key:
             return False
         return (
-            key == info_data.get("project_name")
-            or key == info_data.get("stack_name")
-            or key == info_data.get("compose_project")
+            key == candidate_data.get("project_name")
+            or key == candidate_data.get("stack_name")
+            or key == candidate_data.get("compose_project")
         )
 
     if project_name:
-        for info_data in infos:
-            if _match(info_data, project_name):
-                env_file = info_data.get("env_file")
+        for candidate_data in infos:
+            if _match(candidate_data, project_name):
+                env_file = candidate_data.get("env_file")
                 if isinstance(env_file, str):
                     candidate = Path(env_file)
                     if candidate.exists():
                         return candidate
 
     if stack_name:
-        for info_data in infos:
-            if info_data.get("stack_name") == stack_name:
-                env_file = info_data.get("env_file")
+        for candidate_data in infos:
+            if candidate_data.get("stack_name") == stack_name:
+                env_file = candidate_data.get("env_file")
                 if isinstance(env_file, str):
                     candidate = Path(env_file)
                     if candidate.exists():
