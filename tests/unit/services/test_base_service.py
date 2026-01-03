@@ -1,4 +1,3 @@
-from typing import cast
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -9,7 +8,7 @@ from odoo_intelligence_mcp.services.base_service import (
     ServiceExecutionError,
     ServiceValidationError,
 )
-from odoo_intelligence_mcp.type_defs.odoo_types import Environment
+from tests.fixtures.types import as_environment
 
 
 class ConcreteService(BaseService):
@@ -44,10 +43,10 @@ class TestBaseService:
 
     @pytest.fixture
     def service(self, mock_env: MagicMock) -> ConcreteService:
-        return ConcreteService(cast("Environment", mock_env))
+        return ConcreteService(as_environment(mock_env))
 
     def test_init(self, mock_env: MagicMock) -> None:
-        service = ConcreteService(cast("Environment", mock_env))
+        service = ConcreteService(as_environment(mock_env))
         assert service.env == mock_env
         assert service._cache == {}
 
