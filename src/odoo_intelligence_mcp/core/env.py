@@ -174,10 +174,9 @@ def _extract_json_payload(raw_text: str) -> dict[str, object] | None:
 def _run_ops_info(repo_root_text: str, target: str) -> dict[str, object] | None:
     if not shutil.which("uv"):
         return None
-    repo_root = Path(repo_root_text)
     cmd: list[str] = ["uv", "run", "ops", "local", "info", target, "--json"]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=str(repo_root))
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=repo_root_text)
     except (subprocess.TimeoutExpired, OSError):
         return None
     if result.returncode != 0:
