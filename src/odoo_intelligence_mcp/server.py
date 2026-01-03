@@ -44,12 +44,13 @@ from .tools.operations import odoo_restart, odoo_status, odoo_update_module
 from .tools.security import check_permissions
 from .type_defs.odoo_types import CompatibleEnvironment
 from .utils.error_utils import OdooMCPError, create_error_response
+from .utils.model_utils import resolve_model_with_runner
 
 logger = logging.getLogger(__name__)
 
 app = Server("odoo-intelligence")
 
-odoo_env_manager = HostOdooEnvironmentManager()
+odoo_env_manager = HostOdooEnvironmentManager(lazy=True)
 
 
 def _enhance_registry_failure(env: CompatibleEnvironment, tool_name: str, result: object) -> object:
@@ -141,11 +142,22 @@ async def _handle_model_info(env: CompatibleEnvironment, arguments: dict[str, ob
     if pagination.page_size == 100 and "page_size" not in arguments:
         pagination.page_size = 25
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
-    if mode == "fs":
-        from .tools.model.model_info_fs import get_model_info_fs
+    model_name = get_required(arguments, "model_name")
 
-        return await get_model_info_fs(get_required(arguments, "model_name"), pagination)
-    return await get_model_info(env, get_required(arguments, "model_name"), pagination)
+    async def _run(candidate: str) -> object:
+        if mode == "fs":
+            from .tools.model.model_info_fs import get_model_info_fs
+
+            return await get_model_info_fs(candidate, pagination)
+        return await get_model_info(env, candidate, pagination)
+
+    return await resolve_model_with_runner(
+        env,
+        model_name,
+        _run,
+        allow_module=mode != "fs",
+        allow_fuzzy=mode != "fs",
+    )
 
 
 async def _handle_search_models(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -164,21 +176,43 @@ async def _handle_search_models(env: CompatibleEnvironment, arguments: dict[str,
 async def _handle_model_relationships(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
-    if mode == "fs":
-        from .tools.model.model_relationships_fs import get_model_relationships_fs
+    model_name = get_required(arguments, "model_name")
 
-        return await get_model_relationships_fs(get_required(arguments, "model_name"), pagination)
-    return await get_model_relationships(env, get_required(arguments, "model_name"), pagination)
+    async def _run(candidate: str) -> object:
+        if mode == "fs":
+            from .tools.model.model_relationships_fs import get_model_relationships_fs
+
+            return await get_model_relationships_fs(candidate, pagination)
+        return await get_model_relationships(env, candidate, pagination)
+
+    return await resolve_model_with_runner(
+        env,
+        model_name,
+        _run,
+        allow_module=mode != "fs",
+        allow_fuzzy=mode != "fs",
+    )
 
 
 async def _handle_field_usages(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
-    return await get_field_usages(env, get_required(arguments, "model_name"), get_required(arguments, "field_name"), pagination)
+    model_name = get_required(arguments, "model_name")
+    field_name = get_required(arguments, "field_name")
+
+    async def _run(candidate: str) -> object:
+        return await get_field_usages(env, candidate, field_name, pagination)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_performance_analysis(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
-    return await analyze_performance(env, get_required(arguments, "model_name"), pagination)
+    model_name = get_required(arguments, "model_name")
+
+    async def _run(candidate: str) -> object:
+        return await analyze_performance(env, candidate, pagination)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_pattern_analysis(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -198,11 +232,22 @@ async def _handle_pattern_analysis(env: CompatibleEnvironment, arguments: dict[s
 async def _handle_inheritance_chain(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
-    if mode == "fs":
-        from .tools.model.inheritance_chain_fs import analyze_inheritance_chain_fs
+    model_name = get_required(arguments, "model_name")
 
-        return await analyze_inheritance_chain_fs(get_required(arguments, "model_name"), pagination)
-    return await analyze_inheritance_chain(env, get_required(arguments, "model_name"), pagination)
+    async def _run(candidate: str) -> object:
+        if mode == "fs":
+            from .tools.model.inheritance_chain_fs import analyze_inheritance_chain_fs
+
+            return await analyze_inheritance_chain_fs(candidate, pagination)
+        return await analyze_inheritance_chain(env, candidate, pagination)
+
+    return await resolve_model_with_runner(
+        env,
+        model_name,
+        _run,
+        allow_module=mode != "fs",
+        allow_fuzzy=mode != "fs",
+    )
 
 
 async def _handle_addon_dependencies(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -247,12 +292,22 @@ async def _handle_module_structure(_env: CompatibleEnvironment, arguments: dict[
 
 async def _handle_view_model_usage(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
-    return await get_view_model_usage(env, get_required(arguments, "model_name"), pagination)
+    model_name = get_required(arguments, "model_name")
+
+    async def _run(candidate: str) -> object:
+        return await get_view_model_usage(env, candidate, pagination)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_resolve_dynamic_fields(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
-    return await resolve_dynamic_fields(env, get_required(arguments, "model_name"), pagination)
+    model_name = get_required(arguments, "model_name")
+
+    async def _run(candidate: str) -> object:
+        return await resolve_dynamic_fields(env, candidate, pagination)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_search_field_properties(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -262,7 +317,17 @@ async def _handle_search_field_properties(env: CompatibleEnvironment, arguments:
 
 async def _handle_search_field_type(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
-    return await search_field_type(env, get_required(arguments, "field_type"), pagination)
+    field_type = get_optional_str(arguments, "field_type")
+    if not field_type:
+        return {"error": "field_type is required"}
+    model_name = get_optional_str(arguments, "model_name")
+    if not model_name:
+        return await search_field_type(env, field_type, pagination, None)
+
+    async def _run(candidate: str) -> object:
+        return await search_field_type(env, field_type, pagination, candidate)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_search_decorators(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -273,19 +338,34 @@ async def _handle_search_decorators(env: CompatibleEnvironment, arguments: dict[
 
 async def _handle_field_dependencies(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
-    return await get_field_dependencies(
-        env, get_required(arguments, "model_name"), get_required(arguments, "field_name"), pagination
-    )
+    model_name = get_required(arguments, "model_name")
+    field_name = get_required(arguments, "field_name")
+
+    async def _run(candidate: str) -> object:
+        return await get_field_dependencies(env, candidate, field_name, pagination)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_workflow_states(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
-    if mode == "fs":
-        from .tools.analysis.workflow_states_fs import analyze_workflow_states_fs
+    model_name = get_required(arguments, "model_name")
 
-        return await analyze_workflow_states_fs(get_required(arguments, "model_name"), pagination)
-    return await analyze_workflow_states(env, get_required(arguments, "model_name"), pagination)
+    async def _run(candidate: str) -> object:
+        if mode == "fs":
+            from .tools.analysis.workflow_states_fs import analyze_workflow_states_fs
+
+            return await analyze_workflow_states_fs(candidate, pagination)
+        return await analyze_workflow_states(env, candidate, pagination)
+
+    return await resolve_model_with_runner(
+        env,
+        model_name,
+        _run,
+        allow_module=mode != "fs",
+        allow_fuzzy=mode != "fs",
+    )
 
 
 async def _handle_execute_code(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -293,23 +373,27 @@ async def _handle_execute_code(env: CompatibleEnvironment, arguments: dict[str, 
 
 
 async def _handle_field_value_analyzer(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
-    return await analyze_field_values(
-        env,
-        get_required(arguments, "model_name"),
-        get_required(arguments, "field_name"),
-        get_optional_list(arguments, "domain", []),
-        get_optional_int(arguments, "sample_size", 1000),
-    )
+    model_name = get_required(arguments, "model_name")
+    field_name = get_required(arguments, "field_name")
+    domain = get_optional_list(arguments, "domain", [])
+    sample_size = get_optional_int(arguments, "sample_size", 1000)
+
+    async def _run(candidate: str) -> object:
+        return await analyze_field_values(env, candidate, field_name, domain, sample_size)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_permission_checker(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
-    return await check_permissions(
-        env,
-        get_required(arguments, "user"),
-        get_required(arguments, "model"),
-        get_required(arguments, "operation"),
-        get_optional_int(arguments, "record_id"),
-    )
+    user = get_required(arguments, "user")
+    model_name = get_required(arguments, "model")
+    operation = get_required(arguments, "operation")
+    record_id = get_optional_int(arguments, "record_id")
+
+    async def _run(candidate: str) -> object:
+        return await check_permissions(env, user, candidate, operation, record_id)
+
+    return await resolve_model_with_runner(env, model_name, _run)
 
 
 async def _handle_odoo_update_module(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -399,17 +483,33 @@ async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, o
 async def _handle_analysis_query(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     analysis_type = get_required(arguments, "analysis_type")
 
-    if analysis_type == "performance":
-        return await _handle_performance_analysis(env, arguments)
-    elif analysis_type == "patterns":
-        return await _handle_pattern_analysis(env, arguments)
-    elif analysis_type == "workflow":
-        return await _handle_workflow_states(env, arguments)
-    elif analysis_type == "inheritance":
-        # alias to model_query inheritance
-        return await _handle_inheritance_chain(env, arguments)
-    else:
+    async def _run(run_args: dict[str, object]) -> object:
+        if analysis_type == "performance":
+            return await _handle_performance_analysis(env, run_args)
+        if analysis_type == "patterns":
+            return await _handle_pattern_analysis(env, run_args)
+        if analysis_type == "workflow":
+            return await _handle_workflow_states(env, run_args)
+        if analysis_type == "inheritance":
+            return await _handle_inheritance_chain(env, run_args)
         return {"success": False, "error": f"Unknown analysis_type: {analysis_type}"}
+
+    model_name = get_optional_str(arguments, "model_name")
+    if not model_name:
+        return await _run(arguments)
+
+    mode = get_optional_str(arguments, "mode", "auto") or "auto"
+
+    async def _run_for_model(candidate: str) -> object:
+        return await _run({**arguments, "model_name": candidate})
+
+    return await resolve_model_with_runner(
+        env,
+        model_name,
+        _run_for_model,
+        allow_module=mode != "fs",
+        allow_fuzzy=mode != "fs",
+    )
 
 
 TOOL_HANDLERS = {
