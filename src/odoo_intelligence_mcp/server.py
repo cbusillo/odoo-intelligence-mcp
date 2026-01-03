@@ -494,14 +494,32 @@ async def _handle_analysis_query(env: CompatibleEnvironment, arguments: dict[str
             return await _handle_inheritance_chain(env, run_args)
         return {"success": False, "error": f"Unknown analysis_type: {analysis_type}"}
 
+    if analysis_type == "patterns":
+        return await _run(arguments)
+
     model_name = get_optional_str(arguments, "model_name")
     if not model_name:
         return await _run(arguments)
 
+    pagination = PaginationParams.from_arguments(arguments)
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
 
     async def _run_for_model(candidate: str) -> object:
-        return await _run({**arguments, "model_name": candidate})
+        if analysis_type == "performance":
+            return await analyze_performance(env, candidate, pagination)
+        if analysis_type == "workflow":
+            if mode == "fs":
+                from .tools.analysis.workflow_states_fs import analyze_workflow_states_fs
+
+                return await analyze_workflow_states_fs(candidate, pagination)
+            return await analyze_workflow_states(env, candidate, pagination)
+        if analysis_type == "inheritance":
+            if mode == "fs":
+                from .tools.model.inheritance_chain_fs import analyze_inheritance_chain_fs
+
+                return await analyze_inheritance_chain_fs(candidate, pagination)
+            return await analyze_inheritance_chain(env, candidate, pagination)
+        return {"success": False, "error": f"Unknown analysis_type: {analysis_type}"}
 
     return await resolve_model_with_runner(
         env,
