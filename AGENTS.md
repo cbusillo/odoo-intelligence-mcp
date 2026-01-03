@@ -23,7 +23,9 @@ Development guidelines for running the Odoo Intelligence MCP server inside the C
   `idx`, `cfg`, `tmp`, `obj`, `val`, `res`, `ctx`). Allow only explicit tokens (`id`, `db`, `api`, `orm`, `env`,
   `io`, `url`, `ui`, `ux`, `ip`, `http`, `json`, `xml`, `sql`) and math-only contexts.
 - Functions as verbs; objects as nouns. Keep one responsibility per function.
-- Type everything (`list[str]` style); leverage `type_defs.odoo_types`
+- Type all function signatures and public data shapes. Prefer implicit local typing
+  when the type is obvious; avoid redundant local annotations. Leverage
+  `type_defs.odoo_types`.
 - Line length 133 characters max
 - Use f-strings for formatting/logging
 - Do not run Python directly; use `uv run` for scripts/tests.
