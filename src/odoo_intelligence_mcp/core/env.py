@@ -173,12 +173,10 @@ def _extract_json_payload(raw_text: str) -> dict[str, object] | None:
 @lru_cache(maxsize=16)
 def _run_ops_info(repo_root_text: str, target: str) -> dict[str, object] | None:
     command_name: str = "uv"
-    if not shutil.which(command_name):
-        return None
     cmd: list[str] = [command_name, "run", "ops", "local", "info", target, "--json"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=repo_root_text)
-    except (subprocess.TimeoutExpired, OSError):
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return None
     if result.returncode != 0:
         return None
