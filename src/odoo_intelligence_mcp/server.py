@@ -322,7 +322,7 @@ async def _handle_search_field_type(env: CompatibleEnvironment, arguments: dict[
         return {"error": "field_type is required"}
     model_name = get_optional_str(arguments, "model_name")
     if not model_name:
-        return await search_field_type(env, field_type, pagination, None)
+        return await search_field_type(env, field_type, pagination)
 
     async def _run(candidate: str) -> object:
         return await search_field_type(env, field_type, pagination, candidate)
