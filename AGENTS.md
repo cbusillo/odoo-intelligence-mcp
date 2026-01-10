@@ -98,6 +98,11 @@ The server loads environment variables or the nearest `.env`. Use `ODOO_ENV_FILE
 - Commands run through `docker exec ...`
 - Missing containers trigger `docker compose up -d <service>` with a 10-minute timeout (see `utils/docker_utils.py`).
 
+## Tool Notes
+
+- `inspection_*` depends on a running IDE (PyCharm/IntelliJ) with the Codex plugin; if it fails, tell the user to open the IDE and retry.
+- `agent` is verbose; prefer it for multi-file changes or background research.
+
 ## Quick Tool Testing
 
 ```python

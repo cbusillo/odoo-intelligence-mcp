@@ -30,6 +30,7 @@ from .tools.field import (
     search_field_properties,
     search_field_type,
 )
+from .tools.field.search_field_type import VALID_FIELD_TYPES
 from .tools.filesystem.find_files import find_files
 from .tools.model import (
     analyze_inheritance_chain,
@@ -134,6 +135,25 @@ def _enhance_registry_failure(env: CompatibleEnvironment, tool_name: str, result
     except Exception:
         # On any enhancement error, return original result
         return result
+
+
+def _attach_mode_metadata(result: object, mode_used: str, data_quality: str) -> object:
+    if not isinstance(result, dict):
+        return result
+    if "error" in result:
+        return result
+    result.setdefault("mode_used", mode_used)
+    result.setdefault("data_quality", data_quality)
+    return result
+
+
+def _missing_field_type_response() -> dict[str, object]:
+    return {
+        "success": False,
+        "error": "field_type is required for search_type.",
+        "valid_types": VALID_FIELD_TYPES,
+        "example": {"field_type": "char"},
+    }
 
 
 async def _handle_model_info(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -258,9 +278,18 @@ async def _handle_addon_dependencies(_env: CompatibleEnvironment, arguments: dic
 async def _handle_search_code(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pattern = get_required(arguments, "pattern")
     file_type = get_optional_str(arguments, "file_type", "py")
+    file_type_provided = "file_type" in arguments
     roots = get_optional_list(arguments, "roots")
     pagination = PaginationParams.from_arguments(arguments)
-    return await search_code(pattern, file_type, pagination, roots)
+    result = await search_code(pattern, file_type, pagination, roots)
+    if isinstance(result, dict) and not file_type_provided:
+        meta = result.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+            result["meta"] = meta
+        meta.setdefault("defaulted_file_type", file_type)
+        meta.setdefault("hint", "file_type defaults to 'py'. Set file_type='xml' or 'js' for other sources.")
+    return result
 
 
 async def _handle_find_files(_env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
@@ -319,7 +348,7 @@ async def _handle_search_field_type(env: CompatibleEnvironment, arguments: dict[
     pagination = PaginationParams.from_arguments(arguments)
     field_type = get_optional_str(arguments, "field_type")
     if not field_type:
-        return {"error": "field_type is required"}
+        return _missing_field_type_response()
     model_name = get_optional_str(arguments, "model_name")
     if not model_name:
         return await search_field_type(env, field_type, pagination)
@@ -467,11 +496,14 @@ async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, o
             return await search_field_properties_fs(get_required(arguments, "property"), pagination)
         return await _handle_search_field_properties(env, arguments)
     elif operation == "search_type":
+        field_type = get_optional_str(arguments, "field_type")
+        if not field_type:
+            return _missing_field_type_response()
         if mode == "fs":
             from .tools.field.search_field_type_fs import search_field_type_fs
 
             pagination = PaginationParams.from_arguments(arguments)
-            return await search_field_type_fs(get_required(arguments, "field_type"), pagination)
+            return await search_field_type_fs(field_type, pagination)
         return await _handle_search_field_type(env, arguments)
     elif operation == "list":
         # alias: list -> flatten fields of model_name
@@ -499,16 +531,27 @@ async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, o
 
 async def _handle_analysis_query(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     analysis_type = get_required(arguments, "analysis_type")
+    mode = get_optional_str(arguments, "mode", "auto") or "auto"
     if analysis_type == "inherit":
         analysis_type = "inheritance"
     if analysis_type == "performance":
-        return await _handle_performance_analysis(env, arguments)
+        result = await _handle_performance_analysis(env, arguments)
+        return _attach_mode_metadata(result, "registry", "authoritative")
     if analysis_type == "patterns":
-        return await _handle_pattern_analysis(env, arguments)
+        result = await _handle_pattern_analysis(env, arguments)
+        if mode == "fs":
+            return _attach_mode_metadata(result, "fs", "approximate")
+        return _attach_mode_metadata(result, "registry", "authoritative")
     if analysis_type == "workflow":
-        return await _handle_workflow_states(env, arguments)
+        result = await _handle_workflow_states(env, arguments)
+        if mode == "fs":
+            return _attach_mode_metadata(result, "fs", "approximate")
+        return _attach_mode_metadata(result, "registry", "authoritative")
     if analysis_type == "inheritance":
-        return await _handle_inheritance_chain(env, arguments)
+        result = await _handle_inheritance_chain(env, arguments)
+        if mode == "fs":
+            return _attach_mode_metadata(result, "fs", "approximate")
+        return _attach_mode_metadata(result, "registry", "authoritative")
     return {"success": False, "error": f"Unknown analysis_type: {analysis_type}"}
 
 
@@ -542,7 +585,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_code",
-            description="Regex search in container",
+            description="Regex search in container (file_type defaults to py)",
             inputSchema=add_pagination_to_schema(
                 {
                     "type": "object",
@@ -624,7 +667,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="permission_checker",
-            description="Check CRUD permissions",
+            description="Check CRUD permissions (user id or login)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -772,9 +815,10 @@ async def run_server() -> None:
                 instructions=(
                     "Primary: model_query/field_query/analysis_query (use operation=/analysis_type=).\n"
                     "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage/inheritance (requires model_name).\n"
-                    "field_query: usages/dependencies need model_name+field_name; analyze_values needs model_name+field_name; search_type/search_properties need field_type/property.\n"
+                    "field_query: usages/dependencies need model_name+field_name; analyze_values needs model_name+field_name; search_type/search_properties need field_type (e.g., char, many2one) / property.\n"
                     "analysis_query: performance/workflow/inheritance need model_name; patterns uses pattern_type.\n"
                     "Modes (where supported): auto (default; registry), fs (filesystem only), registry (live Odoo only).\n"
+                    "data_quality: authoritative (registry runtime) vs approximate (filesystem/AST scan).\n"
                     "Page with page/page_size/filter; model_query(search/info) and analysis_query(patterns) default to page_size=25.\n"
                     "Files (container fs): search_code/read_odoo_file/find_method. execute_code sparingly."
                 ),
