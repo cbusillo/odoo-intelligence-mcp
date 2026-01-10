@@ -45,7 +45,7 @@ def _parse_env_line(line: str) -> tuple[str, str] | None:
     if not key:
         return None
     value = value.strip()
-    if value and value[0] in {"\"", "'"} and value[-1:] == value[:1]:
+    if value and value[0] in {'"', "'"} and value[-1:] == value[:1]:
         value = value[1:-1]
     else:
         if "#" in value:
@@ -225,9 +225,7 @@ def _resolve_stack_env_file_from_ops(start_dir: Path, project_name: str | None, 
         if not key:
             return False
         return (
-            key == ops_record.get("project_name")
-            or key == ops_record.get("stack_name")
-            or key == ops_record.get("compose_project")
+            key == ops_record.get("project_name") or key == ops_record.get("stack_name") or key == ops_record.get("compose_project")
         )
 
     if project_name:
@@ -255,9 +253,7 @@ def _resolve_stack_env_file() -> Path | None:
     cwd_env_values = _load_env_file_values(str(cwd_env)) if cwd_env.exists() else {}
     stack_name = os.getenv("ODOO_STACK_NAME") or os.getenv("ODOO_STACK") or os.getenv("ODOO_ENV_NAME")
     if not stack_name:
-        stack_name = cwd_env_values.get("ODOO_STACK_NAME") or cwd_env_values.get("ODOO_STACK") or cwd_env_values.get(
-            "ODOO_ENV_NAME"
-        )
+        stack_name = cwd_env_values.get("ODOO_STACK_NAME") or cwd_env_values.get("ODOO_STACK") or cwd_env_values.get("ODOO_ENV_NAME")
 
     project_name = os.getenv("ODOO_PROJECT_NAME") or cwd_env_values.get("ODOO_PROJECT_NAME")
 
@@ -281,7 +277,7 @@ def _resolve_stack_env_file() -> Path | None:
         if fallback.exists():
             return fallback
     base = Path.home() / "odoo-ai"
-    if base.exists():
+    if base.exists() and not stack_name:
         matches = [path / ".compose.env" for path in base.iterdir() if path.is_dir() and (path / ".compose.env").exists()]
         if len(matches) == 1:
             return matches[0]
@@ -299,7 +295,7 @@ def _resolve_stack_env_file() -> Path | None:
         if fallback.exists():
             return fallback
     fallback_dir = Path.home() / ".odoo-ai" / "stack-env"
-    if fallback_dir.exists():
+    if fallback_dir.exists() and not stack_name:
         candidates = [path for path in fallback_dir.iterdir() if path.is_file() and path.suffix == ".env"]
         if len(candidates) == 1:
             return candidates[0]
@@ -398,7 +394,6 @@ def _scan_compose_roots(root: Path, compose_files: list[str], max_depth: int) ->
     return None
 
 
-
 def resolve_compose_project_directory(config: "EnvConfig", compose_files: list[str]) -> Path | None:
     override = config.project_dir or _get_env_value(config, "ODOO_PROJECT_DIR")
     if override:
@@ -469,7 +464,6 @@ def build_compose_up_command(config: "EnvConfig", services: list[str]) -> tuple[
         command += ["-f", str(entry)]
     command += ["up", "-d", *services]
     return command, project_dir
-
 
 
 def _resolve_container_env(container_name: str) -> dict[str, str]:
@@ -661,6 +655,23 @@ def load_env_config() -> EnvConfig:
 
     if not env_file_path:
         env_file_path = _resolve_stack_env_file()
+        if not env_file_path:
+            stack_name = os.getenv("ODOO_STACK_NAME") or os.getenv("ODOO_STACK") or os.getenv("ODOO_ENV_NAME")
+            has_container_targets = any(
+                value
+                for value in (
+                    os.getenv("ODOO_PROJECT_NAME"),
+                    os.getenv("ODOO_CONTAINER_NAME"),
+                    os.getenv("ODOO_SCRIPT_RUNNER_CONTAINER"),
+                    os.getenv("ODOO_WEB_CONTAINER"),
+                )
+            )
+            if stack_name and not has_container_targets and not is_testing:
+                raise EnvironmentResolutionError(
+                    "ODOO_STACK_NAME/ODOO_STACK/ODOO_ENV_NAME was set but no stack env could be resolved. "
+                    "Set ODOO_PROJECT_DIR to the odoo-ai repo, run 'uv run ops local info <target> --json' once, "
+                    "set ODOO_PROJECT_NAME/ODOO_CONTAINER_NAME overrides, or point ODOO_ENV_FILE at the desired .env/.compose.env."
+                )
 
     if not env_file_path and is_testing:
         # For testing: Look for target project's .env file (../odoo-ai/.env)

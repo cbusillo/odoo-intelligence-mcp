@@ -32,6 +32,7 @@ class DockerClientManager:
                                 "success": True,
                                 "container": resolved_container,
                                 "state": container_info.get("State", {}),
+                                "inspect": container_info,
                             }
 
                 if auto_start:
@@ -40,7 +41,12 @@ class DockerClientManager:
                         result = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=5)
                         if result.returncode == 0:
                             container_info = json.loads(result.stdout)
-                            return {"success": True, "container": container_name, "state": container_info.get("State", {})}
+                            return {
+                                "success": True,
+                                "container": container_name,
+                                "state": container_info.get("State", {}),
+                                "inspect": container_info,
+                            }
 
                 if missing_container:
                     return self._create_error_response(f"Container '{container_name}' not found", "NotFound", container_name)
@@ -48,7 +54,12 @@ class DockerClientManager:
 
             # Container exists, parse the JSON output
             container_info = json.loads(result.stdout)
-            return {"success": True, "container": container_name, "state": container_info.get("State", {})}
+            return {
+                "success": True,
+                "container": container_name,
+                "state": container_info.get("State", {}),
+                "inspect": container_info,
+            }
 
         except subprocess.TimeoutExpired:
             return self._create_error_response("Docker command timed out", "TimeoutError", container_name)

@@ -44,6 +44,11 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
 
             state = container_result.get("state", {})
             state_data = state if isinstance(state, dict) else {}
+            inspect_payload = container_result.get("inspect")
+            if isinstance(inspect_payload, dict):
+                inspect_state = inspect_payload.get("State")
+                if isinstance(inspect_state, dict):
+                    state_data = inspect_state
             container_status = state_data.get("Status", "unknown")
 
             container_info = {
@@ -56,14 +61,24 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
                 container_info["resolved_container"] = resolved_name
 
             if verbose:
-                config_data = state_data.get("Config")
+                container_id = None
+                created_at = None
+                if isinstance(inspect_payload, dict):
+                    config_data = inspect_payload.get("Config") if isinstance(inspect_payload.get("Config"), dict) else {}
+                    container_id = inspect_payload.get("Id")
+                    created_at = inspect_payload.get("Created")
+                else:
+                    config_data = state_data.get("Config") if isinstance(state_data.get("Config"), dict) else {}
+                    container_id = state_data.get("Id")
+                    created_at = state_data.get("Created")
+
                 image_name = "unknown"
                 if isinstance(config_data, dict):
                     image_name = config_data.get("Image", "unknown")
                 verbose_info = {
                     "state": state_data,
-                    "id": state_data.get("Id", "unknown")[:12] if state_data.get("Id") else "unknown",
-                    "created": state_data.get("Created", "unknown"),
+                    "id": container_id[:12] if isinstance(container_id, str) and container_id else "unknown",
+                    "created": created_at if isinstance(created_at, str) else "unknown",
                     "image": image_name,
                 }
 

@@ -45,7 +45,7 @@ async def get_addon_paths_from_container(container_name: str | None = None) -> l
         return candidates
 
     quoted = " ".join(shlex.quote(path) for path in candidates)
-    check_cmd = ["sh", "-c", f"for path in {quoted}; do [ -d \"$path\" ] && echo \"$path\"; done"]
+    check_cmd = ["sh", "-c", f'for path in {quoted}; do [ -d "$path" ] && echo "$path"; done']
     exec_result = docker_manager.exec_run(selected_container, check_cmd)
     if not exec_result.get("success") or exec_result.get("exit_code") != 0:
         return candidates

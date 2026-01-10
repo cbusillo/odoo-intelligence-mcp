@@ -22,8 +22,7 @@ def env_config() -> EnvConfig:
 @pytest.fixture(scope="session", autouse=True)
 def _ensure_container_prefix() -> Generator[None, None, None]:
     explicit = any(
-        os.getenv(key)
-        for key in ("ODOO_PROJECT_NAME", "ODOO_CONTAINER_NAME", "ODOO_SCRIPT_RUNNER_CONTAINER", "ODOO_WEB_CONTAINER")
+        os.getenv(key) for key in ("ODOO_PROJECT_NAME", "ODOO_CONTAINER_NAME", "ODOO_SCRIPT_RUNNER_CONTAINER", "ODOO_WEB_CONTAINER")
     )
     if explicit:
         yield
