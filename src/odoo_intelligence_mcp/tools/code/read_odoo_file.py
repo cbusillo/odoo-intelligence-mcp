@@ -1,4 +1,5 @@
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,8 @@ async def read_odoo_file(
     file_path: str, start_line: int | None = None, end_line: int | None = None, pattern: str | None = None, context_lines: int = 5
 ) -> dict[str, Any]:
     path = Path(file_path)
+    if _is_sensitive_path(path):
+        return {"success": False, "error": f"Access to sensitive file not allowed: {file_path}"}
 
     def process_content(content: str, source_path: str) -> dict[str, Any]:
         lines = content.split("\n")
@@ -125,6 +128,11 @@ async def read_odoo_file(
     # Try each potential path
     for potential_path in paths_to_try:
         try:
+            test_command = f"test -f {shlex.quote(potential_path)}"
+            test_result = docker_manager.exec_run(container_name, ["sh", "-c", test_command])
+            if test_result.get("exit_code") != 0:
+                continue
+
             exec_result = docker_manager.exec_run(container_name, ["cat", potential_path])
             stdout = exec_result.get("stdout", "")
 
@@ -138,3 +146,20 @@ async def read_odoo_file(
         "error": f"File not found: {file_path}",
         "searched_paths": paths_to_try[:5] + (["..."] if len(paths_to_try) > 5 else []),
     }
+
+
+def _is_sensitive_path(path: Path) -> bool:
+    sensitive_names = {
+        ".env",
+        "config.ini",
+        "odoo.conf",
+        "docker-compose.yml",
+        "compose.yml",
+        "docker-compose.override.yml",
+    }
+    if path.name in sensitive_names:
+        return True
+    path_parts = {part for part in path.parts if part}
+    if ".git" in path_parts:
+        return True
+    return False
