@@ -12,8 +12,10 @@ async def find_method_implementations(
 ) -> dict[str, Any]:
     validate_method_name(method_name)
 
-    # Use pagination page_size to limit collection
-    max_results = pagination.page_size
+    filter_text = pagination.filter_text
+
+    # Use pagination page_size to limit collection (unless filtering)
+    max_results = pagination.page_size if not filter_text else None
 
     if mode == "fs":
         idx = await build_ast_index()
@@ -27,6 +29,8 @@ async def find_method_implementations(
                     {
                         "model": model_name,
                         "module": meta.get("module", ""),
+                        "source_module": meta.get("module", ""),
+                        "model_module": meta.get("module", ""),
                         "signature": f"{method_name}(self, *args, **kwargs)",
                         "doc": "",
                         "source_preview": f"# static_ast: {meta.get('file', '')}",
@@ -55,10 +59,51 @@ method_name = """
 max_results = """
         + repr(max_results)
         + """
+filter_text = """
+        + repr(filter_text)
+        + """
+filter_text_lower = filter_text.lower() if isinstance(filter_text, str) and filter_text else None
 implementations = []
+
+def infer_source_module(module_name, source_file):
+    if source_file:
+        normalized = source_file.replace("\\\\", "/")
+        for marker in ("/odoo/addons/", "/addons/", "/volumes/addons/", "/volumes/enterprise/"):
+            if marker in normalized:
+                tail = normalized.split(marker, 1)[1]
+                slug = tail.split("/", 1)[0]
+                if slug:
+                    return slug
+        if "/volumes/" in normalized:
+            tail = normalized.split("/volumes/", 1)[1]
+            parts = [part for part in tail.split("/") if part]
+            if len(parts) >= 2 and parts[0] in ("addons", "enterprise"):
+                return parts[1]
+            if parts:
+                return parts[0]
+    if module_name:
+        if ".addons." in module_name:
+            tail = module_name.split(".addons.", 1)[1]
+            slug = tail.split(".", 1)[0]
+            if slug:
+                return slug
+        parts = [part for part in module_name.split(".") if part]
+        if parts:
+            if parts[0] == "odoo" and len(parts) > 2 and parts[1] == "addons":
+                return parts[2]
+            if parts[0] != "odoo":
+                return parts[0]
+    return ""
 
 # Get all model names from the registry
 model_names = list(env.registry.models.keys())
+module_map = {}
+try:
+    for rec in env["ir.model"].search([]):
+        if rec.model:
+            module_map[rec.model] = rec.modules or ""
+except Exception:
+    module_map = {}
 
 # Process in batches to avoid memory issues
 batch_size = 50
@@ -70,6 +115,8 @@ for batch_start in range(0, len(model_names), batch_size):
         try:
             model = env[model_name]
             model_class = type(model)
+            modules = module_map.get(model_name, "")
+            model_module = getattr(model, "_module", "") or ""
             
             # Check in the entire MRO (Method Resolution Order) to find inherited methods
             method_found = False
@@ -103,9 +150,20 @@ for batch_start in range(0, len(model_names), batch_size):
                     source_preview = "Source not available"
 
                 try:
-                    module = str(model_class.__module__)[:100]  # Limit module name length
+                    method_module = str(getattr(method, "__module__", ""))[:200]
+                except Exception:
+                    method_module = ""
+                try:
+                    module = str(model_class.__module__)[:200]  # Limit module name length
                 except Exception:
                     module = "Unknown module"
+                effective_module = method_module or module
+                try:
+                    source_file = str(inspect.getsourcefile(method) or "")
+                except Exception:
+                    source_file = ""
+
+                source_module = infer_source_module(method_module or effective_module, source_file) or model_module
 
                 doc_string = ""
                 try:
@@ -113,23 +171,42 @@ for batch_start in range(0, len(model_names), batch_size):
                 except Exception:
                     pass
 
-                implementations.append({
-                    "model": model_name,
-                    "module": module,
-                    "signature": signature,
-                    "doc": doc_string,
-                    "source_preview": source_preview,
-                    "has_super": "super()" in source_preview if source_preview != "Source not available" else False,
-                })
+                include_match = True
+                if filter_text_lower:
+                    haystacks = [
+                        str(model_name).lower(),
+                        str(signature).lower(),
+                        str(method_module).lower(),
+                        str(source_file).lower(),
+                        str(effective_module).lower(),
+                        str(source_module).lower(),
+                        str(model_module).lower(),
+                    ]
+                    include_match = any(filter_text_lower in value for value in haystacks if value)
+
+                if include_match:
+                    implementations.append({
+                        "model": model_name,
+                        "module": effective_module or module,
+                        "method_module": method_module,
+                        "source_file": source_file,
+                        "modules": modules,
+                        "source_module": source_module,
+                        "model_module": model_module,
+                        "signature": signature,
+                        "doc": doc_string,
+                        "source_preview": source_preview,
+                        "has_super": "super()" in source_preview if source_preview != "Source not available" else False,
+                    })
                 
                 # Early exit to prevent memory issues - limit total results during collection
-                if len(implementations) >= max_results:  # Use pagination limit
+                if max_results is not None and len(implementations) >= max_results:  # Use pagination limit
                     break
         except Exception:
             continue
         
         # Check if we need to break out of outer batch loop too
-        if len(implementations) >= max_results:
+        if max_results is not None and len(implementations) >= max_results:
             break
     
     # Garbage collect after each batch
@@ -137,7 +214,7 @@ for batch_start in range(0, len(model_names), batch_size):
         gc.collect()
     
     # Early termination if we have enough results
-    if len(implementations) >= max_results:
+    if max_results is not None and len(implementations) >= max_results:
         break
 
 result = implementations  # Limited collection
@@ -153,8 +230,14 @@ result = implementations  # Limited collection
         return {"success": False, "error": "Unexpected response type from environment", "error_type": "TypeError"}
     impl_list = implementations
 
-    # Apply pagination
-    paginated_results = paginate_dict_list(impl_list, pagination, search_fields=["model", "module", "signature"])
+    # Apply pagination (avoid re-filtering by installed modules)
+    if pagination.filter_text:
+        pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size, filter_text=None)
+    paginated_results = paginate_dict_list(
+        impl_list,
+        pagination,
+        search_fields=["model", "module", "method_module", "source_file", "signature"],
+    )
 
     result = {"method_name": method_name, "implementations": paginated_results.to_dict()}
 
