@@ -24,42 +24,115 @@ empty_dict = dict()
 
 # Validate inputs
 if model not in env:
-    result = {"error": f"Model {model} not found"}
+    result = {"success": False, "user_error": f"Model {model} not found"}
 else:
     valid_operations = ["read", "write", "create", "unlink"]
     if operation not in valid_operations:
-        result = {"error": f"Invalid operation {operation}. Must be one of: {valid_operations}"}
+        result = {"success": False, "user_error": f"Invalid operation {operation}. Must be one of: {valid_operations}"}
     else:
         try:
             # Find the user
+            user_obj = None
+            user_candidates = []
+            user_model = env["res.users"]
+            if hasattr(user_model, "sudo"):
+                user_model = user_model.sudo()
+            if hasattr(user_model, "with_context"):
+                user_model = user_model.with_context(active_test=False)
+
             if user.isdigit():
                 user_id = int(user)
-                # Check if user exists before browsing
-                user_exists = env["res.users"].search_count([("id", "=", user_id)])
-                if user_exists:
-                    user_obj = env["res.users"].browse(user_id)
-                else:
-                    user_obj = None
+                user_obj = user_model.browse(user_id)
+                try:
+                    if not user_obj.exists():
+                        user_obj = None
+                except Exception:
+                    user_obj = user_model.search([("id", "=", user_id)], limit=1)
             else:
-                user_search = env["res.users"].search([("login", "=", user)], limit=1)
-                user_obj = user_search if user_search else None
+                user_search = user_model.search([("login", "=", user)], limit=1)
+                if user_search:
+                    user_obj = user_search
+                else:
+                    email_search = user_model.search([("email", "=", user)], limit=1)
+                    if email_search:
+                        user_obj = email_search
+                    else:
+                        name_search = user_model.search([("name", "ilike", user)], limit=1)
+                        if name_search:
+                            user_obj = name_search
 
-            if not user_obj:
+            user_data = None
+            if user_obj:
+                try:
+                    user_records = user_obj.read(["id", "login", "active", "display_name", "partner_id"])
+                    if user_records:
+                        user_data = user_records[0]
+                except Exception:
+                    user_data = None
+
+            db_name = None
+            try:
+                db_name = env.cr.dbname if hasattr(env, "cr") and env.cr else None
+            except Exception:
+                db_name = None
+
+            if not user_data:
+                if not user.isdigit():
+                    candidate_domain = [
+                        "|",
+                        "|",
+                        ("login", "ilike", user),
+                        ("email", "ilike", user),
+                        ("name", "ilike", user),
+                    ]
+                    for candidate in user_model.search(candidate_domain, limit=5):
+                        user_candidates.append(
+                            {
+                                "id": candidate.id,
+                                "login": candidate.login,
+                                "name": candidate.name,
+                                "active": candidate.active,
+                            }
+                        )
                 if user.isdigit():
-                    result = {"error": f"User with ID {user} not found. Please verify the user ID exists."}
+                    result = {"success": False, "user_error": f"User with ID {user} not found. Please verify the user ID exists."}
                 else:
-                    result = {"error": f"User with login '{user}' not found. Try using the user ID instead of login, or verify the login exists."}
+                    result = {
+                        "success": False,
+                        "user_error": f"User '{user}' not found. Provide a user id or exact login (often the email address).",
+                    }
+                if user_candidates:
+                    result["user_candidates"] = user_candidates
+                if db_name:
+                    result["db_name"] = db_name
+                if user.isdigit():
+                    try:
+                        env.cr.execute("SELECT id, login, active, partner_id FROM res_users WHERE id = %s", (user_id,))
+                        row = env.cr.fetchone()
+                        if row:
+                            result["user_sql"] = {
+                                "id": row[0],
+                                "login": row[1],
+                                "active": row[2],
+                                "partner_id": row[3],
+                            }
+                    except Exception:
+                        pass
             else:
+                user_id = user_data.get("id")
+                group_records = env["res.groups"].sudo().search([("user_ids", "in", user_id)])
+                group_ids = group_records.ids
                 analysis = {
                     "user": {
-                        "id": user_obj.id,
-                        "login": user_obj.login,
-                        "name": user_obj.name,
-                        "active": user_obj.active
+                        "id": user_id,
+                        "login": user_data.get("login"),
+                        "name": user_data.get("display_name") or user_data.get("login"),
+                        "active": user_data.get("active"),
                     },
                     "model": model,
                     "operation": operation,
                     "record_id": record_id,
+                    "db_name": db_name,
                     "permissions": empty_dict.copy(),
                     "groups": [],
                     "record_rules": [],
@@ -68,17 +141,23 @@ else:
                 }
 
                 # Get user groups
-                for group in user_obj.groups_id:
+                for group in group_records:
+                    category_name = None
+                    try:
+                        if hasattr(group, "category_id") and group.category_id:
+                            category_name = group.category_id.name
+                    except Exception:
+                        category_name = None
                     analysis["groups"].append({
                         "id": group.id,
                         "name": group.name,
-                        "category": group.category_id.name if group.category_id else None
+                        "category": category_name,
                     })
 
                 # Check model access rights
                 try:
                     # Create environment as the specific user
-                    user_env = env(user=user_obj.id)
+                    user_env = env(user=user_id) if user_id else env
                     user_model = user_env[model]
 
                     # Test each operation
@@ -127,7 +206,7 @@ else:
                         }
 
                         # Check if user has this group
-                        if access.group_id and access.group_id in user_obj.groups_id:
+                        if access.group_id and access.group_id.id in group_ids:
                             rule["user_has_group"] = True
                         elif not access.group_id:
                             rule["user_has_group"] = True  # No group = all users
@@ -162,8 +241,8 @@ else:
                         if is_global:
                             rule_info["applies_to_user"] = True
                         elif rule.groups:
-                            rule_groups = set(rule.groups)
-                            user_groups = set(user_obj.groups_id)
+                            rule_groups = set(rule.groups.ids)
+                            user_groups = set(group_ids)
                             rule_info["applies_to_user"] = bool(rule_groups & user_groups)
                         else:
                             rule_info["applies_to_user"] = False
@@ -175,7 +254,7 @@ else:
                 # Test specific record access if record_id provided
                 if record_id:
                     try:
-                        user_env = env(user=user_obj.id)
+                        user_env = env(user=user_id) if user_id else env
                         user_model = user_env[model]
                         record = user_model.browse(record_id)
 
@@ -256,7 +335,7 @@ else:
         except Exception as e:
             result = {
                 "success": False,
-                "error": str(e),
+                "user_error": str(e),
                 "error_type": type(e).__name__,
                 "user": user,
                 "model": model,
@@ -266,7 +345,11 @@ else:
     )
 
     try:
-        return await env.execute_code(code)
+        result = await env.execute_code(code)
+        if isinstance(result, dict) and "user_error" in result and "error" not in result:
+            result["error"] = result.pop("user_error")
+            result.setdefault("success", False)
+        return result
     except Exception as e:
         return {
             "success": False,

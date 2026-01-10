@@ -10,6 +10,7 @@ Domain = list[DomainTuple]
 ContextValue = str | int | bool | list[int] | None
 ContextDict = dict[str, ContextValue]
 
+
 @runtime_checkable
 class Cursor(Protocol):
     def execute(self, query: str, params: tuple[object, ...] | None = None) -> None: ...
