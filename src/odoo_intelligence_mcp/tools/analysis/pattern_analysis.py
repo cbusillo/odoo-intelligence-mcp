@@ -3,12 +3,29 @@ from typing import Any
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
 from ...type_defs.odoo_types import CompatibleEnvironment
 
+VALID_PATTERN_TYPES = [
+    "computed_fields",
+    "related_fields",
+    "api_decorators",
+    "custom_methods",
+    "state_machines",
+    "all",
+]
+
 
 async def analyze_patterns(
     env: CompatibleEnvironment, pattern_type: str = "all", pagination: PaginationParams | None = None
 ) -> dict[str, Any]:
     if pagination is None:
         pagination = PaginationParams()
+    pattern_type = (pattern_type or "all").strip()
+    if pattern_type not in VALID_PATTERN_TYPES:
+        return {
+            "success": False,
+            "error": f"Invalid pattern_type '{pattern_type}'.",
+            "valid_pattern_types": VALID_PATTERN_TYPES,
+            "example": {"pattern_type": "computed_fields"},
+        }
 
     # Execute pattern collection in Odoo environment with batching for memory efficiency
     collection_code = (
@@ -65,6 +82,13 @@ def get_decorators(func):
 
 # Get all model names from the registry and process in batches
 model_names = list(env.registry.models.keys())
+module_map = {}
+try:
+    for rec in env["ir.model"].search([]):
+        if rec.model:
+            module_map[rec.model] = rec.modules or ""
+except Exception:
+    module_map = {}
 batch_size = 50  # Process 50 models at a time to avoid memory issues
 processed_count = 0
 
@@ -76,6 +100,7 @@ for batch_start in range(0, len(model_names), batch_size):
         try:
             model = env[model_name]
             model_class = type(model)
+            modules = module_map.get(model_name, "")
 
             # Use model._fields to access field objects directly
             # This gives us access to the actual field attributes
@@ -83,10 +108,30 @@ for batch_start in range(0, len(model_names), batch_size):
             # Collect computed fields
             for field_name, field in model._fields.items():
                 if hasattr(field, 'compute') and field.compute:
+                    compute_module = ""
+                    compute_file = ""
+                    try:
+                        compute_method = None
+                        if isinstance(field.compute, str):
+                            compute_method = getattr(model, field.compute, None)
+                        else:
+                            compute_method = field.compute
+                        if compute_method:
+                            compute_module = getattr(compute_method, "__module__", "") or ""
+                            try:
+                                compute_file = inspect.getsourcefile(compute_method) or ""
+                            except Exception:
+                                compute_file = ""
+                    except Exception:
+                        compute_module = ""
+                        compute_file = ""
                     patterns["computed_fields"].append({
                         "model": model_name,
+                        "modules": modules,
                         "field": field_name,
                         "compute_method": safe_serialize(field.compute),
+                        "compute_module": safe_serialize(compute_module),
+                        "compute_file": safe_serialize(compute_file),
                         "store": getattr(field, 'store', False),
                         "depends": safe_serialize(getattr(field, 'depends', [])),
                     })
@@ -95,6 +140,7 @@ for batch_start in range(0, len(model_names), batch_size):
                 if hasattr(field, 'related') and field.related:
                     patterns["related_fields"].append({
                         "model": model_name,
+                        "modules": modules,
                         "field": field_name,
                         "related_path": safe_serialize(field.related),
                         "store": getattr(field, 'store', True),
@@ -106,6 +152,7 @@ for batch_start in range(0, len(model_names), batch_size):
                     if selection:
                         patterns["state_machines"].append({
                             "model": model_name,
+                            "modules": modules,
                             "states": safe_serialize(selection),
                             "field_type": getattr(field, 'type', ''),
                         })
@@ -114,14 +161,27 @@ for batch_start in range(0, len(model_names), batch_size):
             for method_name, method in inspect.getmembers(model_class, inspect.isfunction):
                 if not method_name.startswith("_"):
                     decorators = get_decorators(method)
+                    method_module = ""
+                    method_file = ""
+                    try:
+                        method_module = getattr(method, "__module__", "") or ""
+                    except Exception:
+                        method_module = ""
+                    try:
+                        method_file = inspect.getsourcefile(method) or ""
+                    except Exception:
+                        method_file = ""
 
                     # Add to api_decorators
                     for decorator in decorators:
                         patterns["api_decorators"].append({
                             "model": model_name,
+                            "modules": modules,
                             "method": method_name,
                             "decorator_type": safe_serialize(decorator["type"]),
                             "decorator_fields": safe_serialize(decorator["fields"]),
+                            "method_module": safe_serialize(method_module),
+                            "method_file": safe_serialize(method_file),
                         })
 
                     # Add to custom_methods if not standard method
@@ -133,9 +193,12 @@ for batch_start in range(0, len(model_names), batch_size):
 
                         patterns["custom_methods"].append({
                             "model": model_name,
+                            "modules": modules,
                             "method": method_name,
                             "signature": safe_serialize(signature),
                             "has_decorators": bool(decorators),
+                            "method_module": safe_serialize(method_module),
+                            "method_file": safe_serialize(method_file),
                         })
         except Exception:
             continue
@@ -157,10 +220,10 @@ result = patterns
 
         # Define search fields based on pattern type
         search_fields_map = {
-            "computed_fields": ["model", "field", "compute_method"],
+            "computed_fields": ["model", "field", "compute_method", "compute_module", "compute_file"],
             "related_fields": ["model", "field", "related_path"],
-            "api_decorators": ["model", "method", "decorator_type"],
-            "custom_methods": ["model", "method"],
+            "api_decorators": ["model", "method", "decorator_type", "method_module", "method_file"],
+            "custom_methods": ["model", "method", "method_module", "method_file"],
             "state_machines": ["model"],
         }
 

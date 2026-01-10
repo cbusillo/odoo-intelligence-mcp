@@ -2,6 +2,7 @@ from typing import Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
 from ..common.fs_utils import ensure_pagination, get_models_index
+from .search_field_type import VALID_FIELD_TYPES
 
 
 async def search_field_type_fs(field_type: str, pagination: PaginationParams | None = None) -> dict[str, Any]:
@@ -9,7 +10,14 @@ async def search_field_type_fs(field_type: str, pagination: PaginationParams | N
 
     models = await get_models_index()
     results: list[dict[str, Any]] = []
-    field_type = field_type.lower()
+    field_type = field_type.lower().strip()
+    if field_type not in VALID_FIELD_TYPES:
+        return {
+            "success": False,
+            "error": f"Invalid field_type '{field_type}'.",
+            "valid_types": VALID_FIELD_TYPES,
+            "example": {"field_type": "char"},
+        }
 
     for model_name, meta in models.items():
         fields = meta.get("fields", {})

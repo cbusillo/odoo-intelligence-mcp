@@ -1,5 +1,21 @@
 from typing import Any
 
+VALID_FIELD_TYPES = [
+    "many2one",
+    "one2many",
+    "many2many",
+    "char",
+    "text",
+    "integer",
+    "float",
+    "boolean",
+    "date",
+    "datetime",
+    "binary",
+    "selection",
+    "json",
+]
+
 from ...core.utils import PaginationParams
 from ...type_defs.odoo_types import CompatibleEnvironment
 from ._common import execute_and_paginate_results
@@ -14,23 +30,14 @@ async def search_field_type(
     if pagination is None:
         pagination = PaginationParams()
 
-    valid_types = [
-        "many2one",
-        "one2many",
-        "many2many",
-        "char",
-        "text",
-        "integer",
-        "float",
-        "boolean",
-        "date",
-        "datetime",
-        "binary",
-        "selection",
-        "json",
-    ]
-    if field_type not in valid_types:
-        return {"error": f"Invalid field type. Valid types: {', '.join(valid_types)}"}
+    field_type = field_type.lower().strip()
+    if field_type not in VALID_FIELD_TYPES:
+        return {
+            "success": False,
+            "error": f"Invalid field_type '{field_type}'.",
+            "valid_types": VALID_FIELD_TYPES,
+            "example": {"field_type": "char"},
+        }
 
     code = f"""
 import gc

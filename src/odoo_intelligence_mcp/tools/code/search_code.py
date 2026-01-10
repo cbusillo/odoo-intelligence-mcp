@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Any
 
@@ -30,10 +31,27 @@ async def search_code(
 
     # Pick search roots
     config = load_env_config()
+    addons_roots = [p.strip() for p in config.addons_path.split(",") if p.strip()]
+    relative_roots: list[str] = []
     if roots:
-        search_roots = [p for p in roots if isinstance(p, str) and p.strip()]
+        candidate_roots = [p for p in roots if isinstance(p, str) and p.strip()]
+        expanded_roots: list[str] = []
+        for root in candidate_roots:
+            if root.startswith("/"):
+                expanded_roots.append(root)
+                continue
+            relative_roots.append(root)
+            for base in addons_roots:
+                expanded_roots.append(os.path.join(base, root))
+                parent = os.path.dirname(base)
+                if parent:
+                    expanded_roots.append(os.path.join(parent, root))
+        search_roots: list[str] = []
+        for path in expanded_roots:
+            if path not in search_roots:
+                search_roots.append(path)
     else:
-        search_roots = [p.strip() for p in config.addons_path.split(",") if p.strip()]
+        search_roots = addons_roots
 
     if not search_roots:
         return {
@@ -113,14 +131,19 @@ print(json.dumps(results))
 
     # Apply pagination
     paginated = paginate_dict_list(results, pagination, search_fields=["file", "match"])
-    return validate_response_size(
-        {
-            "success": True,
-            "pattern": pattern,
-            "file_type": file_type,
-            "roots": search_roots,
-            "results": paginated.to_dict(),
-            "mode_used": "fs",
-            "data_quality": "approximate",
+    payload = {
+        "success": True,
+        "pattern": pattern,
+        "file_type": file_type,
+        "roots": search_roots,
+        "results": paginated.to_dict(),
+        "mode_used": "fs",
+        "data_quality": "approximate",
+    }
+    if relative_roots:
+        payload["meta"] = {
+            "relative_roots": relative_roots,
+            "resolved_roots": search_roots,
+            "hint": "Relative roots were expanded against ODOO_ADDONS_PATH and its parent directories. Use absolute paths for precision.",
         }
-    )
+    return validate_response_size(payload)
