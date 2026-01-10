@@ -125,15 +125,11 @@ async def read_odoo_file(
     # Try each potential path
     for potential_path in paths_to_try:
         try:
-            # First check if file exists
-            test_result = docker_manager.exec_run(container_name, ["test", "-f", potential_path])
-            if test_result.get("exit_code") == 0:
-                # File exists, read it
-                exec_result = docker_manager.exec_run(container_name, ["cat", potential_path])
-                stdout = exec_result.get("stdout", "")
+            exec_result = docker_manager.exec_run(container_name, ["cat", potential_path])
+            stdout = exec_result.get("stdout", "")
 
-                if exec_result.get("success"):
-                    return process_content(stdout, potential_path)
+            if exec_result.get("success"):
+                return process_content(stdout, potential_path)
         except (APIError, NotFound, AttributeError, ValueError):
             continue
 
