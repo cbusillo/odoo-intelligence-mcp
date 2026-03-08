@@ -83,7 +83,7 @@ def get_expected_container_names() -> dict[str, str | None]:
 
 def get_expected_database_name() -> str:
     """Get expected database name from environment configuration."""
-    return get_test_config()["database"]
+    return get_test_config().database
 
 
 def create_mock_handle_operation_with_error_handling() -> Callable[[str, str, Any], dict[str, Any]]:

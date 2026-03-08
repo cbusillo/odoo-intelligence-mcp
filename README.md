@@ -32,13 +32,13 @@ Restart Claude after configuration changes.
 
 `.env` resolution order:
 1) `ODOO_ENV_FILE` (explicit)
-2) `ODOO_STATE_ROOT/.compose.env` or `~/odoo-ai/<stack>/.compose.env` (via `ODOO_PROJECT_NAME` or `ODOO_STACK_NAME`)
-   - When `docker/config/ops.toml` exists (found via `ODOO_PROJECT_DIR` or current dir), MCP uses
-     `uv run ops local info <target> --json` to resolve the correct `.compose.env`.
+2) Platform env resolution from the target `odoo-ai` checkout (via `ODOO_PROJECT_DIR`, sibling `../odoo-ai`, or current dir)
+   - MCP prefers `.platform/env/<context>.<instance>.env`.
+   - If needed, MCP falls back to `uv run platform info --context <ctx> --instance <instance> --json-output`.
 3) Current working directory (where Claude was launched)
 4) This MCP server directory (fallback)
 
-Override discovery by setting `ODOO_ENV_FILE` to the target project's `.env` path or `ODOO_PROJECT_DIR` for compose resolution. Use `ODOO_ENV_PRIORITY=process` to let process env vars override `.compose.env` values.
+Override discovery by setting `ODOO_ENV_FILE` to the target project's env file path or `ODOO_PROJECT_DIR` for platform resolution. Use `ODOO_ENV_PRIORITY=process` to let process env vars override file values.
 
 Optional container overrides:
 - `ODOO_CONTAINER_NAME` (primary exec container)

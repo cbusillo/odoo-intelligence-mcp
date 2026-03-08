@@ -5,7 +5,6 @@ import re
 import subprocess
 import sys
 import textwrap
-import tomllib
 from collections.abc import AsyncIterator, Callable, Iterator
 from functools import lru_cache
 from pathlib import Path
@@ -96,60 +95,45 @@ def _expand_path(raw: str | Path) -> Path:
     return Path(expanded)
 
 
-def _find_ops_repo_root(start_dir: Path) -> Path | None:
+def _find_project_repo_root(start_dir: Path) -> Path | None:
     current = start_dir.resolve()
     while True:
-        ops_path = current / "docker" / "config" / "ops.toml"
-        if ops_path.exists():
+        if (current / "platform" / "stack.toml").exists():
             return current
+        sibling_odoo_ai = current / "odoo-ai"
+        if (sibling_odoo_ai / "platform" / "stack.toml").exists():
+            return sibling_odoo_ai
         if current.parent == current:
             return None
         current = current.parent
 
 
-def _get_ops_root(config: "EnvConfig") -> Path | None:
+def _get_project_root(config: "EnvConfig") -> Path | None:
     project_dir = config.project_dir or _get_env_value(config, "ODOO_PROJECT_DIR")
     if project_dir:
         candidate = _expand_path(project_dir)
         if candidate.exists():
-            return _find_ops_repo_root(candidate)
+            return _find_project_repo_root(candidate)
     env_file_path = getattr(config, "_env_file", None)
     if env_file_path:
-        return _find_ops_repo_root(Path(env_file_path).parent)
-    return _find_ops_repo_root(Path.cwd())
+        return _find_project_repo_root(Path(env_file_path).parent)
+    return _find_project_repo_root(Path.cwd())
 
 
 def should_allow_autostart(config: "EnvConfig") -> bool:
-    ops_root = _get_ops_root(config)
-    if not ops_root:
+    project_root = _get_project_root(config)
+    if not project_root:
         return True
     env_file_path = getattr(config, "_env_file", None)
     if not env_file_path:
         return False
-    env_path = Path(env_file_path)
-    if env_path.name == ".compose.env":
-        return True
-    if env_path.parent.name == "stack-env":
-        return True
     override = os.getenv("ODOO_ENV_FILE")
     if override:
         candidate = Path(override).expanduser()
         if candidate.is_dir():
             candidate /= ".env"
         return candidate.exists()
-    return False
-
-
-def _load_ops_targets(repo_root: Path) -> list[str]:
-    ops_path = repo_root / "docker" / "config" / "ops.toml"
-    try:
-        data = tomllib.loads(ops_path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return []
-    targets = data.get("targets", {})
-    if not isinstance(targets, dict):
-        return []
-    return [key for key in targets.keys() if isinstance(key, str) and key]
+    return Path(env_file_path).exists()
 
 
 def _extract_json_payload(raw_text: str) -> dict[str, object] | None:
@@ -168,12 +152,44 @@ def _extract_json_payload(raw_text: str) -> dict[str, object] | None:
     return payload
 
 
+def _derive_platform_targets(project_name: str | None, stack_name: str | None) -> list[tuple[str, str]]:
+    targets: list[tuple[str, str]] = []
+
+    def _add(target_context_name: str | None, target_instance_name: str | None) -> None:
+        if not target_context_name or not target_instance_name:
+            return
+        candidate = (target_context_name, target_instance_name)
+        if candidate not in targets:
+            targets.append(candidate)
+
+    if stack_name and "-" in stack_name:
+        context_name, instance_name = stack_name.rsplit("-", 1)
+        _add(context_name, instance_name)
+
+    if project_name and project_name.startswith("odoo-"):
+        stripped_name = project_name.removeprefix("odoo-")
+        if "-" in stripped_name:
+            context_name, instance_name = stripped_name.rsplit("-", 1)
+            _add(context_name, instance_name)
+
+    return targets
+
+
 @lru_cache(maxsize=16)
-def _run_ops_info(repo_root_text: str, target: str) -> dict[str, object] | None:
-    command_name: str = "uv"
-    cmd = [command_name, "run", "ops", "local", "info", target, "--json"]
+def _run_platform_info(repo_root_text: str, context_name: str, instance_name: str) -> dict[str, object] | None:
+    command = [
+        "uv",
+        "run",
+        "platform",
+        "info",
+        "--context",
+        context_name,
+        "--instance",
+        instance_name,
+        "--json-output",
+    ]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=repo_root_text)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30, cwd=repo_root_text)
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return None
     if result.returncode != 0:
@@ -181,70 +197,29 @@ def _run_ops_info(repo_root_text: str, target: str) -> dict[str, object] | None:
     return _extract_json_payload(result.stdout)
 
 
-def _select_ops_targets(targets: list[str], project_name: str | None, stack_name: str | None) -> list[str]:
-    desired: list[str] = []
-
-    def _add(value: str | None) -> None:
-        if not value:
-            return
-        if value not in desired:
-            desired.append(value)
-
-    _add(stack_name)
-    if stack_name:
-        _add(stack_name.split("-", 1)[0])
-        if stack_name.endswith("-local"):
-            _add(stack_name.removesuffix("-local"))
-
-    _add(project_name)
-    if project_name:
-        if project_name.startswith("odoo-"):
-            _add(project_name.removeprefix("odoo-"))
-        _add(project_name.split("-", 1)[-1])
-
-    candidates = [target for target in desired if target in targets]
-    return candidates or targets
-
-
-def _resolve_stack_env_file_from_ops(start_dir: Path, project_name: str | None, stack_name: str | None) -> Path | None:
-    repo_root = _find_ops_repo_root(start_dir)
+def _resolve_stack_env_file_from_platform(start_dir: Path, project_name: str | None, stack_name: str | None) -> Path | None:
+    repo_root = _find_project_repo_root(start_dir)
     if not repo_root:
         return None
-    if not project_name and not stack_name:
+    stack_file = repo_root / "platform" / "stack.toml"
+    if not stack_file.exists():
         return None
-    targets = _load_ops_targets(repo_root)
-    if not targets:
-        return None
-    infos: list[dict[str, object]] = []
-    for target in _select_ops_targets(targets, project_name, stack_name):
-        info = _run_ops_info(str(repo_root), target)
-        if info:
-            infos.append(info)
 
-    def _match(ops_record: dict[str, object], key: str | None) -> bool:
-        if not key:
-            return False
-        return (
-            key == ops_record.get("project_name") or key == ops_record.get("stack_name") or key == ops_record.get("compose_project")
-        )
+    for context_name, instance_name in _derive_platform_targets(project_name, stack_name):
+        direct_candidate = repo_root / ".platform" / "env" / f"{context_name}.{instance_name}.env"
+        if direct_candidate.exists():
+            return direct_candidate
 
-    if project_name:
-        for ops_entry in infos:
-            if _match(ops_entry, project_name):
-                env_file = ops_entry.get("env_file")
-                if isinstance(env_file, str):
-                    candidate = Path(env_file)
-                    if candidate.exists():
-                        return candidate
-
-    if stack_name:
-        for ops_entry in infos:
-            if ops_entry.get("stack_name") == stack_name:
-                env_file = ops_entry.get("env_file")
-                if isinstance(env_file, str):
-                    candidate = Path(env_file)
-                    if candidate.exists():
-                        return candidate
+        info = _run_platform_info(str(repo_root), context_name, instance_name)
+        if not info:
+            continue
+        for key in ("runtime_env_file", "env_file", "root_env_file"):
+            raw_path = info.get(key)
+            if not isinstance(raw_path, str):
+                continue
+            candidate = Path(raw_path)
+            if candidate.exists():
+                return candidate
     return None
 
 
@@ -257,48 +232,11 @@ def _resolve_stack_env_file() -> Path | None:
 
     project_name = os.getenv("ODOO_PROJECT_NAME") or cwd_env_values.get("ODOO_PROJECT_NAME")
 
-    state_root = os.getenv("ODOO_STATE_ROOT") or cwd_env_values.get("ODOO_STATE_ROOT")
-    if state_root:
-        candidate = _expand_path(state_root) / ".compose.env"
-        if candidate.exists():
-            return candidate
-
     project_dir = os.getenv("ODOO_PROJECT_DIR") or cwd_env_values.get("ODOO_PROJECT_DIR")
-    ops_start_dir = _expand_path(project_dir) if project_dir else Path.cwd()
-    ops_env = _resolve_stack_env_file_from_ops(ops_start_dir, project_name, stack_name)
-    if ops_env:
-        return ops_env
-
-    if project_name:
-        candidate = Path.home() / "odoo-ai" / project_name / ".compose.env"
-        if candidate.exists():
-            return candidate
-        fallback = Path.home() / ".odoo-ai" / "stack-env" / f"{project_name}.env"
-        if fallback.exists():
-            return fallback
-    base = Path.home() / "odoo-ai"
-    if base.exists() and not stack_name:
-        matches = [path / ".compose.env" for path in base.iterdir() if path.is_dir() and (path / ".compose.env").exists()]
-        if len(matches) == 1:
-            return matches[0]
-        if project_name:
-            for candidate in matches:
-                values = _load_env_file_values(str(candidate))
-                if values.get("ODOO_PROJECT_NAME") == project_name:
-                    return candidate
-
-    if stack_name:
-        candidate = Path.home() / "odoo-ai" / stack_name / ".compose.env"
-        if candidate.exists():
-            return candidate
-        fallback = Path.home() / ".odoo-ai" / "stack-env" / f"{stack_name}.env"
-        if fallback.exists():
-            return fallback
-    fallback_dir = Path.home() / ".odoo-ai" / "stack-env"
-    if fallback_dir.exists() and not stack_name:
-        candidates = [path for path in fallback_dir.iterdir() if path.is_file() and path.suffix == ".env"]
-        if len(candidates) == 1:
-            return candidates[0]
+    search_start_dir = _expand_path(project_dir) if project_dir else Path.cwd()
+    platform_env = _resolve_stack_env_file_from_platform(search_start_dir, project_name, stack_name)
+    if platform_env:
+        return platform_env
     return None
 
 
@@ -638,7 +576,7 @@ def _validate_required_env(config: EnvConfig, env_file_path: Path | None) -> Non
             "ODOO_SCRIPT_RUNNER_CONTAINER/ODOO_WEB_CONTAINER to override."
         )
     raise EnvironmentResolutionError(
-        "No .env file could be resolved. Set ODOO_ENV_FILE, run from the target repo root, or set ODOO_PROJECT_NAME (or container "
+        "No environment file could be resolved. Set ODOO_ENV_FILE, run from the target repo root, or set ODOO_PROJECT_NAME (or container "
         "overrides) in the environment."
     )
 
@@ -647,10 +585,9 @@ def load_env_config() -> EnvConfig:
     # Detect if we're running in test mode
     is_testing = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
 
-    # Log the current working directory for debugging
-    logger.debug("MCP server looking for .env file from working directory: %s", Path.cwd())
+    logger.debug("MCP server resolving environment from working directory: %s", Path.cwd())
 
-    # Find the .env file to use
+    # Resolve the environment file to use.
     env_file_path = _resolve_env_file_override()
 
     if not env_file_path:
@@ -668,44 +605,41 @@ def load_env_config() -> EnvConfig:
             )
             if stack_name and not has_container_targets and not is_testing:
                 raise EnvironmentResolutionError(
-                    "ODOO_STACK_NAME/ODOO_STACK/ODOO_ENV_NAME was set but no stack env could be resolved. "
-                    "Set ODOO_PROJECT_DIR to the odoo-ai repo, run 'uv run ops local info <target> --json' once, "
-                    "set ODOO_PROJECT_NAME/ODOO_CONTAINER_NAME overrides, or point ODOO_ENV_FILE at the desired .env/.compose.env."
+                    "ODOO_STACK_NAME/ODOO_STACK/ODOO_ENV_NAME was set but no platform env could be resolved. "
+                    "Set ODOO_PROJECT_DIR to the odoo-ai repo, run 'uv run platform info --context <ctx> --instance <instance> --json-output', "
+                    "set ODOO_PROJECT_NAME/ODOO_CONTAINER_NAME overrides, or point ODOO_ENV_FILE at the desired env file."
                 )
 
     if not env_file_path and is_testing:
-        # For testing: Look for target project's .env file (../odoo-ai/.env)
+        # Test mode fallback: use the sibling target repo root env file when no platform env was resolved.
         developer_dir = Path(__file__).parent.parent.parent.parent.parent  # Go up to Developer/ directory
         target_env_path = developer_dir / "odoo-ai" / ".env"
         if target_env_path.exists():
             env_file_path = target_env_path
-            logger.info("Using target project .env from %s (test mode)", target_env_path)
+            logger.info("Using target project env file from %s (test mode)", target_env_path)
 
     if not env_file_path:
         # First, check the current working directory (where Claude Code was launched)
         cwd_env = Path.cwd() / ".env"
         if cwd_env.exists():
             env_file_path = cwd_env
-            logger.info("Using .env from current working directory: %s", cwd_env)
+            logger.info("Using env file from current working directory: %s", cwd_env)
         else:
-            # Fall back to looking for .env in MCP server's project root
+            # Fall back to the MCP server project root.
             current_path = Path(__file__).parent
             while current_path != current_path.parent:
                 pyproject_path = current_path / "pyproject.toml"
                 if pyproject_path.exists():
-                    # Found project root
                     env_path = current_path / ".env"
                     if env_path.exists():
                         env_file_path = env_path
-                        logger.info("Using local .env from %s", env_path)
+                        logger.info("Using local env file from %s", env_path)
                     break
                 current_path = current_path.parent
 
-    # Pydantic BaseSettings will automatically load from env vars and .env file
+    # Pydantic BaseSettings will automatically load from env vars and the resolved env file.
     if env_file_path:
         env_priority = os.getenv("ODOO_ENV_PRIORITY")
-        if not env_priority and Path(env_file_path).name == ".compose.env":
-            env_priority = "env_file"
         if not env_priority:
             env_priority = "process"
 
@@ -738,7 +672,7 @@ def load_env_config() -> EnvConfig:
         _validate_required_env(config, Path(env_file_path))
         return config
     else:
-        logger.info("No .env file found, using defaults and environment variables")
+        logger.info("No environment file found, using defaults and environment variables")
         config = EnvConfig()
         _validate_required_env(config, None)
         return config
@@ -898,7 +832,7 @@ class HostOdooEnvironment:
                     if not should_allow_autostart(config):
                         raise DockerConnectionError(
                             self.container_name,
-                            "Auto-start disabled until stack env is resolved. Set ODOO_PROJECT_NAME/ODOO_STACK_NAME or ODOO_ENV_FILE.",
+                            "Auto-start disabled until the platform env is resolved. Set ODOO_PROJECT_NAME/ODOO_STACK_NAME or ODOO_ENV_FILE.",
                         )
                     resolved_container = resolve_existing_container_name(config, self.container_name)
                     if resolved_container and resolved_container != self.container_name:
@@ -946,7 +880,7 @@ class HostOdooEnvironment:
                 if not should_allow_autostart(config):
                     raise DockerConnectionError(
                         self.container_name,
-                        "Auto-start disabled until stack env is resolved. Set ODOO_PROJECT_NAME/ODOO_STACK_NAME or ODOO_ENV_FILE.",
+                        "Auto-start disabled until the platform env is resolved. Set ODOO_PROJECT_NAME/ODOO_STACK_NAME or ODOO_ENV_FILE.",
                     )
                 if not config.container_prefix:
                     raise DockerConnectionError(

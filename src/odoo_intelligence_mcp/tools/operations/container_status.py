@@ -61,8 +61,6 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
                 container_info["resolved_container"] = resolved_name
 
             if verbose:
-                container_id = None
-                created_at = None
                 if isinstance(inspect_payload, dict):
                     config_data = inspect_payload.get("Config") if isinstance(inspect_payload.get("Config"), dict) else {}
                     container_id = inspect_payload.get("Id")

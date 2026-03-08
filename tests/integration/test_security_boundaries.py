@@ -27,9 +27,10 @@ class TestCodeInjectionPrevention:
 
     @pytest.mark.asyncio
     async def test_prevent_file_system_access(self) -> None:
+        traversal_path = "../../../../../../etc/passwd"
         dangerous_code = [
             "open('/etc/passwd', 'r').read()",
-            "with open('../../../../../../etc/passwd') as f: data = f.read()",
+            f"file_handle = open({traversal_path!r}); data = file_handle.read()",
             "import shutil; shutil.rmtree('/')",
             "__builtins__['open']('/etc/shadow')",
         ]

@@ -232,7 +232,7 @@ result = implementations  # Limited collection
 
     # Apply pagination (avoid re-filtering by installed modules)
     if pagination.filter_text:
-        pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size, filter_text=None)
+        pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size)
     paginated_results = paginate_dict_list(
         impl_list,
         pagination,

@@ -17,15 +17,15 @@ async def search_decorators(
         for item in items:
             methods = item.get("methods", [])
             matched_methods = []
-            for method in methods:
+            for method_entry in methods:
                 haystacks = [
-                    method.get("module"),
-                    method.get("file"),
-                    method.get("method"),
-                    method.get("signature"),
+                    method_entry.get("module"),
+                    method_entry.get("file"),
+                    method_entry.get("method"),
+                    method_entry.get("signature"),
                 ]
                 if any(lowered in str(value).lower() for value in haystacks if value):
-                    matched_methods.append(method)
+                    matched_methods.append(method_entry)
 
             item_haystacks = [
                 item.get("model"),
@@ -166,13 +166,13 @@ result = {{"results": results}}
         for model_name, meta in idx["models"].items():
             decs = meta.get("decorators", {})
             matches = []
-            for method, lst in decs.items():
+            for method_name, lst in decs.items():
                 for d in lst:
                     if d.get("type") == decorator:
                         matches.append(
                             {
-                                "method": method,
-                                "signature": f"{method}(self, *args, **kwargs)",
+                                "method": method_name,
+                                "signature": f"{method_name}(self, *args, **kwargs)",
                                 "module": meta.get("module") or "",
                                 "file": meta.get("file") or "",
                             }
@@ -192,7 +192,7 @@ result = {{"results": results}}
 
         if filter_text:
             results = _filter_results(results, filter_text)
-            pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size, filter_text=None)
+            pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size)
 
         if pagination:
             paginated_result = paginate_dict_list(
@@ -204,17 +204,28 @@ result = {{"results": results}}
         return {"decorator": decorator, "results": results, "mode_used": "fs", "data_quality": "approximate"}
 
     try:
-        result = await env.execute_code(code)
+        result_payload = await env.execute_code(code)
+
+        if not isinstance(result_payload, dict):
+            return {
+                "success": False,
+                "error": "Unexpected execute_code response type.",
+                "error_type": "ExecuteCodeResponseError",
+                "decorator": decorator,
+            }
 
         # Extract the actual result data from execute_code response
-        if "result" in result and isinstance(result["result"], dict):
-            data = result["result"]
+        raw_result = result_payload.get("result")
+        if isinstance(raw_result, dict):
+            data: dict[str, Any] = {str(key): value for key, value in raw_result.items()}
         else:
-            data = result
+            data = result_payload
 
-        if "results" in data and isinstance(data["results"], list) and filter_text:
-            data["results"] = _filter_results(data["results"], filter_text)
-            pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size, filter_text=None)
+        raw_results = data.get("results")
+        if filter_text and isinstance(raw_results, list) and all(isinstance(item, dict) for item in raw_results):
+            typed_results: list[dict[str, Any]] = raw_results
+            data["results"] = _filter_results(typed_results, filter_text)
+            pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size)
 
         if (
             mode != "fs"

@@ -80,7 +80,7 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
 - `ODOO_DB_NAME`: active database (default `odoo`)
 - `ODOO_ADDONS_PATH`: comma-separated paths (`/opt/project/addons,/odoo/addons,/volumes/enterprise` by default)
 
-The server loads environment variables or the nearest `.env`. Use `ODOO_ENV_FILE` to point at a target project's `.env` when running elsewhere. Codex usually starts from `odoo-intelligence-mcp`, falling back to `../odoo-ai/.env` in tests. Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`, `ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`, `ODOO_STACK_NAME`, `ODOO_ENV_PRIORITY`. When `docker/config/ops.toml` exists, MCP uses `uv run ops local info <target> --json` to resolve stack metadata.
+The server loads environment variables or the nearest `.env`. Use `ODOO_ENV_FILE` to point at a target project's env file when running elsewhere. Codex usually starts from `odoo-intelligence-mcp`, but it can resolve a sibling `../odoo-ai` checkout automatically. Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`, `ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`, `ODOO_STACK_NAME`, `ODOO_ENV_PRIORITY`. When `platform/stack.toml` exists, MCP prefers `.platform/env/<context>.<instance>.env` and falls back to `uv run platform info --context <ctx> --instance <instance> --json-output`.
 
 ## Architecture Overview
 
