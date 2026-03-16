@@ -185,11 +185,12 @@ class TestPerformanceAnalysisResponse:
         assert response.performance_score == 65.0
 
     def test_performance_issue_details(self) -> None:
+        # noinspection SqlNoDataSourceInspection
         issue = PerformanceIssue(
             type="missing_index",
             severity="medium",
             location="sale.order.partner_id",
-            query_example="SELECT * FROM sale_order WHERE partner_id = %s",
+            query_example="-- noinspection SqlResolveForFile\n SELECT * FROM sale_order WHERE partner_id = %s",
         )
         assert issue.type == "missing_index"
         assert issue.query_example is not None
