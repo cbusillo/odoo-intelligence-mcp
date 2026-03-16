@@ -10,7 +10,7 @@ from odoo_intelligence_mcp.tools.filesystem.find_files import find_files
 async def test_find_files_basic_pattern() -> None:
     with patch("odoo_intelligence_mcp.tools.filesystem.find_files.DockerClientManager") as mock_docker:
         with patch("odoo_intelligence_mcp.tools.filesystem.find_files.get_addon_paths_from_container") as mock_paths:
-            mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
+            mock_paths.return_value = ["/odoo/addons", "/opt/project/addons"]
 
             mock_instance = mock_docker.return_value
             mock_instance.get_container.return_value = {"success": True}

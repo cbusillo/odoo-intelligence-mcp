@@ -68,7 +68,16 @@ implementations = []
 def infer_source_module(module_name, source_file):
     if source_file:
         normalized = source_file.replace("\\\\", "/")
-        for marker in ("/odoo/addons/", "/addons/", "/volumes/addons/", "/volumes/enterprise/"):
+        for marker in (
+            "/odoo/addons/",
+            "/odoo/odoo/addons/",
+            "/opt/project/addons/",
+            "/opt/extra_addons/",
+            "/opt/enterprise/",
+            "/addons/",
+            "/volumes/addons/",
+            "/volumes/enterprise/",
+        ):
             if marker in normalized:
                 tail = normalized.split(marker, 1)[1]
                 slug = tail.split("/", 1)[0]

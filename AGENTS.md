@@ -78,7 +78,7 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
 
 - `ODOO_PROJECT_NAME`: Docker compose prefix (required unless container overrides are set)
 - `ODOO_DB_NAME`: active database (default `odoo`)
-- `ODOO_ADDONS_PATH`: comma-separated paths (`/opt/project/addons,/odoo/addons,/volumes/enterprise` by default)
+- `ODOO_ADDONS_PATH`: comma-separated paths (`/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` by default)
 
 The server loads environment variables or the nearest `.env`. Use `ODOO_ENV_FILE` to point at a target project's env file when running elsewhere. Codex usually starts from `odoo-intelligence-mcp`, but it can resolve a sibling `../odoo-ai` checkout automatically. Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`, `ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`, `ODOO_STACK_NAME`, `ODOO_ENV_PRIORITY`. When `platform/stack.toml` exists, MCP prefers `.platform/env/<context>.<instance>.env` and falls back to `uv run platform info --context <ctx> --instance <instance> --json-output`.
 

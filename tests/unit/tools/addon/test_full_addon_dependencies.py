@@ -8,7 +8,7 @@ from odoo_intelligence_mcp.tools.addon.addon_dependencies import get_addon_depen
 @pytest.mark.asyncio
 async def test_get_addon_dependencies_success() -> None:
     with patch("odoo_intelligence_mcp.tools.addon.addon_dependencies.get_addon_paths_from_container") as mock_paths:
-        mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
+        mock_paths.return_value = ["/odoo/addons", "/opt/project/addons"]
 
         with patch("odoo_intelligence_mcp.tools.addon.addon_dependencies._read_manifest_from_container") as mock_read:
             mock_read.return_value = {

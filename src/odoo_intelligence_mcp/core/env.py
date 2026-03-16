@@ -190,7 +190,7 @@ def _run_platform_info(repo_root_text: str, context_name: str, instance_name: st
     ]
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=30, cwd=repo_root_text)
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+    except FileNotFoundError, subprocess.TimeoutExpired, OSError:
         return None
     if result.returncode != 0:
         return None
@@ -420,7 +420,7 @@ def _resolve_container_env(container_name: str) -> dict[str, str]:
             key, value = entry.split("=", 1)
             env_vars[key] = value
         return env_vars
-    except (json.JSONDecodeError, subprocess.TimeoutExpired, OSError):
+    except json.JSONDecodeError, subprocess.TimeoutExpired, OSError:
         return {}
 
 
@@ -437,7 +437,10 @@ class EnvConfig(BaseSettings):
     db_name: str = PydanticField(default="odoo", alias="ODOO_DB_NAME")
     db_host: str = PydanticField(default="database", alias="ODOO_DB_HOST")
     db_port: str = PydanticField(default="5432", alias="ODOO_DB_PORT")
-    addons_path: str = PydanticField(default="/opt/project/addons,/odoo/addons,/volumes/enterprise", alias="ODOO_ADDONS_PATH")
+    addons_path: str = PydanticField(
+        default="/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise",
+        alias="ODOO_ADDONS_PATH",
+    )
     project_dir: str | None = PydanticField(default=None, alias="ODOO_PROJECT_DIR")
     stack_name: str | None = PydanticField(default=None, alias="ODOO_STACK_NAME")
     compose_files: str | None = PydanticField(default=None, alias="ODOO_COMPOSE_FILES")
@@ -1130,7 +1133,7 @@ class HostOdooEnvironment:
 
         except subprocess.TimeoutExpired:
             raise DockerConnectionError(self.container_name, "Command execution timed out after 30 seconds") from None
-        except (DockerConnectionError, CodeExecutionError):
+        except DockerConnectionError, CodeExecutionError:
             raise
         except Exception as e:
             raise DockerConnectionError(self.container_name, f"Unexpected error: {e!s}") from e

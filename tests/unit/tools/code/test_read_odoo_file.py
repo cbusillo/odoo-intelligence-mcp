@@ -206,7 +206,7 @@ async def test_read_file_with_relative_path_search() -> None:
     """Test searching for files using relative paths in addon directories."""
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         with patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths:
-            mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
+            mock_paths.return_value = ["/odoo/addons", "/opt/project/addons"]
 
             mock_instance = mock_docker.return_value
 
@@ -230,7 +230,7 @@ async def test_read_file_with_relative_path_search() -> None:
             assert result["success"] is True
             assert "Product module code" in result["content"]
             # Path could be from either addon path
-            assert result["path"] in ["/odoo/addons/product/models/product.py", "/volumes/addons/product/models/product.py"]
+            assert result["path"] in ["/odoo/addons/product/models/product.py", "/opt/project/addons/product/models/product.py"]
 
 
 @pytest.mark.asyncio
@@ -238,7 +238,7 @@ async def test_read_file_with_addon_prefix_path() -> None:
     """Test reading files with addons/ or enterprise/ prefix."""
     with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
         with patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths:
-            mock_paths.return_value = ["/odoo/addons", "/volumes/enterprise"]
+            mock_paths.return_value = ["/odoo/addons", "/opt/enterprise"]
 
             mock_instance = mock_docker.return_value
 

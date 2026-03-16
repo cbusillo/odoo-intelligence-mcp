@@ -115,3 +115,24 @@ async def test_find_method_with_pagination(mock_odoo_env: MagicMock) -> None:
     assert "implementations" in result
     if isinstance(result["implementations"], dict):
         assert "pagination" in result["implementations"]
+
+
+@pytest.mark.asyncio
+async def test_find_method_generated_code_includes_current_addon_markers(mock_odoo_env: MagicMock) -> None:
+    from odoo_intelligence_mcp.core.utils import PaginationParams
+
+    captured_code: list[str] = []
+
+    async def _capture_execute_code(code: str) -> list[dict[str, str]]:
+        captured_code.append(code)
+        return []
+
+    mock_odoo_env.execute_code = AsyncMock(side_effect=_capture_execute_code)
+
+    await find_method_implementations(mock_odoo_env, "write", PaginationParams())
+
+    assert captured_code
+    generated_code = captured_code[0]
+    assert '"/opt/project/addons/"' in generated_code
+    assert '"/opt/extra_addons/"' in generated_code
+    assert '"/opt/enterprise/"' in generated_code

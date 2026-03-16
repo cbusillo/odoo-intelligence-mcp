@@ -42,7 +42,7 @@ async def test_get_module_structure_complete() -> None:
         mock_docker_manager.return_value = mock_docker_instance
 
         with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_paths:
-            mock_paths.return_value = ["/odoo/addons", "/volumes/addons"]
+            mock_paths.return_value = ["/odoo/addons", "/opt/project/addons"]
 
             result = await get_module_structure("test_module")
 

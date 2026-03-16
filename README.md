@@ -51,7 +51,7 @@ Compose files can be supplied via `ODOO_COMPOSE_FILES` or inherited from `DEPLOY
 
 Defaults (override via environment or `.env`):
 - Database: `odoo` (`ODOO_DB_NAME`)
-- Addons Path: `/opt/project/addons,/odoo/addons,/volumes/enterprise` (`ODOO_ADDONS_PATH`)
+- Addons Path: `/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` (`ODOO_ADDONS_PATH`)
 - Container Prefix: required (`ODOO_PROJECT_NAME`) unless container overrides are set
 
 Derived containers from prefix:
@@ -104,7 +104,7 @@ Notes
 
 Examples
 - Search Python for a pattern:
-  `search_code { "pattern": "def _compute", "file_type": "py", "roots": ["/volumes/addons"] }`
+  `search_code { "pattern": "def _compute", "file_type": "py", "roots": ["/opt/project/addons"] }`
 - Model info:
   `model_query { "operation": "info", "model_name": "sale.order" }`
 - Field dependencies:
