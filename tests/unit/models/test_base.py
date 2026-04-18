@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from odoo_intelligence_mcp.models.base import BaseModel
@@ -46,7 +46,6 @@ class TestBaseModel:
         with patch("odoo_intelligence_mcp.models.base.datetime") as mock_datetime:
             new_time = datetime(2024, 12, 25, 12, tzinfo=UTC)
             mock_datetime.now.return_value = new_time
-            mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
             model.update_timestamp()
             assert model.updated_at == new_time
             assert model.updated_at != original_updated
@@ -54,13 +53,19 @@ class TestBaseModel:
     def test_created_updated_independence(self) -> None:
         model = BaseModel()
         original_created = model.created_at
-        model.update_timestamp()
+        with patch("odoo_intelligence_mcp.models.base.datetime") as mock_datetime:
+            new_time = datetime(2024, 12, 25, 12, tzinfo=UTC)
+            mock_datetime.now.return_value = new_time
+            model.update_timestamp()
         assert model.created_at == original_created
         assert model.updated_at != model.created_at
 
     def test_multiple_instances_different_timestamps(self) -> None:
-        model1 = BaseModel()
-        model2 = BaseModel()
+        first_time = datetime(2024, 12, 25, 12, tzinfo=UTC)
+        with patch("odoo_intelligence_mcp.models.base.datetime") as mock_datetime:
+            mock_datetime.now.side_effect = [first_time + timedelta(seconds=offset) for offset in range(4)]
+            model1 = BaseModel()
+            model2 = BaseModel()
         assert model1.created_at != model2.created_at or model1.updated_at != model2.updated_at
 
     def test_to_dict_preserves_all_fields(self) -> None:
