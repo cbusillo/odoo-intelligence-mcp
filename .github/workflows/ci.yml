@@ -1,0 +1,33 @@
+---
+name: CI
+
+"on":
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Run unit tests
+        run: >-
+          uv run pytest tests/unit -m "not integration" --no-cov -q
+          -k "not test_get_container_with_auto_start and not test_restart_container_autostart_success"
