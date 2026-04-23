@@ -1,0 +1,13 @@
+{
+  "defaultBranch": "master",
+  "importantWorkflows": ["CI"],
+  "qaLabels": [],
+  "deployLabels": [],
+  "healthUrls": [],
+  "relatedRepos": ["odoo-ai"],
+  "validatedThrough": [],
+  "cleanup": {
+    "deleteMergedLocalBranches": true,
+    "removeMergedCleanWorktrees": true
+  }
+}
