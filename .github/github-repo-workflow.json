@@ -1,5 +1,5 @@
 {
-  "defaultBranch": "master",
+  "defaultBranch": "main",
   "importantWorkflows": ["CI"],
   "qaLabels": [],
   "deployLabels": [],
