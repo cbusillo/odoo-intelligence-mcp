@@ -39,10 +39,7 @@ for archival investigation.
 ## Codex Workflow Expectations
 
 1. Exercise the relevant MCP tool against the Docker stack before restarting the server.
-2. Prefer Codex built-ins (`Read`, `Edit`, `MultiEdit`, `Write`) for file/dependency work.
-3. Reserve raw `docker exec` / SQL for emergencies (schema corruption, ORM boot failures).
-
-> ❗ Inside Codex, avoid `bash` for `find`, `grep`, `cat`, or `ls`; `rg`, `fd`, and the explorer are faster and safer.
+2. Reserve raw `docker exec` / SQL for emergencies (schema corruption, ORM boot failures).
 
 ### Standard Loop
 
@@ -111,7 +108,6 @@ prefers `.platform/env/<context>.<instance>.env` and falls back to
 ## Tool Notes
 
 - `inspection_*` depends on a running IDE (PyCharm/IntelliJ) with the Codex plugin; if it fails, tell the user to open the IDE and retry.
-- `agent` is verbose; prefer it for multi-file changes or background research.
 
 ## Quick Tool Testing
 
