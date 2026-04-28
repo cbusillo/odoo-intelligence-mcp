@@ -2,6 +2,10 @@
 
 Development guidelines for running the Odoo Intelligence MCP server inside the Codex CLI environment.
 
+This repo should target the live Odoo workspace/runtime repos. Do not use the
+retired `odoo-ai` checkout as the default target unless the user explicitly asks
+for archival investigation.
+
 ## Project Snapshot
 
 - **Stack**: Python 3.14+, MCP SDK 1.9+, asyncio
@@ -35,10 +39,7 @@ Development guidelines for running the Odoo Intelligence MCP server inside the C
 ## Codex Workflow Expectations
 
 1. Exercise the relevant MCP tool against the Docker stack before restarting the server.
-2. Prefer Codex built-ins (`Read`, `Edit`, `MultiEdit`, `Write`) for file/dependency work.
-3. Reserve raw `docker exec` / SQL for emergencies (schema corruption, ORM boot failures).
-
-> ❗ Inside Codex, avoid `bash` for `find`, `grep`, `cat`, or `ls`; `rg`, `fd`, and the explorer are faster and safer.
+2. Reserve raw `docker exec` / SQL for emergencies (schema corruption, ORM boot failures).
 
 ### Standard Loop
 
@@ -80,7 +81,13 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
 - `ODOO_DB_NAME`: active database (default `odoo`)
 - `ODOO_ADDONS_PATH`: comma-separated paths (`/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` by default)
 
-The server loads environment variables or the nearest `.env`. Use `ODOO_ENV_FILE` to point at a target project's env file when running elsewhere. Codex usually starts from `odoo-intelligence-mcp`, but it can resolve a sibling `../odoo-ai` checkout automatically. Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`, `ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`, `ODOO_STACK_NAME`, `ODOO_ENV_PRIORITY`. When `platform/stack.toml` exists, MCP prefers `.platform/env/<context>.<instance>.env` and falls back to `uv run platform info --context <ctx> --instance <instance> --json-output`.
+The server loads environment variables or the nearest `.env`. Use
+`ODOO_ENV_FILE` to point at a target project's env file when running elsewhere.
+Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`,
+`ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`,
+`ODOO_STACK_NAME`, `ODOO_ENV_PRIORITY`. When `platform/stack.toml` exists, MCP
+prefers `.platform/env/<context>.<instance>.env` and falls back to
+`uv run platform info --context <ctx> --instance <instance> --json-output`.
 
 ## Architecture Overview
 
@@ -101,7 +108,6 @@ The server loads environment variables or the nearest `.env`. Use `ODOO_ENV_FILE
 ## Tool Notes
 
 - `inspection_*` depends on a running IDE (PyCharm/IntelliJ) with the Codex plugin; if it fails, tell the user to open the IDE and retry.
-- `agent` is verbose; prefer it for multi-file changes or background research.
 
 ## Quick Tool Testing
 
