@@ -1,13 +1,97 @@
 {
   "defaultBranch": "main",
+  "projectType": "python-mcp-service",
+  "docs": {
+    "index": "README.md",
+    "agentGuide": "AGENTS.md",
+    "tests": "tests/README.md",
+    "projectMetadata": "pyproject.toml"
+  },
+  "qualityGate": {
+    "setup": {
+      "default": "uv sync --locked --group dev"
+    },
+    "run": {
+      "server": "uv run odoo-intelligence-mcp"
+    },
+    "format": {
+      "default": "uv run mcp-format"
+    },
+    "test": {
+      "default": "uv run mcp-test",
+      "unit": "uv run mcp-test-unit",
+      "integration": "uv run mcp-test-integration",
+      "ci": "uv run pytest tests/unit -m \"not integration\" --no-cov -q -k \"not test_get_container_with_auto_start and not test_restart_container_autostart_success\""
+    },
+    "coverage": {
+      "default": "uv run mcp-test-cov",
+      "minimumPercent": 75
+    },
+    "inspection": {
+      "tool": "jetbrains",
+      "ide": "PyCharm",
+      "scopePreference": ["changed_files", "directory", "whole_project"]
+    },
+    "docsRequiredWhen": [
+      "behavior changes",
+      "api changes",
+      "config changes",
+      "operations changes",
+      "ownership boundaries change",
+      "MCP tool contract changes",
+      "Docker/Odoo runtime discovery changes",
+      "pagination or response schema changes",
+      "test or coverage command changes"
+    ]
+  },
   "importantWorkflows": ["CI"],
   "qaLabels": [],
   "deployLabels": [],
   "healthUrls": [],
-  "relatedRepos": ["odoo-ai"],
-  "validatedThrough": [],
+  "relatedRepos": [
+    "odoo-devkit",
+    "odoo-shared-addons",
+    "odoo-docker",
+    "odoo-enterprise-docker",
+    "odoo-tenant-cm",
+    "odoo-tenant-opw"
+  ],
+  "validatedThrough": ["odoo-tenant-cm", "odoo-tenant-opw"],
+  "githubSignals": {
+    "postMerge": {
+      "waitForActions": true,
+      "checkSecurityAndQuality": true
+    },
+    "capabilities": {
+      "codeScanning": "available",
+      "secretScanning": "available",
+      "dependabotAlerts": "available",
+      "securityAdvisories": "available"
+    },
+    "refreshWhen": [
+      "repo visibility changes",
+      "GitHub plan changes",
+      "security settings change",
+      "token permissions change"
+    ]
+  },
   "cleanup": {
     "deleteMergedLocalBranches": true,
     "removeMergedCleanWorktrees": true
+  },
+  "metadataFreshness": {
+    "updateWhen": [
+      "docs routing changes",
+      "validation gates change",
+      "primary commands change",
+      "important workflows change",
+      "repo relationship changes",
+      "validated-through repos change",
+      "cleanup policy changes",
+      "ownership boundaries change",
+      "MCP tool contract changes",
+      "Docker/Odoo runtime discovery changes",
+      "test or coverage command changes"
+    ]
   }
 }

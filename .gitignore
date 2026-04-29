@@ -200,4 +200,5 @@ cython_debug/
 *.local.*
 
 .code/
+*.override.*
 .claude/
