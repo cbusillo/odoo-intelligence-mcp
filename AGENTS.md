@@ -11,14 +11,10 @@ for archival investigation.
 - **Stack**: Python 3.14+, MCP SDK 1.9+, asyncio
 - **Primary agent shell**: Codex CLI (tools: `Read`, `Edit`, `MultiEdit`, `Write`, inspections, etc.)
 
-## Quick Command Reference
+## Workflow Metadata
 
-- **Setup**: `uv sync` (installs dependencies in local venv)
-- **Run**: `uv run odoo_intelligence_mcp` (host process that connects to Docker)
-- **Format**: `uv run mcp-format`
-- **Inspections**: `inspection_trigger(scope="whole_project")` then `inspection_get_problems()`
-- **Tests**: `uv run mcp-test`
-- **Coverage**: `uv run mcp-test-cov` (minimum 75 %)
+- Use [`.github/github-repo-workflow.json`](.github/github-repo-workflow.json)
+  for setup, run, format, test, coverage, inspection, and cleanup routing.
 
 ## Code Standards
 
