@@ -210,7 +210,7 @@ async def test_environment_with_actual_docker_check() -> None:
     try:
         result = subprocess.run(["docker", "ps"], capture_output=True, text=True, timeout=5)
         docker_available = result.returncode == 0
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except subprocess.SubprocessError, FileNotFoundError:
         docker_available = False
 
     if not docker_available:

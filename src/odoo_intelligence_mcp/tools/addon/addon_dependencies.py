@@ -23,7 +23,7 @@ def _read_manifest_from_container(manifest_path: str) -> dict[str, Any] | None:
         if exec_result.get("success") and exec_result.get("exit_code") == 0:
             manifest_content = exec_result.get("stdout", "")
             return ast.literal_eval(manifest_content)
-    except (SyntaxError, ValueError):
+    except SyntaxError, ValueError:
         return None
     return None
 

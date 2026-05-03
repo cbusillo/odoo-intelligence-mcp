@@ -37,7 +37,7 @@ class OdooStaticAnalyzer:
                         content = py_file.read_text()
                         if f'_name = "{model_name}"' in content or f"_name = '{model_name}'" in content:
                             return py_file
-                    except (OSError, UnicodeDecodeError, PermissionError):
+                    except OSError, UnicodeDecodeError, PermissionError:
                         continue
 
         return None
@@ -291,7 +291,7 @@ class OdooStaticAnalyzer:
 
                             results.append(result)
 
-                except (SyntaxError, UnicodeDecodeError, OSError):
+                except SyntaxError, UnicodeDecodeError, OSError:
                     continue
 
         return results

@@ -188,7 +188,7 @@ def check_response_size(data: dict[str, Any], max_tokens: int = 25000) -> bool:
         json_str = json.dumps(data)
         estimated_tokens = len(json_str) // 4
         return estimated_tokens <= max_tokens
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return True
 
 
@@ -266,7 +266,7 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
                         data["truncated_fields"].append(key)
 
         return data
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return data
 
 

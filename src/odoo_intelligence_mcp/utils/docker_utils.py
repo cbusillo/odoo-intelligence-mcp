@@ -190,10 +190,10 @@ class DockerClientManager:
                                 )
                                 if compose_result.returncode == 0:
                                     return True
-                            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                            except subprocess.TimeoutExpired, FileNotFoundError, OSError:
                                 return False
 
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        except subprocess.TimeoutExpired, FileNotFoundError:
             pass
 
         return False
