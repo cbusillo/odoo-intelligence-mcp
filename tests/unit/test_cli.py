@@ -13,7 +13,7 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest"])
+        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "-m", cli.NO_LIVE_STACK_MARKERS])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_unit_function(self, mock_run: MagicMock) -> None:
@@ -21,7 +21,7 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test_unit()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration"])
+        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "--no-cov"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_integration_function(self, mock_run: MagicMock) -> None:
@@ -29,7 +29,29 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test_integration()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/integration", "-m", "integration"])
+        mock_run.assert_called_once_with(
+            [sys.executable, "-m", "pytest", "tests/integration", "-m", f"integration and {cli.NO_LIVE_STACK_MARKERS}", "--no-cov"]
+        )
+
+    @patch("odoo_intelligence_mcp.cli.subprocess.run")
+    def test_test_ci_function(self, mock_run: MagicMock) -> None:
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_ci()
+        assert exc_info.value.code == 0
+        mock_run.assert_called_once_with(
+            [sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "--no-cov", "-q", "-k", cli.CI_TEST_EXPRESSION]
+        )
+
+    @patch("odoo_intelligence_mcp.cli.subprocess.run")
+    def test_test_live_function(self, mock_run: MagicMock) -> None:
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_live()
+        assert exc_info.value.code == 0
+        mock_run.assert_called_once_with(
+            [sys.executable, "-m", "pytest", "tests/integration", "-m", cli.LIVE_STACK_MARKERS, "--no-cov"]
+        )
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_cov_function(self, mock_run: MagicMock) -> None:
@@ -37,7 +59,38 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test_cov()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "--cov", "--cov-report=term-missing", "--cov-report=html"])
+        mock_run.assert_called_once_with(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-m",
+                cli.NO_LIVE_STACK_MARKERS,
+                "--cov",
+                "--cov-report=term-missing",
+                "--cov-report=html",
+            ]
+        )
+
+    @patch("odoo_intelligence_mcp.cli.subprocess.run")
+    def test_test_live_cov_function(self, mock_run: MagicMock) -> None:
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_live_cov()
+        assert exc_info.value.code == 0
+        mock_run.assert_called_once_with(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/integration",
+                "-m",
+                cli.LIVE_STACK_MARKERS,
+                "--cov",
+                "--cov-report=term-missing",
+                "--cov-report=html",
+            ]
+        )
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_format_code_function(self, mock_run: MagicMock) -> None:
@@ -134,6 +187,18 @@ class TestCLIFunctions:
 
         with pytest.raises(SystemExit):
             cli.test_cov()
+        assert mock_run.call_args[0][0][0] == sys.executable
+
+        with pytest.raises(SystemExit):
+            cli.test_ci()
+        assert mock_run.call_args[0][0][0] == sys.executable
+
+        with pytest.raises(SystemExit):
+            cli.test_live()
+        assert mock_run.call_args[0][0][0] == sys.executable
+
+        with pytest.raises(SystemExit):
+            cli.test_live_cov()
         assert mock_run.call_args[0][0][0] == sys.executable
 
         cli.format_code()

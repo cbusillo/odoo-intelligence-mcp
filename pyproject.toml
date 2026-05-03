@@ -30,7 +30,10 @@ odoo-intelligence-mcp = "odoo_intelligence_mcp.server:main"
 mcp-test = "odoo_intelligence_mcp.cli:test"
 mcp-test-unit = "odoo_intelligence_mcp.cli:test_unit"
 mcp-test-integration = "odoo_intelligence_mcp.cli:test_integration"
+mcp-test-ci = "odoo_intelligence_mcp.cli:test_ci"
+mcp-test-live = "odoo_intelligence_mcp.cli:test_live"
 mcp-test-cov = "odoo_intelligence_mcp.cli:test_cov"
+mcp-test-live-cov = "odoo_intelligence_mcp.cli:test_live_cov"
 mcp-format = "odoo_intelligence_mcp.cli:format_code"
 mcp-check = "odoo_intelligence_mcp.cli:check"
 mcp-clean = "odoo_intelligence_mcp.cli:clean"
@@ -132,6 +135,8 @@ markers = [
     "asyncio: Asynchronous tests",
     "mock: Tests that use mocking",
     "docker: Tests that require Docker containers",
+    "requires_docker: Tests that require a live Docker daemon",
+    "requires_odoo: Tests that require a live Odoo container/workspace",
 ]
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
@@ -181,7 +186,7 @@ exclude_lines = [
     "^\\s*pass\\s*$",
     "^\\s*\\.\\.\\.\\s*$",
 ]
-fail_under = 70
+fail_under = 75
 
 [tool.coverage.html]
 directory = "htmlcov"

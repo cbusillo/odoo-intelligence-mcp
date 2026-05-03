@@ -20,7 +20,7 @@ def env_config() -> EnvConfig:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _ensure_container_prefix() -> Generator[None, None, None]:
+def _ensure_container_prefix() -> Generator[None]:
     explicit = any(
         os.getenv(key) for key in ("ODOO_PROJECT_NAME", "ODOO_CONTAINER_NAME", "ODOO_SCRIPT_RUNNER_CONTAINER", "ODOO_WEB_CONTAINER")
     )
@@ -43,7 +43,7 @@ def test_env(env_config: EnvConfig) -> HostOdooEnvironment:
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+def event_loop() -> Generator[asyncio.AbstractEventLoop]:
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
@@ -315,7 +315,7 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
                 "name": model_name,
                 "model": model_name,
                 "table": model_name.replace(".", "_"),
-                "description": f"{model_name.split('.')[-1].title().replace('_', ' ')} Model",
+                "description": f"{model_name.rsplit('.', maxsplit=1)[-1].title().replace('_', ' ')} Model",
                 "rec_name": "name",
                 "order": "id",
                 "total_field_count": 3,
@@ -1231,3 +1231,13 @@ def mock_mcp_context() -> dict[str, Any]:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "requires_docker: mark test as requiring Docker to be running")
     config.addinivalue_line("markers", "requires_odoo: mark test as requiring Odoo instance")
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        fixture_names = getattr(item, "fixturenames", ())
+        if "real_odoo_env_if_available" in fixture_names:
+            item.add_marker(pytest.mark.requires_docker)
+            item.add_marker(pytest.mark.requires_odoo)
+        elif item.get_closest_marker("docker"):
+            item.add_marker(pytest.mark.requires_docker)
