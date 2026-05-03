@@ -60,7 +60,7 @@ class TestDockerRegistryIteration:
         try:
             # noinspection PyTypeChecker
             model_names = list(host_env.registry)
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             model_names = []
 
         # With DockerRegistry, this always gives empty list

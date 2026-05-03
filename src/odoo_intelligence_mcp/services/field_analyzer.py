@@ -150,7 +150,7 @@ class FieldAnalyzer(BaseService):
         try:
             code_result = execute_code(self.env, "result = list(env.registry.models.keys())")
             all_models = code_result.get("result", []) if isinstance(code_result, dict) else []
-        except (KeyError, AttributeError, TypeError):
+        except KeyError, AttributeError, TypeError:
             return []
 
         matching_fields = []
@@ -179,7 +179,7 @@ class FieldAnalyzer(BaseService):
                             }
                         )
             return matching_fields
-        except (KeyError, AttributeError):
+        except KeyError, AttributeError:
             return []
 
     @staticmethod

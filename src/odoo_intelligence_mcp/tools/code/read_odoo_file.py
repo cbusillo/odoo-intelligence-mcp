@@ -138,7 +138,7 @@ async def read_odoo_file(
 
             if exec_result.get("success"):
                 return process_content(stdout, potential_path)
-        except (APIError, NotFound, AttributeError, ValueError):
+        except APIError, NotFound, AttributeError, ValueError:
             continue
 
     return {

@@ -32,6 +32,7 @@ def test_resolve_stack_env_file_should_prefer_platform_runtime_env(monkeypatch, 
     monkeypatch.chdir(mcp_repo)
     monkeypatch.setenv("ODOO_STACK_NAME", "opw-local")
     monkeypatch.delenv("ODOO_PROJECT_NAME", raising=False)
+    monkeypatch.delenv("ODOO_PROJECT_DIR", raising=False)
     monkeypatch.delenv("ODOO_ENV_FILE", raising=False)
 
     resolved_env_file = env_module._resolve_stack_env_file()

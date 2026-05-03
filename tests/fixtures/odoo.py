@@ -13,7 +13,7 @@ def docker_available() -> bool:
         # noinspection LSPLocalInspectionTool
         result = subprocess.run(["docker", "ps"], capture_output=True, timeout=5)
         return result.returncode == 0
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except subprocess.SubprocessError, FileNotFoundError:
         return False
 
 
