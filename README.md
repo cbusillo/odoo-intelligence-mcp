@@ -155,16 +155,24 @@ Large responses are validated and may include warnings or truncation to respect 
 ### Testing Requirements
 
 ```bash
-# Run the full suite (must pass)
+# Default no-live-stack gate for local/PR validation.
+# Excludes tests that require a live Docker daemon or Odoo container.
 uv run mcp-test
 
 # Alternatives
-uv run mcp-test-unit        # Unit tests
-uv run mcp-test-integration # Integration tests
-uv run mcp-test-cov         # With coverage report
+uv run mcp-test-ci          # CI unit gate
+uv run mcp-test-unit        # Unit tests only
+uv run mcp-test-integration # Mocked/non-live integration tests
+uv run mcp-test-live        # Live Docker/Odoo integration tests
+uv run mcp-test-cov         # No-live-stack coverage report
+uv run mcp-test-live-cov    # Live Docker/Odoo coverage report
 
-# Threshold: 75% minimum coverage (current fail-under 74.5 in pyproject)
+# Threshold: 75% minimum coverage for the documented coverage gate.
 ```
+
+`mcp-test-live` and `mcp-test-live-cov` require the target Docker/Odoo workspace to be available. During the broader Odoo refactor,
+use the no-live-stack gate for ordinary MCP changes and run the live-stack gate when validating runtime behavior against the current
+Odoo workspace.
 
 ### Code Quality
 

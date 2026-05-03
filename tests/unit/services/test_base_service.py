@@ -162,3 +162,71 @@ class TestBaseService:
         mock_env.some_method = Mock(return_value="result")
         # noinspection PyUnresolvedReferences
         assert service.env.some_method() == "result"
+
+    def test_safe_execute_success(self, service: ConcreteService) -> None:
+        def concatenate(first: str, second: str) -> str:
+            return f"{first}-{second}"
+
+        result = service._safe_execute("join values", concatenate, "left", second="right")
+
+        assert result == "left-right"
+
+    def test_safe_execute_preserves_service_errors(self, service: ConcreteService) -> None:
+        service_error = ServiceValidationError("Already service-shaped")
+
+        def raise_service_error() -> None:
+            raise service_error
+
+        with pytest.raises(ServiceValidationError) as exc_info:
+            service._safe_execute("validate", raise_service_error)
+
+        assert exc_info.value is service_error
+
+    def test_safe_execute_wraps_unexpected_errors(self, service: ConcreteService) -> None:
+        def raise_unexpected_error() -> None:
+            raise RuntimeError("boom")
+
+        with pytest.raises(ServiceExecutionError) as exc_info:
+            service._safe_execute("explode", raise_unexpected_error)
+
+        assert str(exc_info.value) == "Failed to execute explode in TestService: boom"
+
+    def test_paginate_results_middle_page(self) -> None:
+        result = ConcreteService._paginate_results(["a", "b", "c", "d", "e"], page=2, page_size=2)
+
+        assert result == {
+            "items": ["c", "d"],
+            "pagination": {
+                "page": 2,
+                "page_size": 2,
+                "total_items": 5,
+                "total_pages": 3,
+                "has_next": True,
+                "has_previous": True,
+            },
+        }
+
+    def test_paginate_results_empty(self) -> None:
+        result = ConcreteService._paginate_results([], page=1, page_size=10)
+
+        assert result == {
+            "items": [],
+            "pagination": {
+                "page": 1,
+                "page_size": 10,
+                "total_items": 0,
+                "total_pages": 0,
+                "has_next": False,
+                "has_previous": False,
+            },
+        }
+
+    def test_format_error_response(self, service: ConcreteService) -> None:
+        response = service._format_error_response(ValueError("bad value"))
+
+        assert response == {
+            "error": True,
+            "error_type": "ValueError",
+            "message": "bad value",
+            "service": "TestService",
+        }

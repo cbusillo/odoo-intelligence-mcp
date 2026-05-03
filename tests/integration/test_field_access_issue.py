@@ -5,6 +5,8 @@ from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironm
 from odoo_intelligence_mcp.tools.field.field_dependencies import get_field_dependencies
 from odoo_intelligence_mcp.tools.field.field_value_analyzer import analyze_field_values
 
+pytestmark = [pytest.mark.requires_docker, pytest.mark.requires_odoo]
+
 
 class TestFieldAccessIntegration:
     @pytest_asyncio.fixture

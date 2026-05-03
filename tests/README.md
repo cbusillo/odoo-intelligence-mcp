@@ -27,24 +27,54 @@ tests/
 
 ## Running Tests
 
-### All Tests
+### Default No-Live-Stack Gate
+
+Use this for normal local and PR validation. It excludes tests that require a live Docker daemon or Odoo container.
+
 ```bash
 uv run mcp-test
 ```
 
-### Unit Tests Only
+### CI Unit Gate
+
+This mirrors the GitHub Actions test command.
+
 ```bash
-uv run pytest tests/unit/ -v
+uv run mcp-test-ci
 ```
 
-### Integration Tests Only
+### Unit Tests Only
+
 ```bash
-uv run pytest tests/integration/ -v
+uv run mcp-test-unit
+```
+
+### Mocked/No-Live Integration Tests
+
+These run integration tests that do not require a live Docker/Odoo stack.
+
+```bash
+uv run mcp-test-integration
+```
+
+### Live Docker/Odoo Integration Tests
+
+These require the target Docker/Odoo workspace to be available.
+
+```bash
+uv run mcp-test-live
 ```
 
 ### With Coverage
+
 ```bash
 uv run mcp-test-cov
+```
+
+### Live Docker/Odoo Coverage
+
+```bash
+uv run mcp-test-live-cov
 ```
 
 ### Specific Test File
@@ -234,11 +264,16 @@ When adding new features:
 
 ## Common Issues
 
-### Docker Not Available
-Some integration tests require Docker. Skip them with:
+### Docker/Odoo Not Available
+
+Some integration tests require the live Docker/Odoo workspace. The default `uv run mcp-test` excludes those tests.
+To select tests manually, use marker expressions:
+
 ```bash
-pytest -m "not docker"
+uv run pytest -m "not requires_docker and not requires_odoo"
 ```
+
+Use `uv run mcp-test-live` only when Docker and the target Odoo workspace are available.
 
 ### Slow Tests
 Run fast unit tests only:
