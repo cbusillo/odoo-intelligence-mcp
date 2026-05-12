@@ -13,7 +13,7 @@ for archival investigation.
 
 ## Workflow Metadata
 
-- Use [`.github/github-repo-workflow.json`](.github/github-repo-workflow.json)
+- Use [`.github/github.json`](.github/github.json)
   for setup, run, format, test, coverage, inspection, and cleanup routing.
 
 ## Code Standards
