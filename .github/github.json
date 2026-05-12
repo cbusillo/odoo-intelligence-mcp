@@ -32,7 +32,11 @@
     "inspection": {
       "tool": "jetbrains",
       "ide": "PyCharm",
-      "scopePreference": ["changed_files", "directory", "whole_project"]
+      "scopePreference": [
+        "changed_files",
+        "directory",
+        "whole_project"
+      ]
     },
     "docsRequiredWhen": [
       "behavior changes",
@@ -46,7 +50,9 @@
       "test or coverage command changes"
     ]
   },
-  "importantWorkflows": ["CI"],
+  "importantWorkflows": [
+    "CI"
+  ],
   "qaLabels": [],
   "deployLabels": [],
   "healthUrls": [],
@@ -58,7 +64,6 @@
     "odoo-tenant-cm",
     "odoo-tenant-opw"
   ],
-  "validatedThrough": ["odoo-tenant-cm", "odoo-tenant-opw"],
   "githubSignals": {
     "postMerge": {
       "waitForActions": true,
@@ -88,7 +93,6 @@
       "primary commands change",
       "important workflows change",
       "repo relationship changes",
-      "validated-through repos change",
       "cleanup policy changes",
       "ownership boundaries change",
       "MCP tool contract changes",
