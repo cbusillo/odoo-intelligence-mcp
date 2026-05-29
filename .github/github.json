@@ -84,7 +84,15 @@
   },
   "cleanup": {
     "deleteMergedLocalBranches": true,
-    "removeMergedCleanWorktrees": true
+    "removeMergedCleanWorktrees": true,
+    "commands": [
+      {
+        "name": "mcp-clean",
+        "command": "uv run mcp-clean",
+        "when": "routine",
+        "description": "Remove repo-local Python and test-generated artifacts such as pytest caches, coverage HTML, coverage data, __pycache__ directories, and pyc files."
+      }
+    ]
   },
   "metadataFreshness": {
     "updateWhen": [
