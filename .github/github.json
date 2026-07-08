@@ -15,14 +15,16 @@
       "server": "uv run odoo-intelligence-mcp"
     },
     "format": {
-      "default": "uv run mcp-format"
+      "default": "uv run mcp-format",
+      "check": "uv run ruff format --check ."
     },
     "test": {
       "default": "uv run mcp-test",
       "unit": "uv run mcp-test-unit",
       "integration": "uv run mcp-test-integration",
       "ci": "uv run mcp-test-ci",
-      "liveStack": "uv run mcp-test-live"
+      "liveStack": "uv run mcp-test-live",
+      "staticAnalysis": "uv run ruff check ."
     },
     "coverage": {
       "default": "uv run mcp-test-cov",
@@ -51,7 +53,15 @@
     ]
   },
   "importantWorkflows": [
-    "CI"
+    "CI",
+    "CodeQL",
+    "Dependency Graph",
+    "Dependabot Updates"
+  ],
+  "requiredStatusChecks": [
+    "test",
+    "Analyze (actions)",
+    "Analyze (python)"
   ],
   "qaLabels": [],
   "deployLabels": [],
