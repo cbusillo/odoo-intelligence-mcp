@@ -13,7 +13,7 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "mcp",
+    "mcp>=1.28,<2",
     "pydantic",
     "python-dotenv",
     "hatchling",
