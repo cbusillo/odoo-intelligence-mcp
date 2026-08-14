@@ -8,7 +8,7 @@ for archival investigation.
 
 ## Project Snapshot
 
-- **Stack**: Python 3.14+, MCP SDK 1.9+, asyncio
+- **Stack**: Python 3.14+, MCP SDK 2.0+, asyncio
 - **Primary agent shell**: Codex CLI (tools: `Read`, `Edit`, `MultiEdit`, `Write`, inspections, etc.)
 
 ## Workflow Metadata

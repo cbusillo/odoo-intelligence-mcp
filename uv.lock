@@ -357,6 +357,7 @@ source = { editable = "." }
 dependencies = [
     { name = "coverage" },
     { name = "hatchling" },
+    { name = "jsonschema" },
     { name = "mcp" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -392,6 +393,7 @@ requires-dist = [
     { name = "coverage" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
     { name = "hatchling" },
+    { name = "jsonschema", specifier = ">=4.20" },
     { name = "mcp", specifier = ">=2.0.0,<3" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
