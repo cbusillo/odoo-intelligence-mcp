@@ -2,10 +2,10 @@ import asyncio
 import json
 import logging
 
+from jsonschema import ValidationError, validate
 from mcp.server import Server
-from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
-from mcp.types import ServerCapabilities, TextContent, Tool, ToolsCapability
+from mcp.types import CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, TextContent, Tool
 
 from .core.env import HostOdooEnvironmentManager
 from .core.utils import (
@@ -48,8 +48,6 @@ from .utils.error_utils import OdooMCPError, create_error_response
 from .utils.model_utils import resolve_model_with_runner
 
 logger = logging.getLogger(__name__)
-
-app = Server("odoo-intelligence")
 
 odoo_env_manager = HostOdooEnvironmentManager(lazy=True)
 
@@ -574,19 +572,17 @@ TOOL_HANDLERS = {
 }
 
 
-# noinspection Annotator
-@app.list_tools()
 async def handle_list_tools() -> list[Tool]:
     return [
         Tool(
             name="addon_dependencies",
             description="Addon manifest dependencies",
-            inputSchema={"type": "object", "properties": {"addon_name": {"type": "string"}}, "required": ["addon_name"]},
+            input_schema={"type": "object", "properties": {"addon_name": {"type": "string"}}, "required": ["addon_name"]},
         ),
         Tool(
             name="search_code",
             description="Regex search in container (file_type defaults to py)",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
@@ -601,7 +597,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="find_files",
             description="Find files by name in container",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {"pattern": {"type": "string"}, "file_type": {"type": "string"}},
@@ -612,7 +608,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="read_odoo_file",
             description="Read file (range/pattern)",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "file_path": {"type": "string"},
@@ -627,12 +623,12 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="module_structure",
             description="Addon structure",
-            inputSchema={"type": "object", "properties": {"module_name": {"type": "string"}}, "required": ["module_name"]},
+            input_schema={"type": "object", "properties": {"module_name": {"type": "string"}}, "required": ["module_name"]},
         ),
         Tool(
             name="find_method",
             description="Find model methods",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
@@ -646,7 +642,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="search_decorators",
             description="Model decorators",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
@@ -663,12 +659,12 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="execute_code",
             description="Execute Python in Odoo container",
-            inputSchema={"type": "object", "properties": {"code": {"type": "string"}}, "required": ["code"]},
+            input_schema={"type": "object", "properties": {"code": {"type": "string"}}, "required": ["code"]},
         ),
         Tool(
             name="permission_checker",
             description="Check CRUD permissions (user id or login)",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "user": {"type": "string"},
@@ -682,7 +678,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="odoo_update_module",
             description="Update/install modules",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"modules": {"type": "string"}, "force_install": {"type": "boolean", "default": False}},
                 "required": ["modules"],
@@ -691,17 +687,17 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="odoo_status",
             description="Show container/service status",
-            inputSchema={"type": "object", "properties": {"verbose": {"type": "boolean", "default": False}}, "required": []},
+            input_schema={"type": "object", "properties": {"verbose": {"type": "boolean", "default": False}}, "required": []},
         ),
         Tool(
             name="odoo_restart",
             description="Restart containers",
-            inputSchema={"type": "object", "properties": {"services": {"type": "string"}}},
+            input_schema={"type": "object", "properties": {"services": {"type": "string"}}},
         ),
         Tool(
             name="model_query",
             description="Models: search|info|relationships|inheritance|view_usage",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
@@ -717,7 +713,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="field_query",
             description="Fields: usages|analyze_values|resolve_dynamic|dependencies|search_properties|search_type",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
@@ -747,7 +743,7 @@ async def handle_list_tools() -> list[Tool]:
         Tool(
             name="analysis_query",
             description="Analysis: performance|patterns|workflow|inheritance",
-            inputSchema=add_pagination_to_schema(
+            input_schema=add_pagination_to_schema(
                 {
                     "type": "object",
                     "properties": {
@@ -763,7 +759,6 @@ async def handle_list_tools() -> list[Tool]:
     ]
 
 
-@app.call_tool()
 async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> list[TextContent]:
     if arguments is None:
         arguments = {}  # Default to empty dict for tools with all optional parameters
@@ -802,27 +797,60 @@ async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> li
         return [TextContent(type="text", text=response_text)]
 
 
-# noinspection Annotator
+async def handle_list_tools_request(
+    _request_context: object,
+    _request_parameters: PaginatedRequestParams | None,
+) -> ListToolsResult:
+    return ListToolsResult(tools=await handle_list_tools())
+
+
+async def handle_call_tool_request(
+    _request_context: object,
+    request_parameters: CallToolRequestParams,
+) -> CallToolResult:
+    try:
+        arguments = request_parameters.arguments or {}
+        tool = next((candidate for candidate in await handle_list_tools() if candidate.name == request_parameters.name), None)
+        if tool is not None:
+            validate(instance=arguments, schema=tool.model_dump()["input_schema"])
+
+        content = await handle_call_tool(request_parameters.name, arguments)
+        return CallToolResult(content=content)
+    except ValidationError as exception:
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"Input validation error: {exception.message}")],
+            is_error=True,
+        )
+    except Exception as exception:
+        logger.exception(f"Unexpected error dispatching tool {request_parameters.name}")
+        return CallToolResult(content=[TextContent(type="text", text=str(exception))], is_error=True)
+
+
+app = Server(
+    "odoo-intelligence",
+    version="0.1.0",
+    instructions=(
+        "Primary: model_query/field_query/analysis_query (use operation=/analysis_type=).\n"
+        "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage/inheritance (requires model_name).\n"
+        "field_query: usages/dependencies need model_name+field_name; analyze_values needs model_name+field_name; "
+        "search_type/search_properties need field_type (e.g., char, many2one) / property.\n"
+        "analysis_query: performance/workflow/inheritance need model_name; patterns uses pattern_type.\n"
+        "Modes (where supported): auto (default; registry), fs (filesystem only), registry (live Odoo only).\n"
+        "data_quality: authoritative (registry runtime) vs approximate (filesystem/AST scan).\n"
+        "Page with page/page_size/filter; model_query(search/info) and analysis_query(patterns) default to page_size=25.\n"
+        "Files (container fs): search_code/read_odoo_file/find_method. execute_code sparingly."
+    ),
+    on_list_tools=handle_list_tools_request,
+    on_call_tool=handle_call_tool_request,
+)
+
+
 async def run_server() -> None:
     async with stdio_server() as (read_stream, write_stream):
         await app.run(
             read_stream,
             write_stream,
-            InitializationOptions(
-                server_name="odoo-intelligence",
-                server_version="0.1.0",
-                capabilities=ServerCapabilities(tools=ToolsCapability()),
-                instructions=(
-                    "Primary: model_query/field_query/analysis_query (use operation=/analysis_type=).\n"
-                    "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage/inheritance (requires model_name).\n"
-                    "field_query: usages/dependencies need model_name+field_name; analyze_values needs model_name+field_name; search_type/search_properties need field_type (e.g., char, many2one) / property.\n"
-                    "analysis_query: performance/workflow/inheritance need model_name; patterns uses pattern_type.\n"
-                    "Modes (where supported): auto (default; registry), fs (filesystem only), registry (live Odoo only).\n"
-                    "data_quality: authoritative (registry runtime) vs approximate (filesystem/AST scan).\n"
-                    "Page with page/page_size/filter; model_query(search/info) and analysis_query(patterns) default to page_size=25.\n"
-                    "Files (container fs): search_code/read_odoo_file/find_method. execute_code sparingly."
-                ),
-            ),
+            app.create_initialization_options(),
         )
 
 

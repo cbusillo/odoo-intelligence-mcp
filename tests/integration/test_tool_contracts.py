@@ -264,9 +264,8 @@ class TestToolContracts:
         for tool in tools:
             assert tool.name, "Tool must have a name"
             assert tool.description, "Tool must have a description"
-            assert tool.inputSchema, "Tool must have an input schema"
-
-            schema = tool.inputSchema
+            schema = tool.model_dump()["input_schema"]
+            assert schema, "Tool must have an input schema"
             assert "type" in schema
             assert schema["type"] == "object"
 

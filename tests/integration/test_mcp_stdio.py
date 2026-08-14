@@ -53,7 +53,7 @@ async def test_mcp_list_tools_request() -> None:
     assert "odoo_update_module" in tool_names
 
     # Verify all tools have proper schemas
-    assert all(hasattr(tool, "inputSchema") for tool in tools)
+    assert all(isinstance(tool.model_dump()["input_schema"], dict) for tool in tools)
 
     # Check we have at least 15 tools after consolidation
     assert len(tools) >= 15

@@ -25,8 +25,7 @@ async def test_list_tools() -> None:
         assert isinstance(tool, Tool)
         assert hasattr(tool, "name")
         assert hasattr(tool, "description")
-        assert hasattr(tool, "inputSchema")
-        assert isinstance(tool.inputSchema, dict)
+        assert isinstance(tool.model_dump()["input_schema"], dict)
 
 
 @pytest.mark.asyncio
