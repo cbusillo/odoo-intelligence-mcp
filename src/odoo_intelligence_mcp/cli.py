@@ -5,8 +5,9 @@ from pathlib import Path
 
 NO_LIVE_STACK_MARKERS = "not requires_docker and not requires_odoo"
 LIVE_STACK_MARKERS = "requires_docker or requires_odoo"
-CI_TEST_EXPRESSION = "not test_get_container_with_auto_start and not test_restart_container_autostart_success"
-LIVE_COVERAGE_THRESHOLD = 75
+COVERAGE_REPORT_ARGUMENTS = ("--cov", "--cov-report=term-missing", "--cov-report=html", "--cov-report=xml")
+CI_COVERAGE_REPORT_ARGUMENTS = ("--cov", "--cov-report=term-missing", "--cov-report=xml")
+LIVE_COVERAGE_FAIL_UNDER = 0
 
 
 def _run_pytest(*arguments: str) -> None:
@@ -27,7 +28,7 @@ def test_integration() -> None:
 
 
 def test_ci() -> None:
-    _run_pytest("tests/unit", "-m", "not integration", "-q", "-k", CI_TEST_EXPRESSION)
+    _run_pytest("tests/unit", "-m", "not integration", "-q")
 
 
 def test_live() -> None:
@@ -35,14 +36,11 @@ def test_live() -> None:
 
 
 def test_cov() -> None:
-    _run_pytest(
-        "-m",
-        NO_LIVE_STACK_MARKERS,
-        "--cov=odoo_intelligence_mcp",
-        "--cov-report=term-missing",
-        "--cov-report=html",
-        "--cov-report=xml",
-    )
+    _run_pytest("-m", NO_LIVE_STACK_MARKERS, *COVERAGE_REPORT_ARGUMENTS)
+
+
+def test_cov_ci() -> None:
+    _run_pytest("-m", NO_LIVE_STACK_MARKERS, *CI_COVERAGE_REPORT_ARGUMENTS)
 
 
 def test_live_cov() -> None:
@@ -50,11 +48,8 @@ def test_live_cov() -> None:
         "tests/integration",
         "-m",
         LIVE_STACK_MARKERS,
-        "--cov=odoo_intelligence_mcp",
-        "--cov-report=term-missing",
-        "--cov-report=html",
-        "--cov-report=xml",
-        f"--cov-fail-under={LIVE_COVERAGE_THRESHOLD}",
+        *COVERAGE_REPORT_ARGUMENTS,
+        f"--cov-fail-under={LIVE_COVERAGE_FAIL_UNDER}",
     )
 
 

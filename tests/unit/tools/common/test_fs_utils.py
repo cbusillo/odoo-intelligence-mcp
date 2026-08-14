@@ -56,6 +56,7 @@ def test_fs_enrich_fills_defaults() -> None:
 
     result = fs_enrich(payload)
 
+    assert result["value"] == 1
     assert result["mode_used"] == "fs"
     assert result["data_quality"] == "approximate"
 
@@ -65,7 +66,7 @@ def test_fs_enrich_preserves_existing_values() -> None:
 
     result = fs_enrich(payload)
 
-    assert result == payload
+    assert result == {"mode_used": "custom", "data_quality": "exact"}
 
 
 def test_paginate_items_returns_paginated_dict() -> None:

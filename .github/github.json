@@ -28,6 +28,7 @@
     },
     "coverage": {
       "default": "uv run mcp-test-cov",
+      "ci": "uv run mcp-test-cov-ci",
       "liveStack": "uv run mcp-test-live-cov",
       "minimumPercent": 75
     },
@@ -58,7 +59,7 @@
     "Dependency Graph",
     "Dependabot Updates"
   ],
-  "requiredStatusChecks": ["test"],
+  "requiredStatusChecks": ["test", "coverage"],
   "codeScanningMergeProtection": {
     "ruleset": "Require code scanning results",
     "tool": "CodeQL",
@@ -95,18 +96,18 @@
       "token permissions change"
     ]
   },
-    "cleanup": {
-      "deleteMergedLocalBranches": true,
-      "removeMergedCleanWorktrees": true,
-      "commands": [
-        {
-          "name": "mcp-clean",
-          "command": "uv run mcp-clean",
-          "when": "routine",
-          "description": "Remove repo-local Python and test-generated artifacts such as pytest caches, coverage HTML, coverage data files, coverage.xml, __pycache__ directories, and pyc files."
-        }
-      ]
-    },
+  "cleanup": {
+    "deleteMergedLocalBranches": true,
+    "removeMergedCleanWorktrees": true,
+    "commands": [
+      {
+        "name": "mcp-clean",
+        "command": "uv run mcp-clean",
+        "when": "routine",
+        "description": "Remove repo-local Python and test-generated artifacts such as pytest caches, coverage HTML, coverage data files, coverage.xml, __pycache__ directories, and pyc files."
+      }
+    ]
+  },
   "metadataFreshness": {
     "updateWhen": [
       "docs routing changes",

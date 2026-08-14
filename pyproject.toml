@@ -34,6 +34,7 @@ mcp-test-integration = "odoo_intelligence_mcp.cli:test_integration"
 mcp-test-ci = "odoo_intelligence_mcp.cli:test_ci"
 mcp-test-live = "odoo_intelligence_mcp.cli:test_live"
 mcp-test-cov = "odoo_intelligence_mcp.cli:test_cov"
+mcp-test-cov-ci = "odoo_intelligence_mcp.cli:test_cov_ci"
 mcp-test-live-cov = "odoo_intelligence_mcp.cli:test_live_cov"
 mcp-format = "odoo_intelligence_mcp.cli:format_code"
 mcp-check = "odoo_intelligence_mcp.cli:check"
@@ -65,6 +66,7 @@ target-version = "py314"
 select = ["ALL"]
 ignore = [
     "D", # pydocstyle - no comments/docstrings per project style
+    "CPY001", # Copyright headers are intentionally prohibited by project style
     "COM812", # trailing-comma-missing (conflicts with formatter)
     "ISC001", # single-line-implicit-string-concatenation (conflicts with formatter)
     "PLW1510", # subprocess-run-without-check - needed for Docker operations
@@ -102,6 +104,7 @@ ignore = [
     "PLR2004", # Magic values are fine in tests
     "ANN401", # No Any type
 ]
+"tests/unit/tools/**/*_fs.py" = ["PLR0402"] # Direct module imports keep PyCharm patch targets resolvable
 # Additional specific ignores
 "tools/field/resolve_dynamic_fields.py" = ["ANN401", "PLR0913"]
 "tools/model/view_model_usage.py" = ["C901"]
@@ -147,7 +150,6 @@ log_cli_level = "INFO"
 [tool.coverage.run]
 source_pkgs = ["odoo_intelligence_mcp"]
 branch = true
-parallel = true
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
@@ -168,6 +170,7 @@ precision = 2
 show_missing = true
 skip_covered = false
 skip_empty = true
+include_namespace_packages = true
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

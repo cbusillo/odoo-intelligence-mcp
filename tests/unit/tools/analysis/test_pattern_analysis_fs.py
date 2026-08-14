@@ -1,8 +1,7 @@
 import pytest
 
-from odoo_intelligence_mcp.core.utils import PaginationParams
 import odoo_intelligence_mcp.tools.analysis.pattern_analysis_fs as pattern_analysis_fs
-
+from odoo_intelligence_mcp.core.utils import PaginationParams
 from tests.fixtures.fs_index import create_mock_build_ast_index
 
 
@@ -19,9 +18,13 @@ async def test_analyze_patterns_fs_rejects_invalid_pattern_type() -> None:
 
 @pytest.mark.asyncio
 async def test_analyze_patterns_fs_returns_all_categories(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(pattern_analysis_fs, "build_ast_index", create_mock_build_ast_index())
+    monkeypatch.setattr(
+        pattern_analysis_fs,
+        pattern_analysis_fs.build_ast_index.__name__,
+        create_mock_build_ast_index(),
+    )
 
-    result = await pattern_analysis_fs.analyze_patterns_fs("all", PaginationParams(page_size=10))
+    result = await pattern_analysis_fs.analyze_patterns_fs(pagination=PaginationParams(page_size=10))
 
     assert result["mode_used"] == "fs"
     assert result["data_quality"] == "approximate"
@@ -39,7 +42,11 @@ async def test_analyze_patterns_fs_returns_all_categories(monkeypatch: pytest.Mo
 
 @pytest.mark.asyncio
 async def test_analyze_patterns_fs_paginates_single_category(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(pattern_analysis_fs, "build_ast_index", create_mock_build_ast_index())
+    monkeypatch.setattr(
+        pattern_analysis_fs,
+        pattern_analysis_fs.build_ast_index.__name__,
+        create_mock_build_ast_index(),
+    )
 
     result = await pattern_analysis_fs.analyze_patterns_fs("computed_fields", PaginationParams(page_size=2))
 
@@ -64,7 +71,11 @@ async def test_analyze_patterns_fs_returns_empty_categories(monkeypatch: pytest.
             "delegates": {},
         }
     }
-    monkeypatch.setattr(pattern_analysis_fs, "build_ast_index", create_mock_build_ast_index(empty_models, include_defaults=False))
+    monkeypatch.setattr(
+        pattern_analysis_fs,
+        pattern_analysis_fs.build_ast_index.__name__,
+        create_mock_build_ast_index(empty_models, include_defaults=False),
+    )
 
     result = await pattern_analysis_fs.analyze_patterns_fs("computed_fields")
 

@@ -7,7 +7,7 @@ from tests.fixtures.fs_index import create_mock_get_models_index
 
 @pytest.mark.asyncio
 async def test_get_model_info_fs_paginates_fields(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(model_info_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(model_info_fs, model_info_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await model_info_fs.get_model_info_fs("res.partner", PaginationParams(page_size=3))
 
@@ -31,7 +31,7 @@ async def test_get_model_info_fs_paginates_fields(monkeypatch: pytest.MonkeyPatc
 
 @pytest.mark.asyncio
 async def test_get_model_info_fs_returns_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(model_info_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(model_info_fs, model_info_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await model_info_fs.get_model_info_fs("missing.model")
 

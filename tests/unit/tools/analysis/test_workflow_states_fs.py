@@ -6,7 +6,7 @@ from tests.fixtures.fs_index import create_mock_get_models_index
 
 @pytest.mark.asyncio
 async def test_analyze_workflow_states_fs_returns_state_actions(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(workflow_states_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(workflow_states_fs, workflow_states_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await workflow_states_fs.analyze_workflow_states_fs("sale.order")
 
@@ -24,7 +24,7 @@ async def test_analyze_workflow_states_fs_returns_state_actions(monkeypatch: pyt
 
 @pytest.mark.asyncio
 async def test_analyze_workflow_states_fs_handles_models_without_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(workflow_states_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(workflow_states_fs, workflow_states_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await workflow_states_fs.analyze_workflow_states_fs("product.template")
 
@@ -37,7 +37,7 @@ async def test_analyze_workflow_states_fs_handles_models_without_state(monkeypat
 
 @pytest.mark.asyncio
 async def test_analyze_workflow_states_fs_returns_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(workflow_states_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(workflow_states_fs, workflow_states_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await workflow_states_fs.analyze_workflow_states_fs("missing.model")
 

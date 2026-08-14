@@ -7,7 +7,7 @@ from tests.fixtures.fs_index import create_mock_get_models_index
 
 @pytest.mark.asyncio
 async def test_search_field_type_fs_returns_relational_fields(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_field_type_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(search_field_type_fs, search_field_type_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await search_field_type_fs.search_field_type_fs("many2one", PaginationParams(page_size=1))
 
@@ -21,7 +21,7 @@ async def test_search_field_type_fs_returns_relational_fields(monkeypatch: pytes
 
 @pytest.mark.asyncio
 async def test_search_field_type_fs_rejects_invalid_type(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_field_type_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(search_field_type_fs, search_field_type_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await search_field_type_fs.search_field_type_fs("invalid")
 
@@ -32,7 +32,7 @@ async def test_search_field_type_fs_rejects_invalid_type(monkeypatch: pytest.Mon
 
 @pytest.mark.asyncio
 async def test_search_field_type_fs_returns_empty_results(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_field_type_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(search_field_type_fs, search_field_type_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await search_field_type_fs.search_field_type_fs("binary")
 

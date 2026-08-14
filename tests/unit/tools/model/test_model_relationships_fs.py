@@ -7,7 +7,11 @@ from tests.fixtures.fs_index import create_mock_get_models_index
 
 @pytest.mark.asyncio
 async def test_get_model_relationships_fs_returns_summary(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(model_relationships_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(
+        model_relationships_fs,
+        model_relationships_fs.get_models_index.__name__,
+        create_mock_get_models_index(),
+    )
 
     result = await model_relationships_fs.get_model_relationships_fs("sale.order", PaginationParams(page_size=2))
 
@@ -29,7 +33,11 @@ async def test_get_model_relationships_fs_returns_summary(monkeypatch: pytest.Mo
 
 @pytest.mark.asyncio
 async def test_get_model_relationships_fs_returns_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(model_relationships_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(
+        model_relationships_fs,
+        model_relationships_fs.get_models_index.__name__,
+        create_mock_get_models_index(),
+    )
 
     result = await model_relationships_fs.get_model_relationships_fs("missing.model")
 

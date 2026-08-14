@@ -1,13 +1,13 @@
 import pytest
 
-from odoo_intelligence_mcp.core.utils import PaginationParams
 import odoo_intelligence_mcp.tools.model.search_models_fs as search_models_fs
+from odoo_intelligence_mcp.core.utils import PaginationParams
 from tests.fixtures.fs_index import create_mock_build_ast_index
 
 
 @pytest.mark.asyncio
 async def test_search_models_fs_returns_exact_match(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_models_fs, "build_ast_index", create_mock_build_ast_index())
+    monkeypatch.setattr(search_models_fs, search_models_fs.build_ast_index.__name__, create_mock_build_ast_index())
 
     result = await search_models_fs.search_models_fs("res.partner")
 
@@ -21,7 +21,7 @@ async def test_search_models_fs_returns_exact_match(monkeypatch: pytest.MonkeyPa
 
 @pytest.mark.asyncio
 async def test_search_models_fs_returns_partial_and_description_matches(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_models_fs, "build_ast_index", create_mock_build_ast_index())
+    monkeypatch.setattr(search_models_fs, search_models_fs.build_ast_index.__name__, create_mock_build_ast_index())
 
     result = await search_models_fs.search_models_fs("sale", PaginationParams(page_size=1))
 
@@ -32,7 +32,7 @@ async def test_search_models_fs_returns_partial_and_description_matches(monkeypa
 
 @pytest.mark.asyncio
 async def test_search_models_fs_returns_description_match(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_models_fs, "build_ast_index", create_mock_build_ast_index())
+    monkeypatch.setattr(search_models_fs, search_models_fs.build_ast_index.__name__, create_mock_build_ast_index())
 
     result = await search_models_fs.search_models_fs("support")
 
@@ -43,7 +43,7 @@ async def test_search_models_fs_returns_description_match(monkeypatch: pytest.Mo
 
 @pytest.mark.asyncio
 async def test_search_models_fs_returns_empty_results(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_models_fs, "build_ast_index", create_mock_build_ast_index())
+    monkeypatch.setattr(search_models_fs, search_models_fs.build_ast_index.__name__, create_mock_build_ast_index())
 
     result = await search_models_fs.search_models_fs("nomatch")
 

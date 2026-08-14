@@ -74,13 +74,21 @@ uv run mcp-test-cov
 This command measures the `odoo_intelligence_mcp` package, writes terminal, HTML, and XML reports, and enforces the documented 75%
 minimum.
 
+### CI Coverage Gate
+
+```bash
+uv run mcp-test-cov-ci
+```
+
+This command uses the same package scope and 75% minimum while omitting the local HTML report.
+
 ### Live Docker/Odoo Coverage
 
 ```bash
 uv run mcp-test-live-cov
 ```
 
-This command uses the same package scope and 75% minimum as `mcp-test-cov`, but runs against the live Docker/Odoo workspace.
+This command reports coverage from live-stack tests without enforcing the whole-package threshold.
 
 ### Specific Test File
 ```bash

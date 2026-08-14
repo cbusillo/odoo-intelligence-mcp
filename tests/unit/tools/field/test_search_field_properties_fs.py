@@ -7,7 +7,11 @@ from tests.fixtures.fs_index import create_mock_get_models_index
 
 @pytest.mark.asyncio
 async def test_search_field_properties_fs_returns_computed_fields(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_field_properties_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(
+        search_field_properties_fs,
+        search_field_properties_fs.get_models_index.__name__,
+        create_mock_get_models_index(),
+    )
 
     result = await search_field_properties_fs.search_field_properties_fs("computed", PaginationParams(page_size=2))
 
@@ -20,7 +24,11 @@ async def test_search_field_properties_fs_returns_computed_fields(monkeypatch: p
 
 @pytest.mark.asyncio
 async def test_search_field_properties_fs_returns_related_fields(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_field_properties_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(
+        search_field_properties_fs,
+        search_field_properties_fs.get_models_index.__name__,
+        create_mock_get_models_index(),
+    )
 
     result = await search_field_properties_fs.search_field_properties_fs("related")
 
@@ -30,7 +38,11 @@ async def test_search_field_properties_fs_returns_related_fields(monkeypatch: py
 
 @pytest.mark.asyncio
 async def test_search_field_properties_fs_returns_empty_results(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(search_field_properties_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(
+        search_field_properties_fs,
+        search_field_properties_fs.get_models_index.__name__,
+        create_mock_get_models_index(),
+    )
 
     result = await search_field_properties_fs.search_field_properties_fs("readonly")
 

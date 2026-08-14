@@ -39,9 +39,7 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test_ci()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with(
-            [sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "-q", "-k", cli.CI_TEST_EXPRESSION]
-        )
+        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "-q"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_live_function(self, mock_run: MagicMock) -> None:
@@ -64,9 +62,28 @@ class TestCLIFunctions:
                 "pytest",
                 "-m",
                 cli.NO_LIVE_STACK_MARKERS,
-                "--cov=odoo_intelligence_mcp",
+                "--cov",
                 "--cov-report=term-missing",
                 "--cov-report=html",
+                "--cov-report=xml",
+            ]
+        )
+
+    @patch("odoo_intelligence_mcp.cli.subprocess.run")
+    def test_test_cov_ci_function(self, mock_run: MagicMock) -> None:
+        mock_run.return_value.returncode = 0
+        with pytest.raises(SystemExit) as exc_info:
+            cli.test_cov_ci()
+        assert exc_info.value.code == 0
+        mock_run.assert_called_once_with(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-m",
+                cli.NO_LIVE_STACK_MARKERS,
+                "--cov",
+                "--cov-report=term-missing",
                 "--cov-report=xml",
             ]
         )
@@ -85,11 +102,11 @@ class TestCLIFunctions:
                 "tests/integration",
                 "-m",
                 cli.LIVE_STACK_MARKERS,
-                "--cov=odoo_intelligence_mcp",
+                "--cov",
                 "--cov-report=term-missing",
                 "--cov-report=html",
                 "--cov-report=xml",
-                f"--cov-fail-under={cli.LIVE_COVERAGE_THRESHOLD}",
+                f"--cov-fail-under={cli.LIVE_COVERAGE_FAIL_UNDER}",
             ]
         )
 
@@ -190,6 +207,10 @@ class TestCLIFunctions:
 
         with pytest.raises(SystemExit):
             cli.test_cov()
+        assert mock_run.call_args[0][0][0] == sys.executable
+
+        with pytest.raises(SystemExit):
+            cli.test_cov_ci()
         assert mock_run.call_args[0][0][0] == sys.executable
 
         with pytest.raises(SystemExit):

@@ -53,7 +53,7 @@ async def test_analyze_inheritance_chain_fs_returns_inheritance_details(monkeypa
             "delegates": {},
         },
     }
-    monkeypatch.setattr(inheritance_chain_fs, "get_models_index", create_mock_get_models_index(models))
+    monkeypatch.setattr(inheritance_chain_fs, inheritance_chain_fs.get_models_index.__name__, create_mock_get_models_index(models))
 
     result = await inheritance_chain_fs.analyze_inheritance_chain_fs("res.partner.ext", PaginationParams(page_size=2))
 
@@ -73,7 +73,7 @@ async def test_analyze_inheritance_chain_fs_returns_inheritance_details(monkeypa
 
 @pytest.mark.asyncio
 async def test_analyze_inheritance_chain_fs_returns_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(inheritance_chain_fs, "get_models_index", create_mock_get_models_index())
+    monkeypatch.setattr(inheritance_chain_fs, inheritance_chain_fs.get_models_index.__name__, create_mock_get_models_index())
 
     result = await inheritance_chain_fs.analyze_inheritance_chain_fs("missing.model")
 

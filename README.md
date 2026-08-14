@@ -165,15 +165,16 @@ uv run mcp-test-unit        # Unit tests only
 uv run mcp-test-integration # Mocked/non-live integration tests
 uv run mcp-test-live        # Live Docker/Odoo integration tests
 uv run mcp-test-cov         # No-live-stack coverage report for odoo_intelligence_mcp
+uv run mcp-test-cov-ci      # CI coverage gate with XML output
 uv run mcp-test-live-cov    # Live Docker/Odoo coverage report for odoo_intelligence_mcp
 
-# Threshold: both coverage commands enforce the documented 75% minimum.
+# Threshold: mcp-test-cov and mcp-test-cov-ci enforce the documented 75% minimum.
 ```
 
-`mcp-test-cov` measures only the `odoo_intelligence_mcp` package and emits terminal, HTML, and XML reports. `mcp-test-live-cov`
-uses the same package scope for the live Docker/Odoo path and applies the same 75% fail-under threshold. `mcp-test-live` and
-`mcp-test-live-cov` require the target Docker/Odoo workspace to be available. During the broader Odoo refactor, use the no-live-stack
-gate for ordinary MCP changes and run the live-stack gate when validating runtime behavior against the current Odoo workspace.
+`mcp-test-cov` measures only the `odoo_intelligence_mcp` package and emits terminal, HTML, and XML reports. `mcp-test-cov-ci`
+uses the same scope and threshold but omits the local HTML report. `mcp-test-live-cov` is informational because
+a live-only subset cannot represent whole-package coverage. `mcp-test-live` and `mcp-test-live-cov` require the target Docker/Odoo
+workspace to be available.
 
 ### Code Quality
 
