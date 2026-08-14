@@ -124,10 +124,6 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=.",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-branch",
 ]
 markers = [
     "unit: Unit tests that test individual components in isolation",
@@ -149,7 +145,7 @@ log_cli = true
 log_cli_level = "INFO"
 
 [tool.coverage.run]
-source = ["src"]
+source_pkgs = ["odoo_intelligence_mcp"]
 branch = true
 parallel = true
 omit = [
@@ -199,8 +195,9 @@ output = "coverage.xml"
 
 [tool.coverage.paths]
 source = [
-    ".",
+    "src/odoo_intelligence_mcp",
     "*/site-packages/odoo_intelligence_mcp",
+    "*/dist-packages/odoo_intelligence_mcp",
 ]
 
 [dependency-groups]

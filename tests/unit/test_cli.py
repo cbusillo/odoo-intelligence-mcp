@@ -21,7 +21,7 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test_unit()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "--no-cov"])
+        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration"])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_integration_function(self, mock_run: MagicMock) -> None:
@@ -30,7 +30,7 @@ class TestCLIFunctions:
             cli.test_integration()
         assert exc_info.value.code == 0
         mock_run.assert_called_once_with(
-            [sys.executable, "-m", "pytest", "tests/integration", "-m", f"integration and {cli.NO_LIVE_STACK_MARKERS}", "--no-cov"]
+            [sys.executable, "-m", "pytest", "tests/integration", "-m", f"integration and {cli.NO_LIVE_STACK_MARKERS}"]
         )
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
@@ -40,7 +40,7 @@ class TestCLIFunctions:
             cli.test_ci()
         assert exc_info.value.code == 0
         mock_run.assert_called_once_with(
-            [sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "--no-cov", "-q", "-k", cli.CI_TEST_EXPRESSION]
+            [sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "-q", "-k", cli.CI_TEST_EXPRESSION]
         )
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
@@ -49,9 +49,7 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test_live()
         assert exc_info.value.code == 0
-        mock_run.assert_called_once_with(
-            [sys.executable, "-m", "pytest", "tests/integration", "-m", cli.LIVE_STACK_MARKERS, "--no-cov"]
-        )
+        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/integration", "-m", cli.LIVE_STACK_MARKERS])
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
     def test_test_cov_function(self, mock_run: MagicMock) -> None:
@@ -66,9 +64,10 @@ class TestCLIFunctions:
                 "pytest",
                 "-m",
                 cli.NO_LIVE_STACK_MARKERS,
-                "--cov",
+                "--cov=odoo_intelligence_mcp",
                 "--cov-report=term-missing",
                 "--cov-report=html",
+                "--cov-report=xml",
             ]
         )
 
@@ -86,9 +85,11 @@ class TestCLIFunctions:
                 "tests/integration",
                 "-m",
                 cli.LIVE_STACK_MARKERS,
-                "--cov",
+                "--cov=odoo_intelligence_mcp",
                 "--cov-report=term-missing",
                 "--cov-report=html",
+                "--cov-report=xml",
+                f"--cov-fail-under={cli.LIVE_COVERAGE_THRESHOLD}",
             ]
         )
 
@@ -122,18 +123,20 @@ class TestCLIFunctions:
             [],
             [mock_file, mock_dir],
             [mock_file],
+            [],
+            [mock_file],
         ]
 
         mock_path_class.return_value = mock_path_instance
 
         cli.clean()
 
-        assert mock_path_instance.glob.call_count == 5
-        expected_patterns = [".pytest_cache", "htmlcov", ".coverage", "**/__pycache__", "**/*.pyc"]
+        assert mock_path_instance.glob.call_count == 7
+        expected_patterns = [".pytest_cache", "htmlcov", ".coverage", ".coverage.*", "coverage.xml", "**/__pycache__", "**/*.pyc"]
         actual_calls = [call(pattern) for pattern in expected_patterns]
         mock_path_instance.glob.assert_has_calls(actual_calls)
 
-        assert mock_file.unlink.call_count == 3  # mock_file appears in patterns 1, 4, and 5
+        assert mock_file.unlink.call_count == 4  # mock_file appears in patterns 1, 4, 5, and 7
         assert mock_rmtree.call_count == 2  # mock_dir appears in patterns 2 and 4
         mock_rmtree.assert_any_call(mock_dir)
 
@@ -146,7 +149,7 @@ class TestCLIFunctions:
 
         cli.clean()
 
-        assert mock_path_instance.glob.call_count == 5
+        assert mock_path_instance.glob.call_count == 7
         mock_rmtree.assert_not_called()
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")

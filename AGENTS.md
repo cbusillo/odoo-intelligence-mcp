@@ -46,7 +46,7 @@ for archival investigation.
 5. Run `uv run mcp-test`—all tests must pass.
 6. Format with `uv run mcp-format`.
 7. Trigger inspections (`inspection_trigger(scope="whole_project")`; review via `inspection_get_problems`).
-8. Verify coverage (`uv run mcp-test-cov` ≥ 75 %).
+8. Verify coverage (`uv run mcp-test-cov` or `uv run mcp-test-live-cov`, both ≥ 75 %).
 
 ## MCP Tool Development
 
@@ -62,6 +62,7 @@ When adding a tool:
 
 ```python
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+
 
 async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, Any]:
     try:
@@ -128,6 +129,6 @@ Run with `uv run python smoke.py` inside Codex. Ensure outputs are JSON-serializ
 - [ ] `uv run mcp-format`
 - [ ] `inspection_trigger(scope="whole_project")` / `inspection_get_problems()` (no new actionable findings)
 - [ ] `uv run mcp-test`
-- [ ] `uv run mcp-test-cov` ≥ 75 %
+- [ ] `uv run mcp-test-cov` or `uv run mcp-test-live-cov` ≥ 75 %
 
 Codex tip: keep responses short and structured; default to conservative paging to help downstream agent consumers.
