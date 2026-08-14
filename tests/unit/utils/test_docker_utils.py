@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from odoo_intelligence_mcp.utils.docker_utils import DockerClientManager
@@ -52,7 +53,9 @@ def test_get_container_with_auto_start() -> None:
     """Test container auto-start when not found."""
     with (
         patch("subprocess.run") as mock_run,
+        patch("odoo_intelligence_mcp.utils.docker_utils.load_env_config", return_value=Mock()),
         patch("odoo_intelligence_mcp.utils.docker_utils.resolve_existing_container_name", return_value=None),
+        patch("odoo_intelligence_mcp.utils.docker_utils.should_allow_autostart", return_value=True),
     ):
         container_info = {"State": {"Status": "running", "Running": True}}
         mock_run.side_effect = [
@@ -100,14 +103,20 @@ def test_restart_container_failure() -> None:
 
 
 def test_restart_container_autostart_success() -> None:
-    with patch("subprocess.run") as mock_run:
-        container_state = {"State": {"Status": "running"}}
+    with (
+        patch("subprocess.run") as mock_run,
+        patch("odoo_intelligence_mcp.utils.docker_utils.load_env_config", return_value=Mock()),
+        patch("odoo_intelligence_mcp.utils.docker_utils.should_allow_autostart", return_value=True),
+        patch(
+            "odoo_intelligence_mcp.utils.docker_utils.build_compose_up_command",
+            return_value=(["docker", "compose", "up", "-d", "web"], Path.cwd()),
+        ),
+    ):
         mock_run.side_effect = [
             Mock(returncode=1, stdout="", stderr="Error: No such container"),
             Mock(returncode=1, stdout="", stderr="Error: No such container"),
             Mock(returncode=0, stdout="started", stderr=""),
             Mock(returncode=0, stdout="restarted", stderr=""),
-            Mock(returncode=0, stdout=json.dumps(container_state), stderr=""),
         ]
 
         manager = DockerClientManager()

@@ -43,10 +43,10 @@ for archival investigation.
 2. Follow patterns in `src/odoo_intelligence_mcp/server.py` when modifying handlers.
 3. Paginate responses likely to exceed ~25 K tokens (`pagination_utils.py`).
 4. Always close cursors/contexts via `try/finally`.
-5. Run `uv run mcp-test`—all tests must pass.
+5. Run `uv run mcp-test`—all no-live-stack tests must pass.
 6. Format with `uv run mcp-format`.
 7. Trigger inspections (`inspection_trigger(scope="whole_project")`; review via `inspection_get_problems`).
-8. Verify coverage (`uv run mcp-test-cov` ≥ 75 %).
+8. Verify coverage (`uv run mcp-test-cov` ≥ 75 %; CI runs `uv run mcp-test-cov-ci`).
 
 ## MCP Tool Development
 
@@ -62,6 +62,7 @@ When adding a tool:
 
 ```python
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+
 
 async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, Any]:
     try:

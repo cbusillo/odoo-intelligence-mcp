@@ -3,10 +3,17 @@ from unittest.mock import patch
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager, load_env_config
+from odoo_intelligence_mcp.core.env import HostOdooEnvironmentManager
 from odoo_intelligence_mcp.server import handle_call_tool
 from odoo_intelligence_mcp.utils.error_utils import CodeExecutionError, DockerConnectionError
-from tests.fixtures import MockDockerRun, container_running
+from tests.fixtures import MockDockerRun
+
+
+@pytest.fixture
+def configured_mock_odoo_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("ODOO_PROJECT_NAME=odoo\n")
+    monkeypatch.setenv("ODOO_ENV_FILE", str(env_file))
 
 
 @pytest.mark.asyncio
@@ -21,7 +28,7 @@ async def test_real_odoo_connection(real_odoo_env_if_available: Any) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_docker_container_not_found(mock_docker_run: type[MockDockerRun]) -> None:
+async def test_docker_container_not_found(mock_docker_run: type[MockDockerRun], configured_mock_odoo_environment: None) -> None:
     with patch("subprocess.run", mock_docker_run("container_not_found")):
         manager = HostOdooEnvironmentManager()
         env = await manager.get_environment()
@@ -96,31 +103,33 @@ async def test_invalid_json_response_from_odoo(mock_docker_run: type[MockDockerR
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_handle_tool_with_all_docker_scenarios() -> None:
+async def test_handle_tool_with_all_docker_scenarios(configured_mock_odoo_environment: None) -> None:
     scenarios = [
         ("container_not_found", "No such container", DockerConnectionError),
         ("timeout", "timed out", DockerConnectionError),
     ]
 
     for scenario, expected_error_text, error_type in scenarios:
-        with patch("subprocess.run", MockDockerRun(scenario)):
-            with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment") as mock_get_env:
-                manager = HostOdooEnvironmentManager()
-                mock_get_env.return_value = await manager.get_environment()
+        with (
+            patch("subprocess.run", MockDockerRun(scenario)),
+            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment") as mock_get_env,
+        ):
+            manager = HostOdooEnvironmentManager()
+            mock_get_env.return_value = await manager.get_environment()
 
-                result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
+            result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})
 
-                import json
+            import json
 
-                content = json.loads(result[0].text)
-                assert content["success"] is False
-                assert expected_error_text in content["error"]
-                assert content["error_type"] == error_type.__name__
+            content = json.loads(result[0].text)
+            assert content["success"] is False
+            assert expected_error_text in content["error"]
+            assert content["error_type"] == error_type.__name__
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-@pytest.mark.skipif(not container_running(load_env_config().container_name), reason="Requires running Odoo container")
+@pytest.mark.requires_odoo
 async def test_real_model_info_if_available() -> None:
     # This test runs against real Odoo if available
     result = await handle_call_tool("model_query", {"operation": "info", "model_name": "res.partner"})

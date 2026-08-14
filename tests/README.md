@@ -71,11 +71,24 @@ uv run mcp-test-live
 uv run mcp-test-cov
 ```
 
+This command measures the `odoo_intelligence_mcp` package, writes terminal, HTML, and XML reports, and enforces the documented 75%
+minimum.
+
+### CI Coverage Gate
+
+```bash
+uv run mcp-test-cov-ci
+```
+
+This command uses the same package scope and 75% minimum while omitting the local HTML report.
+
 ### Live Docker/Odoo Coverage
 
 ```bash
 uv run mcp-test-live-cov
 ```
+
+This command reports coverage from live-stack tests without enforcing the whole-package threshold.
 
 ### Specific Test File
 ```bash
@@ -172,7 +185,7 @@ Security tests verify protection against:
 
 ## Coverage Requirements
 
-- **Target**: 80% minimum overall coverage
+- **Target**: 75% minimum package coverage for `odoo_intelligence_mcp`
 - **Critical Paths**: 100% coverage for security-sensitive code
 - **New Code**: All new features must include comprehensive tests
 
@@ -181,8 +194,7 @@ Security tests verify protection against:
 ### 1. Test Naming
 ```python
 # Test name should be descriptive: test_<component>_<scenario>_<expected_outcome>
-def test_model_info_invalid_name_returns_error() -> None:
-    ...
+def test_model_info_invalid_name_returns_error() -> None: ...
 ```
 
 ### 2. Arrange-Act-Assert Pattern
@@ -215,6 +227,7 @@ uv run pytest tests/failing_test.py --pdb
 ### 3. Check test logs
 ```python
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 ```
 
