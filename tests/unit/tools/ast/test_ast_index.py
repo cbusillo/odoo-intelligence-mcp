@@ -24,7 +24,6 @@ async def test_build_ast_index_uses_configured_addon_roots(mock_load_env_config:
     assert container_name == "odoo-web-1"
     assert command[:2] == ["python3", "-c"]
     assert 'roots = ["/opt/project/addons", "/opt/enterprise"]' in command[2]
-    assert docker_manager.exec_run.call_args.kwargs == {"timeout": 120}
 
 
 @pytest.mark.asyncio

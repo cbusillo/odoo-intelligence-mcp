@@ -145,13 +145,19 @@ class TestDockerFailureModes:
     @pytest.mark.asyncio
     async def test_memory_exhaustion(self, test_env: HostOdooEnvironment) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=137, stdout="", stderr="Killed")
+
+            def side_effect(*args: object, **_kwargs: object) -> MagicMock:
+                if "inspect" in str(args[0]):
+                    return MagicMock(returncode=0, stdout="running\n", stderr="")
+                return MagicMock(returncode=137, stdout="", stderr="Killed")
+
+            mock_run.side_effect = side_effect
 
             env = test_env
             with pytest.raises(DockerConnectionError) as exc_info:
                 await env.execute_code("result = list(range(10**9))")
 
-            assert "137" in str(exc_info.value) or "killed" in str(exc_info.value).lower()
+            assert "oom" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     async def test_permission_denied(self, test_env: HostOdooEnvironment) -> None:

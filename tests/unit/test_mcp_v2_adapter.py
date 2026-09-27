@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from mcp.types import CallToolRequestParams, CallToolResult, ListToolsResult, TextContent
 
+from odoo_intelligence_mcp import __version__
 from odoo_intelligence_mcp.server import app, handle_call_tool_request, handle_list_tools_request
 
 
@@ -71,5 +72,5 @@ def test_server_initialization_uses_registered_tool_handlers() -> None:
     initialization_options = app.create_initialization_options()
 
     assert initialization_options.server_name == "odoo-intelligence"
-    assert initialization_options.server_version == "0.1.0"
+    assert initialization_options.server_version == __version__
     assert initialization_options.capabilities.tools is not None

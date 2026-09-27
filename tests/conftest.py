@@ -1,5 +1,7 @@
 import asyncio
 import os
+import subprocess
+import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,22 @@ from odoo_intelligence_mcp.core.env import EnvConfig, HostOdooEnvironment, load_
 
 # Import fixtures to make them available to tests
 from .fixtures import mock_docker_run, real_odoo_env_if_available  # noqa: F401
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_host_docker(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    if request.node.get_closest_marker("requires_docker") or request.node.get_closest_marker("requires_odoo"):
+        return
+    real_subprocess_run = subprocess.run
+
+    def run_without_host_docker(command: object, *arguments: object, **keyword_arguments: object) -> object:
+        command_parts = [str(part) for part in command] if isinstance(command, list | tuple) else [str(command)]
+        if "docker" in command_parts[:2]:
+            return subprocess.CompletedProcess(command, 1, "", "Error: No such object: no-live-stack test")
+        return real_subprocess_run(command, *arguments, **keyword_arguments)
+
+    monkeypatch.setattr(subprocess, "run", run_without_host_docker)
+    monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
 
 @pytest.fixture

@@ -32,6 +32,15 @@ for archival investigation.
 - Prefer early returns (ignore TRY300) and shallow nesting
 - Maintain ≥75 % coverage before shipping
 
+## Test Rules
+
+- A test must fail when the product is broken and pass when someone makes an intended change.
+- Do not assert literals defined elsewhere (versions, timeouts, command lines, glob lists, hashes); compare against the
+  single source of truth or assert behavior instead. The package version lives only in `pyproject.toml`.
+- Do not assert workflow or config text; enforce the rule where it executes.
+- Verification and loading code must not depend on working-tree or host state, and must not branch on whether pytest is
+  running. No-live-stack tests never reach the host Docker daemon or sleep for real (`tests/conftest.py` enforces this).
+
 ## Codex Workflow Expectations
 
 1. Exercise the relevant MCP tool against the Docker stack before restarting the server.
