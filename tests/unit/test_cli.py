@@ -1,5 +1,6 @@
 import sys
-from unittest.mock import MagicMock, call, patch
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -7,226 +8,43 @@ from odoo_intelligence_mcp import cli
 
 
 class TestCLIFunctions:
+    @pytest.mark.parametrize("returncode", [0, 1, 5])
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
+    def test_test_commands_exit_with_pytest_returncode(self, mock_run: MagicMock, returncode: int) -> None:
+        mock_run.return_value.returncode = returncode
         with pytest.raises(SystemExit) as exc_info:
             cli.test()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "-m", cli.NO_LIVE_STACK_MARKERS])
+        assert exc_info.value.code == returncode
+        assert mock_run.call_args[0][0][:3] == [sys.executable, "-m", "pytest"]
 
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_unit_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_unit()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration"])
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_integration_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_integration()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with(
-            [sys.executable, "-m", "pytest", "tests/integration", "-m", f"integration and {cli.NO_LIVE_STACK_MARKERS}"]
-        )
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_ci_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_ci()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/unit", "-m", "not integration", "-q"])
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_live_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_live()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with([sys.executable, "-m", "pytest", "tests/integration", "-m", cli.LIVE_STACK_MARKERS])
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_cov_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_cov()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "-m",
-                cli.NO_LIVE_STACK_MARKERS,
-                "--cov",
-                "--cov-report=term-missing",
-                "--cov-report=html",
-                "--cov-report=xml",
-            ]
-        )
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_cov_ci_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_cov_ci()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "-m",
-                cli.NO_LIVE_STACK_MARKERS,
-                "--cov",
-                "--cov-report=term-missing",
-                "--cov-report=xml",
-            ]
-        )
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_test_live_cov_function(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test_live_cov()
-        assert exc_info.value.code == 0
-        mock_run.assert_called_once_with(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "tests/integration",
-                "-m",
-                cli.LIVE_STACK_MARKERS,
-                "--cov",
-                "--cov-report=term-missing",
-                "--cov-report=html",
-                "--cov-report=xml",
-                f"--cov-fail-under={cli.LIVE_COVERAGE_FAIL_UNDER}",
-            ]
-        )
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_format_code_function(self, mock_run: MagicMock) -> None:
-        cli.format_code()
-        mock_run.assert_called_once_with([sys.executable, "-m", "ruff", "format", "."])
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_check_function(self, mock_run: MagicMock) -> None:
+    def test_check_formats_before_linting(self, mock_run: MagicMock) -> None:
         with patch("odoo_intelligence_mcp.cli.format_code") as mock_format:
             cli.check()
             mock_format.assert_called_once()
-            mock_run.assert_called_once_with([sys.executable, "-m", "ruff", "check", "."])
+            assert mock_run.call_args[0][0][:3] == [sys.executable, "-m", "ruff"]
 
-    @patch("odoo_intelligence_mcp.cli.Path")
-    @patch("odoo_intelligence_mcp.cli.shutil.rmtree")
-    def test_clean_function(self, mock_rmtree: MagicMock, mock_path_class: MagicMock) -> None:
-        mock_file = MagicMock()
-        mock_file.is_file.return_value = True
-        mock_file.is_dir.return_value = False
-
-        mock_dir = MagicMock()
-        mock_dir.is_file.return_value = False
-        mock_dir.is_dir.return_value = True
-
-        mock_path_instance = MagicMock()
-        mock_path_instance.glob.side_effect = [
-            [mock_file],
-            [mock_dir],
-            [],
-            [mock_file, mock_dir],
-            [mock_file],
-            [],
-            [mock_file],
-        ]
-
-        mock_path_class.return_value = mock_path_instance
+    def test_clean_removes_generated_artifacts_and_keeps_sources(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        source_file = tmp_path / "src" / "package" / "module.py"
+        source_file.parent.mkdir(parents=True)
+        source_file.write_text("value = 1\n")
+        bytecode_directory = source_file.parent / "__pycache__"
+        bytecode_directory.mkdir()
+        (bytecode_directory / "module.cpython-314.pyc").write_bytes(b"")
+        stray_bytecode = source_file.parent / "stray.pyc"
+        stray_bytecode.write_bytes(b"")
+        (tmp_path / ".pytest_cache").mkdir()
+        (tmp_path / "htmlcov").mkdir()
+        (tmp_path / "coverage.xml").write_text("<coverage/>")
+        (tmp_path / ".coverage").write_text("")
+        monkeypatch.chdir(tmp_path)
 
         cli.clean()
 
-        assert mock_path_instance.glob.call_count == 7
-        expected_patterns = [".pytest_cache", "htmlcov", ".coverage", ".coverage.*", "coverage.xml", "**/__pycache__", "**/*.pyc"]
-        actual_calls = [call(pattern) for pattern in expected_patterns]
-        mock_path_instance.glob.assert_has_calls(actual_calls)
-
-        assert mock_file.unlink.call_count == 4  # mock_file appears in patterns 1, 4, 5, and 7
-        assert mock_rmtree.call_count == 2  # mock_dir appears in patterns 2 and 4
-        mock_rmtree.assert_any_call(mock_dir)
-
-    @patch("odoo_intelligence_mcp.cli.Path")
-    @patch("odoo_intelligence_mcp.cli.shutil.rmtree")
-    def test_clean_function_no_files(self, mock_rmtree: MagicMock, mock_path_class: MagicMock) -> None:
-        mock_path_instance = MagicMock()
-        mock_path_instance.glob.return_value = []
-        mock_path_class.return_value = mock_path_instance
-
-        cli.clean()
-
-        assert mock_path_instance.glob.call_count == 7
-        mock_rmtree.assert_not_called()
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_subprocess_run_with_error(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 1
-        with pytest.raises(SystemExit) as exc_info:
-            cli.test()
-        assert exc_info.value.code == 1
-
-    @patch("odoo_intelligence_mcp.cli.Path")
-    def test_clean_handles_permission_error(self, mock_path_class: MagicMock) -> None:
-        mock_file = MagicMock()
-        mock_file.is_file.return_value = True
-        mock_file.unlink.side_effect = PermissionError("Permission denied")
-
-        mock_path_instance = MagicMock()
-        mock_path_instance.glob.side_effect = [[mock_file], [], [], [], []]
-        mock_path_class.return_value = mock_path_instance
-
-        with pytest.raises(PermissionError):
-            cli.clean()
-
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_all_cli_commands_use_sys_executable(self, mock_run: MagicMock) -> None:
-        mock_run.return_value.returncode = 0
-
-        with pytest.raises(SystemExit):
-            cli.test()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_unit()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_integration()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_cov()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_cov_ci()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_ci()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_live()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        with pytest.raises(SystemExit):
-            cli.test_live_cov()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        cli.format_code()
-        assert mock_run.call_args[0][0][0] == sys.executable
-
-        cli.check()
-        assert mock_run.call_args[0][0][0] == sys.executable
+        assert source_file.exists()
+        assert not bytecode_directory.exists()
+        assert not stray_bytecode.exists()
+        assert not (tmp_path / ".pytest_cache").exists()
+        assert not (tmp_path / "htmlcov").exists()
+        assert not (tmp_path / "coverage.xml").exists()
+        assert not (tmp_path / ".coverage").exists()

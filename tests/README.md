@@ -31,6 +31,10 @@ tests/
 
 Use this for normal local and PR validation. It excludes tests that require a live Docker daemon or Odoo container.
 
+Tests without the `requires_docker` or `requires_odoo` marker never reach the host Docker daemon: `tests/conftest.py`
+answers `docker` subprocess calls as "no such container" and turns container start-up waits into no-ops, so results match CI
+whether or not a local stack is running.
+
 ```bash
 uv run mcp-test
 ```

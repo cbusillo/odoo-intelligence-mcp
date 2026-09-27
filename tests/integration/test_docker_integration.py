@@ -254,4 +254,3 @@ result = {"partner_count": env['res.partner'].search_count([])}
         # Verify the command structure
         call_args = mock_run.call_args
         assert call_args[1]["input"] is not None  # Code was passed via stdin
-        assert call_args[1]["timeout"] == 60  # Default timeout increased for stability

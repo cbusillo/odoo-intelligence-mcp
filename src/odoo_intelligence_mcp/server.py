@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from importlib.metadata import version
 
 from jsonschema import ValidationError, validate
 from mcp.server import Server
@@ -828,7 +829,7 @@ async def handle_call_tool_request(
 
 app = Server(
     "odoo-intelligence",
-    version="0.1.0",
+    version=version("odoo-intelligence-mcp"),
     instructions=(
         "Primary: model_query/field_query/analysis_query (use operation=/analysis_type=).\n"
         "Start: model_query(operation=search, pattern=...) → info/relationships/view_usage/inheritance (requires model_name).\n"

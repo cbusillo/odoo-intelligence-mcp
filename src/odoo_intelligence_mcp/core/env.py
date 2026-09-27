@@ -585,9 +585,6 @@ def _validate_required_env(config: EnvConfig, env_file_path: Path | None) -> Non
 
 
 def load_env_config() -> EnvConfig:
-    # Detect if we're running in test mode
-    is_testing = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
-
     logger.debug("MCP server resolving environment from working directory: %s", Path.cwd())
 
     # Resolve the environment file to use.
@@ -606,20 +603,12 @@ def load_env_config() -> EnvConfig:
                     os.getenv("ODOO_WEB_CONTAINER"),
                 )
             )
-            if stack_name and not has_container_targets and not is_testing:
+            if stack_name and not has_container_targets:
                 raise EnvironmentResolutionError(
                     "ODOO_STACK_NAME/ODOO_STACK/ODOO_ENV_NAME was set but no platform env could be resolved. "
                     "Set ODOO_PROJECT_DIR to the odoo-ai repo, run 'uv run platform info --context <ctx> --instance <instance> --json-output', "
                     "set ODOO_PROJECT_NAME/ODOO_CONTAINER_NAME overrides, or point ODOO_ENV_FILE at the desired env file."
                 )
-
-    if not env_file_path and is_testing:
-        # Test mode fallback: use the sibling target repo root env file when no platform env was resolved.
-        developer_dir = Path(__file__).parent.parent.parent.parent.parent  # Go up to Developer/ directory
-        target_env_path = developer_dir / "odoo-ai" / ".env"
-        if target_env_path.exists():
-            env_file_path = target_env_path
-            logger.info("Using target project env file from %s (test mode)", target_env_path)
 
     if not env_file_path:
         # First, check the current working directory (where Claude Code was launched)

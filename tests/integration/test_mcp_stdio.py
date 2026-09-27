@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from odoo_intelligence_mcp import __version__
 from odoo_intelligence_mcp.server import run_server
 
 
@@ -26,7 +27,7 @@ async def test_mcp_initialize_request() -> None:
             mock_run.assert_called_once()
             init_options = mock_run.call_args[0][2]
             assert init_options.server_name == "odoo-intelligence"
-            assert init_options.server_version == "0.1.0"
+            assert init_options.server_version == __version__
             assert hasattr(init_options.capabilities, "tools")
 
 
@@ -157,5 +158,5 @@ async def test_run_server_function() -> None:
             # Check initialization options
             init_options = mock_run.call_args[0][2]
             assert init_options.server_name == "odoo-intelligence"
-            assert init_options.server_version == "0.1.0"
+            assert init_options.server_version == __version__
             assert hasattr(init_options.capabilities, "tools")

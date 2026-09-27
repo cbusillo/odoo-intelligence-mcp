@@ -1,4 +1,6 @@
+from importlib.metadata import version
+
 from .server import main
 
-__version__ = "0.1.0"
+__version__ = version("odoo-intelligence-mcp")
 __all__ = ["main"]
