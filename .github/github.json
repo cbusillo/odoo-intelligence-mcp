@@ -22,7 +22,8 @@
       "default": "uv run mcp-test",
       "unit": "uv run mcp-test-unit",
       "integration": "uv run mcp-test-integration",
-      "ci": "uv run mcp-test-ci",
+      "ci": "uv run mcp-test-cov-ci",
+      "quickUnit": "uv run mcp-test-ci",
       "liveStack": "uv run mcp-test-live",
       "staticAnalysis": "uv run ruff check ."
     },
@@ -59,7 +60,7 @@
     "Dependency Graph",
     "Dependabot Updates"
   ],
-  "requiredStatusChecks": ["test", "coverage"],
+  "requiredStatusChecks": ["test"],
   "codeScanningMergeProtection": {
     "ruleset": "Require code scanning results",
     "tool": "CodeQL",

@@ -31,30 +31,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --group dev
 
-      - name: Run unit tests
-        run: uv run mcp-test-ci
-
-  coverage:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.14"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --locked --group dev
-
-      - name: Run coverage gate
+      # One lane: the coverage gate runs the unit and no-live integration
+      # tests, so a separate unit-only job would repeat them.
+      - name: Run tests with coverage gate
         run: uv run mcp-test-cov-ci
 
       - name: Upload coverage report

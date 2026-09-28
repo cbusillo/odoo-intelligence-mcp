@@ -39,9 +39,10 @@ whether or not a local stack is running.
 uv run mcp-test
 ```
 
-### CI Unit Gate
+### Quick Unit Run
 
-This mirrors the GitHub Actions test command.
+A fast, quiet unit-only run. CI does not run it separately; the `test` job runs the coverage gate below, which
+includes these tests.
 
 ```bash
 uv run mcp-test-ci
@@ -84,7 +85,8 @@ minimum.
 uv run mcp-test-cov-ci
 ```
 
-This command uses the same package scope and 75% minimum while omitting the local HTML report.
+This is what the GitHub Actions `test` job runs. It uses the same package scope and 75% minimum while omitting the
+local HTML report.
 
 ### Live Docker/Odoo Coverage
 
