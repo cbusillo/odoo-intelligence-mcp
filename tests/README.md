@@ -52,5 +52,5 @@ uv run pytest --lf
 
 - `tests/conftest.py`: pytest fixtures such as `mock_odoo_env`, plus the Docker guard above.
 - `tests/fixtures/types.py`: typed mock protocols (`MockModel`, `MockRecord`, `MockRegistry`, ...).
-- `tests/fixtures/common.py`, `mocks.py`, `docker.py`, `odoo.py`: shared assertion and mock helpers.
+- `tests/fixtures/common.py`, `docker.py`, `odoo.py`: shared assertion, Docker, and Odoo mock helpers.
 - `tests/fixtures/fs_index.py`: helpers for the filesystem-index (`fs` mode) tests.
