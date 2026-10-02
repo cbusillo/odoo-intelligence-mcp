@@ -32,13 +32,17 @@ Restart Claude after configuration changes.
 
 `.env` resolution order:
 1) `ODOO_ENV_FILE` (explicit)
-2) Platform env resolution from the target `odoo-ai` checkout (via `ODOO_PROJECT_DIR`, sibling `../odoo-ai`, or current dir)
-   - MCP prefers `.platform/env/<context>.<instance>.env`.
-   - If needed, MCP falls back to `uv run platform info --context <ctx> --instance <instance> --json-output`.
+2) Platform env resolution from a workspace that has `platform/stack.toml`, such as an `odoo-devkit` checkout. MCP looks
+   for it in `ODOO_PROJECT_DIR` (or the current directory) and its parents. It runs only when `ODOO_STACK_NAME`
+   (`<context>-<instance>`; aliases `ODOO_STACK`, `ODOO_ENV_NAME`) or an `ODOO_PROJECT_NAME` of the form `odoo-<context>-<instance>` is set.
+   - MCP uses `.platform/env/<context>.<instance>.env` when it exists.
+   - Otherwise it tries `uv run platform info --context <ctx> --instance <instance> --json-output` in that workspace.
+     This and a sibling `odoo-ai` lookup are leftovers from the archived `odoo-ai` workspace; `odoo-devkit` has no
+     `platform info` command. Removal is tracked in #15.
 3) Current working directory (where Claude was launched)
 4) This MCP server directory (fallback)
 
-Override discovery by setting `ODOO_ENV_FILE` to the target project's env file path or `ODOO_PROJECT_DIR` for platform resolution. Use `ODOO_ENV_PRIORITY=process` to let process env vars override file values.
+Override discovery by setting `ODOO_ENV_FILE` to the target project's env file path or `ODOO_PROJECT_DIR` for platform resolution. Process env vars override file values by default; set `ODOO_ENV_PRIORITY=env_file` to let the env file win.
 
 Optional container overrides:
 - `ODOO_CONTAINER_NAME` (primary exec container)
@@ -64,7 +68,6 @@ Many operations accept `mode`:
 - `auto` (default)
 - `fs` (static scan over `ODOO_ADDONS_PATH`)
 - `registry` (runtime via Odoo registry)
-- `db` (reserved)
 
 Enable enhanced error payloads: `ODOO_MCP_ENHANCED_ERRORS=true`.
 
@@ -81,7 +84,10 @@ export ODOO_ADDONS_PATH="/custom/addons,/odoo/addons"
 ## Operations (Tools)
 
 - `search_code(pattern, file_type=py, roots?[])` → hits[] (default file_type is `py`; set `xml`/`js` for other sources)
+- `find_files(pattern, file_type?)` → files[]
+- `read_odoo_file(file_path, start_line?, end_line?, pattern?, context_lines=5)` → content
 - `find_method(method_name, mode=auto|fs|registry)` → locations[]
+- `search_decorators(decorator: depends|constrains|onchange|model_create_multi, mode=auto|fs|registry)` → methods[]
 - `model_query(operation: info|search|relationships|inheritance|view_usage, model_name?, pattern?, page?, page_size?, mode=auto)`
 - `field_query(operation: usages|dependencies|analyze_values|resolve_dynamic|search_properties|search_type, model_name, field_name?, field_type?, property?, sample_size=1000, page?, page_size?, mode=auto)`
 - `analysis_query(analysis_type: performance|patterns|workflow|inheritance, model_name?, pattern_type?, page?, page_size?, mode=auto)`
@@ -119,8 +125,6 @@ Examples
 Conventions
 - Paginated results: `{ "items": [...], "pagination": { page, page_size, total_count, total_pages, has_next_page, has_previous_page, filter_applied } }`
 - Single‑object results: plain objects with relevant fields and optional `success`/`error` keys
-
-<!-- Removed deprecated View Migration Helper section; use search_code/read_odoo_file/model_query for migrations. -->
 
 ## Pagination
 
@@ -180,10 +184,10 @@ workspace to be available.
 
 ```bash
 uv run mcp-format  # ruff format
-
-# Project inspections (PyCharm profile via Codex CLI)
-inspection_trigger(scope="whole_project")
-inspection_get_problems()
+uv run ruff check .
 ```
+
+Run JetBrains (PyCharm) inspections on changed files with the `jetbrains-inspection` skill; `.github/github.json` lists
+the scope order.
 
 See AGENTS.md for workflow, formatting, and testing conventions.

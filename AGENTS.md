@@ -1,15 +1,14 @@
 # AGENTS.md
 
-Development guidelines for running the Odoo Intelligence MCP server inside the Codex CLI environment.
+Development guidelines for agents (Codex or Claude Code) working on the Odoo Intelligence MCP server.
 
-This repo should target the live Odoo workspace/runtime repos. Do not use the
-retired `odoo-ai` checkout as the default target unless the user explicitly asks
-for archival investigation.
+Target the live Odoo workspace, such as an `odoo-devkit` checkout with `platform/stack.toml`. The `odoo-ai`
+repository is archived; do not use it as a target unless the user explicitly asks for archival investigation.
+Discovery code still has `odoo-ai` leftovers; #15 tracks removing them.
 
 ## Project Snapshot
 
 - **Stack**: Python 3.14+, MCP SDK 2.0+, asyncio
-- **Primary agent shell**: Codex CLI (tools: `Read`, `Edit`, `MultiEdit`, `Write`, inspections, etc.)
 
 ## Workflow Metadata
 
@@ -41,7 +40,7 @@ for archival investigation.
 - Verification and loading code must not depend on working-tree or host state, and must not branch on whether pytest is
   running. No-live-stack tests never reach the host Docker daemon or sleep for real (`tests/conftest.py` enforces this).
 
-## Codex Workflow Expectations
+## Workflow Expectations
 
 1. Exercise the relevant MCP tool against the Docker stack before restarting the server.
 2. Reserve raw `docker exec` / SQL for emergencies (schema corruption, ORM boot failures).
@@ -50,22 +49,22 @@ for archival investigation.
 
 1. Baseline the existing tool behavior.
 2. Follow patterns in `src/odoo_intelligence_mcp/server.py` when modifying handlers.
-3. Paginate responses likely to exceed ~25 K tokens (`pagination_utils.py`).
+3. Paginate responses likely to exceed ~25 K tokens (`core/utils.py`: `add_pagination_to_schema`, `PaginationParams`).
 4. Always close cursors/contexts via `try/finally`.
 5. Run `uv run mcp-test`—all no-live-stack tests must pass.
 6. Format with `uv run mcp-format`.
-7. Trigger inspections (`inspection_trigger(scope="whole_project")`; review via `inspection_get_problems`).
+7. Run JetBrains inspections on changed files with the `jetbrains-inspection` skill (scope order in `.github/github.json`).
 8. Verify coverage (`uv run mcp-test-cov` ≥ 75 %; CI runs `uv run mcp-test-cov-ci`).
 
 ## MCP Tool Development
 
 When adding a tool:
 
-1. Register it in the `tools` list (`server.py`).
-2. Add a branch in `handle_call_tool`.
-3. Implement `async def tool_name(...) -> dict[str, Any]` above `run_server()`.
-4. Smoke-test with the Codex MCP client before restart.
-5. Validate payload size with `response_utils` or pagination helpers.
+1. Implement `async def tool_name(env, ...) -> dict[str, Any]` in the matching `tools/<domain>/` package.
+2. Add its `Tool` schema to `handle_list_tools` in `server.py` (wrap list results with `add_pagination_to_schema`).
+3. Add a `_handle_<tool_name>` adapter in `server.py` and register it in `TOOL_HANDLERS`.
+4. Smoke-test with an MCP client before restart.
+5. Validate payload size with `core/utils.py` (`validate_response_size`) or the pagination helpers.
 
 **Canonical pattern**
 
@@ -87,13 +86,14 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
 - `ODOO_DB_NAME`: active database (default `odoo`)
 - `ODOO_ADDONS_PATH`: comma-separated paths (`/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` by default)
 
-The server loads environment variables or the nearest `.env`. Use
+The server loads environment variables or the nearest `.env`; process variables win unless `ODOO_ENV_PRIORITY=env_file`. Use
 `ODOO_ENV_FILE` to point at a target project's env file when running elsewhere.
 Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`,
 `ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`,
 `ODOO_STACK_NAME`, `ODOO_ENV_PRIORITY`. When `platform/stack.toml` exists, MCP
 prefers `.platform/env/<context>.<instance>.env` and falls back to
-`uv run platform info --context <ctx> --instance <instance> --json-output`.
+`uv run platform info --context <ctx> --instance <instance> --json-output` (an `odoo-ai` command that
+`odoo-devkit` does not provide). README.md has the full resolution order.
 
 ## Architecture Overview
 
@@ -109,11 +109,8 @@ prefers `.platform/env/<context>.<instance>.env` and falls back to
 
 - Default containers: `{prefix}-web-1`, `{prefix}-script-runner-1`, `{prefix}-database-1`
 - Commands run through `docker exec ...`
-- Missing containers trigger `docker compose up -d <service>` with a 10-minute timeout (see `utils/docker_utils.py`).
-
-## Tool Notes
-
-- `inspection_*` depends on a running IDE (PyCharm/IntelliJ) with the Codex plugin; if it fails, tell the user to open the IDE and retry.
+- When autostart is allowed (`should_allow_autostart` in `core/env.py`), missing containers trigger
+  `docker compose up -d <service>` with a 10-minute timeout (see `utils/docker_utils.py`).
 
 ## Quick Tool Testing
 
@@ -131,13 +128,13 @@ async def smoke() -> None:
 asyncio.run(smoke())
 ```
 
-Run with `uv run python smoke.py` inside Codex. Ensure outputs are JSON-serializable; paginate anything large. Inline `# noqa` suppressions require justification.
+Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginate anything large. Inline `# noqa` suppressions require justification.
 
 ## Pre-Commit Checklist
 
 - [ ] `uv run mcp-format`
-- [ ] `inspection_trigger(scope="whole_project")` / `inspection_get_problems()` (no new actionable findings)
+- [ ] JetBrains inspections on changed files via `jetbrains-inspection` (no new actionable findings)
 - [ ] `uv run mcp-test`
 - [ ] `uv run mcp-test-cov` ≥ 75 %
 
-Codex tip: keep responses short and structured; default to conservative paging to help downstream agent consumers.
+Tip: keep tool responses short and structured; default to conservative paging to help downstream agent consumers.
