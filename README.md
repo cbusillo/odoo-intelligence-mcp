@@ -34,7 +34,7 @@ Restart Claude after configuration changes.
 1) `ODOO_ENV_FILE` (explicit)
 2) Platform env resolution from a workspace that has `platform/stack.toml`, such as an `odoo-devkit` checkout. MCP looks
    for it in `ODOO_PROJECT_DIR` (or the current directory) and its parents. It runs only when `ODOO_STACK_NAME`
-   (`<context>-<instance>`) or an `ODOO_PROJECT_NAME` of the form `odoo-<context>-<instance>` is set.
+   (`<context>-<instance>`; aliases `ODOO_STACK`, `ODOO_ENV_NAME`) or an `ODOO_PROJECT_NAME` of the form `odoo-<context>-<instance>` is set.
    - MCP uses `.platform/env/<context>.<instance>.env` when it exists.
    - Otherwise it tries `uv run platform info --context <ctx> --instance <instance> --json-output` in that workspace.
      This and a sibling `odoo-ai` lookup are leftovers from the archived `odoo-ai` workspace; `odoo-devkit` has no
