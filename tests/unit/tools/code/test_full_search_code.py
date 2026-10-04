@@ -18,7 +18,8 @@ async def test_search_code_basic_pattern() -> None:
 
         result = await search_code("test_method")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert "pagination" in result["results"]
     assert len(result["results"]["items"]) == 1
     assert result["results"]["items"][0]["line"] == 5
@@ -44,7 +45,8 @@ async def test_search_code_xml_files() -> None:
 
         result = await search_code("test\\.model", "xml")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert "pagination" in result["results"]
 
 
@@ -69,7 +71,8 @@ async def test_search_code_with_pagination() -> None:
         pagination = PaginationParams(limit=10, offset=0)
         result = await search_code("test_method", pagination=pagination)
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert "pagination" in result["results"]
     assert result["results"]["pagination"]["page_size"] == 10
 
@@ -81,7 +84,8 @@ async def test_search_code_no_matches() -> None:
 
         result = await search_code("nonexistent_pattern")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert len(result["results"]["items"]) == 0
     assert result["results"]["pagination"]["total_count"] == 0
 
@@ -125,7 +129,8 @@ async def test_search_code_javascript_files() -> None:
 
         result = await search_code("testFunction", "js")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert len(result["results"]["items"]) == 1
     assert result["results"]["items"][0]["file"].endswith(".js")
     assert "testFunction" in result["results"]["items"][0]["match"]

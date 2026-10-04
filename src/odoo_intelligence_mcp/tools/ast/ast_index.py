@@ -227,7 +227,6 @@ print(json.dumps(index))
         }
     try:
         raw = exec_result.get("stdout", "{}")
-        data = __import__("json").loads(raw)
-        return data
+        return __import__("json").loads(raw)
     except Exception as e:
         return {"success": False, "error": f"Failed to parse AST index: {e!s}", "error_type": type(e).__name__}

@@ -137,10 +137,7 @@ else:
         return result
 
     # Extract the actual result data from execute_code response
-    if "result" in result and isinstance(result["result"], dict):
-        data = result["result"]
-    else:
-        data = result
+    data = result["result"] if "result" in result and isinstance(result["result"], dict) else result
 
     # Apply pagination to large lists if provided
     if isinstance(data, dict) and pagination:

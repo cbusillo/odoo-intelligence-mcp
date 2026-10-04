@@ -107,10 +107,7 @@ else:
             return result
 
         # Extract the actual result data from execute_code response
-        if "result" in result and isinstance(result["result"], dict):
-            data = result["result"]
-        else:
-            data = result
+        data = result["result"] if "result" in result and isinstance(result["result"], dict) else result
 
         # Combine all relationships for pagination
         all_relationships = []

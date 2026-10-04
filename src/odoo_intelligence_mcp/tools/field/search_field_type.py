@@ -1,5 +1,8 @@
 from typing import TYPE_CHECKING, Any
 
+from ...core.utils import PaginationParams
+from ._common import execute_and_paginate_results
+
 VALID_FIELD_TYPES = [
     "many2one",
     "one2many",
@@ -16,8 +19,6 @@ VALID_FIELD_TYPES = [
     "json",
 ]
 
-from ...core.utils import PaginationParams
-from ._common import execute_and_paginate_results
 
 if TYPE_CHECKING:
     from ...type_defs.odoo_types import CompatibleEnvironment

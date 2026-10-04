@@ -135,7 +135,5 @@ class TestExpectedBehavior:
         assert "res.partner" in models
 
         # Should work in for loops
-        collected = []
-        for model in registry:
-            collected.append(model)
+        collected = list(registry)
         assert len(collected) == 3

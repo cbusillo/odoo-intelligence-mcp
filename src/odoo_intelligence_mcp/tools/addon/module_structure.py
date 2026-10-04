@@ -27,13 +27,15 @@ async def get_module_structure(module_name: str, pagination: PaginationParams | 
     check_cmd = [
         "sh",
         "-c",
-        f"for path in {' '.join(container_paths)}; do "
-        f'  if [ -d "$path/{module_name}" ]; then '
-        f'    echo "$path/{module_name}"; '
-        "    exit 0; "
-        "  fi; "
-        "done; "
-        "exit 1",
+        (
+            f"for path in {' '.join(container_paths)}; do "
+            f'  if [ -d "$path/{module_name}" ]; then '
+            f'    echo "$path/{module_name}"; '
+            "    exit 0; "
+            "  fi; "
+            "done; "
+            "exit 1"
+        ),
     ]
 
     exec_result = docker_manager.exec_run(container_name, check_cmd)
@@ -149,7 +151,7 @@ print(json.dumps(structure))
     paginated_files = paginate_dict_list(all_files, pagination, search_fields=["path", "category"])
 
     # Build result
-    result = {
+    return {
         "module": module_name,
         "path": structure.get("path", ""),
         "manifest": structure.get("manifest", {}),
@@ -164,5 +166,3 @@ print(json.dumps(structure))
             "css_count": len(static.get("css", [])),
         },
     }
-
-    return result

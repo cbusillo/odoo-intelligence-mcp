@@ -111,10 +111,7 @@ else:
             return raw_result
 
         # Extract the actual result data from execute_code response
-        if "result" in raw_result and isinstance(raw_result["result"], dict):
-            data = raw_result["result"]
-        else:
-            data = raw_result
+        data = raw_result["result"] if "result" in raw_result and isinstance(raw_result["result"], dict) else raw_result
 
         # Apply pagination to performance_issues list
         paginated_result = data.copy()

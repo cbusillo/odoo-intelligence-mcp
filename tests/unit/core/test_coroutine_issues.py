@@ -59,14 +59,8 @@ result = count1 + count2  # This should now work - no more coroutines
 
         env.execute_code = AsyncMock(return_value={"error": "coroutine object has no attribute id"})
 
-        # This should fail when trying to access user.id without awaiting
-        try:
-            result = await check_permissions(env, "admin", "res.partner", "read")
-            # If we get here, check if there's an error in the result
-            assert "error" in result or "coroutine" in str(result).lower()
-        except AttributeError as e:
-            # Expected error when trying to access .id on a coroutine
-            assert "coroutine" in str(e).lower() or "has no attribute" in str(e).lower()
+        result = await check_permissions(env, "admin", "res.partner", "read")
+        assert "error" in result or "coroutine" in str(result).lower()
 
     @pytest.mark.asyncio
     async def test_view_model_usage_iteration_issue_resolved(self, test_env: HostOdooEnvironment) -> None:

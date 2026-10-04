@@ -94,7 +94,7 @@ class TestErrorUtils:
 
     def test_validate_model_name_not_string(self) -> None:
         with pytest.raises(InvalidArgumentError) as exc_info:
-            validate_model_name(123)  # type: ignore
+            validate_model_name(123)
 
         assert exc_info.value.arg_name == "model_name"
         assert exc_info.value.expected_type == "string"
@@ -122,7 +122,7 @@ class TestErrorUtils:
 
     def test_validate_field_name_not_string(self) -> None:
         with pytest.raises(InvalidArgumentError) as exc_info:
-            validate_field_name(None)  # type: ignore
+            validate_field_name(None)
 
         assert exc_info.value.arg_name == "field_name"
         assert exc_info.value.expected_type == "non-empty string"

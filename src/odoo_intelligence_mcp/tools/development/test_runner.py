@@ -76,8 +76,8 @@ async def run_tests(
         stderr = exec_result.get("stderr", "")
 
         # Output is already strings from exec_run
-        stdout_str = stdout if stdout else ""
-        stderr_str = stderr if stderr else ""
+        stdout_str = stdout or ""
+        stderr_str = stderr or ""
 
         # Combine output
         output = stdout_str + "\n" + stderr_str

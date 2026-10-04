@@ -32,7 +32,7 @@ async def get_model_info_fs(model_name: str, pagination: PaginationParams | None
             **({"relation": f.get("relation")} if f.get("relation") else {}),
         }
 
-    result = {
+    return {
         "name": model_name,
         "table": None,
         "description": meta.get("description") or "",
@@ -53,4 +53,3 @@ async def get_model_info_fs(model_name: str, pagination: PaginationParams | None
         "mode_used": "fs",
         "data_quality": "approximate",
     }
-    return result

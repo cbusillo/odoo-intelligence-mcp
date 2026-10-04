@@ -30,7 +30,7 @@ class TestModelInfoIntegration:
 
         # Check that at least one field exists and has proper structure
         if result["fields"]:
-            first_field_name = list(result["fields"].keys())[0]
+            first_field_name = next(iter(result["fields"].keys()))
             first_field = result["fields"][first_field_name]
             assert "type" in first_field
             assert "string" in first_field

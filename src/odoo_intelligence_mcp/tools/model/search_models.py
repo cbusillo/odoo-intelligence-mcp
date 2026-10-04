@@ -61,10 +61,7 @@ result = {{
     result = await env.execute_code(code)
 
     # Extract the actual result data from execute_code response
-    if "result" in result and isinstance(result["result"], dict):
-        data = result["result"]
-    else:
-        data = result
+    data = result["result"] if "result" in result and isinstance(result["result"], dict) else result
 
     if pagination and "exact_matches" in data:
         # Combine all matches for pagination

@@ -85,7 +85,7 @@ class TestModelInspector:
     ) -> None:
         mock_env.__contains__.return_value = False
 
-        with pytest.raises(ServiceValidationError, match="Model 'invalid.model' not found"):
+        with pytest.raises(ServiceValidationError, match=r"Model 'invalid.model' not found"):
             await model_inspector.get_comprehensive_model_analysis("invalid.model")
 
     @pytest.mark.asyncio
@@ -239,7 +239,7 @@ class TestModelInspector:
         async def test_func() -> None:
             raise ServiceValidationError("Test validation error")
 
-        with pytest.raises(ServiceValidationError, match="Test validation error"):
+        with pytest.raises(ServiceValidationError, match=r"Test validation error"):
             await model_inspector._safe_execute("test operation", test_func)
 
     @pytest.mark.asyncio
@@ -247,7 +247,7 @@ class TestModelInspector:
         async def test_func() -> None:
             raise ValueError("Test error")
 
-        with pytest.raises(ServiceExecutionError, match="Failed to execute test operation in ModelInspector"):
+        with pytest.raises(ServiceExecutionError, match=r"Failed to execute test operation in ModelInspector"):
             await model_inspector._safe_execute("test operation", test_func)
 
     def test_cache_operations(self, model_inspector: ModelInspector) -> None:

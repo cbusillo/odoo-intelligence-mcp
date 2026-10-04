@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -82,7 +82,7 @@ def handle_tool_error[T](func: T) -> T:
             # For unexpected errors, provide a generic response
             return create_error_response(e)
 
-    return wrapper  # type: ignore
+    return cast("T", wrapper)
 
 
 def validate_model_name(model_name: str) -> None:

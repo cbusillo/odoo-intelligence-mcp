@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+import pytest
+
 from odoo_intelligence_mcp.core import env as env_module
 
 if TYPE_CHECKING:
@@ -19,7 +21,7 @@ def test_find_project_repo_root_should_find_sibling_odoo_ai(tmp_path: Path) -> N
     assert env_module._find_project_repo_root(start_dir) == target_repo
 
 
-def test_resolve_stack_env_file_should_prefer_platform_runtime_env(monkeypatch, tmp_path: Path) -> None:
+def test_resolve_stack_env_file_should_prefer_platform_runtime_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     workspace_root = tmp_path / "Developer"
     mcp_repo = workspace_root / "odoo-intelligence-mcp"
     mcp_repo.mkdir(parents=True)

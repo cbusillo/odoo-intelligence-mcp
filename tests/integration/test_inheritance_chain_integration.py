@@ -145,7 +145,7 @@ class TestInheritanceChainIntegration:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_analyze_inheritance_chain_nonexistent_model(self, real_odoo_env_if_available: CompatibleEnvironment) -> None:
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception, match="not found") as exc_info:
             await analyze_inheritance_chain(real_odoo_env_if_available, "nonexistent.model")
 
         assert "not found" in str(exc_info.value)
