@@ -105,3 +105,19 @@ result = count1 + count2  # This should now work - no more coroutines
 if __name__ == "__main__":
     # Run the tests to demonstrate the issues
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.asyncio
+async def test_docker_execution_allows_event_loop_progress(test_env: HostOdooEnvironment, monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    import threading
+
+    loop_progressed = threading.Event()
+
+    def execute_until_loop_progresses(code: str) -> bool:
+        return loop_progressed.wait(timeout=1)
+
+    monkeypatch.setattr(test_env, "_execute_code", execute_until_loop_progresses)
+    asyncio.get_running_loop().call_soon(loop_progressed.set)
+    result = await test_env.execute_code("result = True")
+    assert result is True

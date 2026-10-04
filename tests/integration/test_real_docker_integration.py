@@ -168,22 +168,30 @@ async def test_environment_isolation() -> None:
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_concurrent_requests_handling() -> None:
-    # Test that concurrent requests don't interfere
     import asyncio
+    import json
+    import re
+    import subprocess
+
+    default_response = MockDockerRun()
+
+    def respond_to_request(command: list[str], *arguments: Any, **keyword_arguments: Any) -> object:
+        code = keyword_arguments.get("input", "")
+        model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+        if "shell" in command and model_match:
+            return subprocess.CompletedProcess(command, 0, json.dumps({"model": model_match.group(1)}), "")
+        return default_response(command, *arguments, **keyword_arguments)
 
     async def make_request(model_name: str) -> dict[str, Any]:
-        with patch("subprocess.run", MockDockerRun(custom_response={"stdout": f'{{"model": "{model_name}"}}'})):
-            result = await handle_call_tool("model_query", {"operation": "info", "model_name": model_name})
-            import json
+        result = await handle_call_tool("model_query", {"operation": "info", "model_name": model_name})
+        return json.loads(result[0].text)
 
-            return json.loads(result[0].text)
-
-    # Make concurrent requests
-    results = await asyncio.gather(
-        make_request("res.partner"),
-        make_request("product.template"),
-        make_request("sale.order"),
-    )
+    with patch("subprocess.run", respond_to_request):
+        results = await asyncio.gather(
+            make_request("res.partner"),
+            make_request("product.template"),
+            make_request("sale.order"),
+        )
 
     # Each should have the correct model
     assert results[0]["model"] == "res.partner"
