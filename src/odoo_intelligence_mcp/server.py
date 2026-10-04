@@ -11,6 +11,7 @@ from mcp.types import CallToolRequestParams, CallToolResult, ListToolsResult, Pa
 
 from .core.env import HostOdooEnvironmentManager
 from .core.utils import (
+    DEFAULT_PAGE_SIZE,
     PaginationParams,
     add_pagination_to_schema,
     get_optional_bool,
@@ -161,7 +162,7 @@ def _missing_field_type_response() -> dict[str, object]:
 async def _handle_model_info(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
     # Use smaller default page size to prevent huge responses
-    if pagination.page_size == 100 and "page_size" not in arguments:
+    if pagination.page_size == DEFAULT_PAGE_SIZE and "page_size" not in arguments:
         pagination.page_size = 25
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
     model_name = get_required(arguments, "model_name")
@@ -185,7 +186,7 @@ async def _handle_model_info(env: CompatibleEnvironment, arguments: dict[str, ob
 async def _handle_search_models(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     pagination = PaginationParams.from_arguments(arguments)
     # Use smaller default page size to prevent huge responses
-    if pagination.page_size == 100 and "page_size" not in arguments:
+    if pagination.page_size == DEFAULT_PAGE_SIZE and "page_size" not in arguments:
         pagination.page_size = 25
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
     if mode == "fs":
@@ -241,7 +242,7 @@ async def _handle_pattern_analysis(env: CompatibleEnvironment, arguments: dict[s
     pattern_type = get_optional_str(arguments, "pattern_type", "all")
     pagination = PaginationParams.from_arguments(arguments)
     # Use smaller default page size to prevent huge responses
-    if pagination.page_size == 100 and "page_size" not in arguments:
+    if pagination.page_size == DEFAULT_PAGE_SIZE and "page_size" not in arguments:
         pagination.page_size = 25
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
     if mode == "fs":
@@ -468,18 +469,38 @@ async def _handle_model_query(env: CompatibleEnvironment, arguments: dict[str, o
         return {"success": False, "error": f"Unknown operation: {operation}"}
 
 
+async def _handle_field_list(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
+    # alias: list -> flatten fields of model_name
+    model_name = get_required(arguments, "model_name")
+    info = await _handle_model_info(env, {**arguments, "model_name": model_name})
+    if isinstance(info, dict) and "error" in info:
+        return info
+    fields_dict = info.get("fields", {}) if isinstance(info, dict) else {}
+    items = []
+    if isinstance(fields_dict, dict):
+        for fname, fdata in fields_dict.items():
+            entry = {"name": fname}
+            if isinstance(fdata, dict):
+                for k in ("type", "string", "required", "store", "relation"):
+                    if k in fdata:
+                        entry[k] = fdata[k]
+            items.append(entry)
+    pagination = PaginationParams.from_arguments(arguments)
+    from .core.utils import paginate_dict_list
+
+    return {"model": model_name, "fields": paginate_dict_list(items, pagination, ["name", "type", "string"]).to_dict()}
+
+
 async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, object]) -> object:
     operation = get_required(arguments, "operation")
-    if operation == "values":
-        operation = "analyze_values"
-    elif operation == "dynamic":
-        operation = "resolve_dynamic"
-    elif operation == "deps":
-        operation = "dependencies"
-    elif operation == "properties":
-        operation = "search_properties"
-    elif operation == "type":
-        operation = "search_type"
+    aliases = {
+        "values": "analyze_values",
+        "dynamic": "resolve_dynamic",
+        "deps": "dependencies",
+        "properties": "search_properties",
+        "type": "search_type",
+    }
+    operation = aliases.get(operation, operation)
     mode = get_optional_str(arguments, "mode", "auto") or "auto"
 
     if operation == "usages":
@@ -508,25 +529,7 @@ async def _handle_field_query(env: CompatibleEnvironment, arguments: dict[str, o
             return await search_field_type_fs(field_type, pagination)
         return await _handle_search_field_type(env, arguments)
     elif operation == "list":
-        # alias: list -> flatten fields of model_name
-        model_name = get_required(arguments, "model_name")
-        info = await _handle_model_info(env, {**arguments, "model_name": model_name})
-        if isinstance(info, dict) and "error" in info:
-            return info
-        fields_dict = info.get("fields", {}) if isinstance(info, dict) else {}
-        items = []
-        if isinstance(fields_dict, dict):
-            for fname, fdata in fields_dict.items():
-                entry = {"name": fname}
-                if isinstance(fdata, dict):
-                    for k in ("type", "string", "required", "store", "relation"):
-                        if k in fdata:
-                            entry[k] = fdata[k]
-                items.append(entry)
-        pagination = PaginationParams.from_arguments(arguments)
-        from .core.utils import paginate_dict_list
-
-        return {"model": model_name, "fields": paginate_dict_list(items, pagination, ["name", "type", "string"]).to_dict()}
+        return await _handle_field_list(env, arguments)
     else:
         return {"success": False, "error": f"Unknown operation: {operation}"}
 
