@@ -1,4 +1,5 @@
 import sys
+from subprocess import CompletedProcess
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -8,6 +9,13 @@ from odoo_intelligence_mcp import cli
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.fixture
+def cli_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    (tmp_path / "ruff.toml").write_text('respect-gitignore = false\n[lint]\nselect = ["E701", "F821"]\n')
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
 
 
 class TestCLIFunctions:
@@ -20,12 +28,38 @@ class TestCLIFunctions:
         assert exc_info.value.code == returncode
         assert mock_run.call_args[0][0][:3] == [sys.executable, "-m", "pytest"]
 
-    @patch("odoo_intelligence_mcp.cli.subprocess.run")
-    def test_check_formats_before_linting(self, mock_run: MagicMock) -> None:
-        with patch("odoo_intelligence_mcp.cli.format_code") as mock_format:
+    @pytest.mark.parametrize("returncode", [0, 1, 19])
+    def test_format_propagates_failure(self, returncode: int) -> None:
+        with patch.object(cli.subprocess, "run", return_value=CompletedProcess([], returncode)) as mock_run:
+            if returncode:
+                with pytest.raises(SystemExit) as exception:
+                    cli.format_code()
+                assert exception.value.code == returncode
+            else:
+                cli.format_code()
+        mock_run.assert_called_once()
+
+    @pytest.mark.parametrize(
+        ("formatter_returncode", "lint_returncode"),
+        [(0, 0), (0, 19), (7, 0), (7, 19)],
+    )
+    def test_check_propagates_first_failure(self, formatter_returncode: int, lint_returncode: int) -> None:
+        outcomes = [CompletedProcess([], formatter_returncode), CompletedProcess([], lint_returncode)]
+        with patch.object(cli.subprocess, "run", side_effect=outcomes) as mock_run, pytest.raises(SystemExit) as exception:
             cli.check()
-            mock_format.assert_called_once()
-            assert mock_run.call_args[0][0][:3] == [sys.executable, "-m", "ruff"]
+        assert exception.value.code == (formatter_returncode or lint_returncode)
+        assert mock_run.call_count == (1 if formatter_returncode else 2)
+
+    @pytest.mark.parametrize(("expression", "returncode"), [("1", 0), ("missing_name", 1)])
+    def test_check_formats_source_and_lints_it(self, cli_workspace: Path, expression: str, returncode: int) -> None:
+        source_file = cli_workspace / "module.py"
+        source_file.write_text(f"if True: answer={expression}\n")
+
+        with pytest.raises(SystemExit) as exception:
+            cli.check()
+
+        assert exception.value.code == returncode
+        assert source_file.read_text() == f"if True:\n    answer = {expression}\n"
 
     def test_clean_removes_generated_artifacts_and_keeps_sources(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         source_file = tmp_path / "src" / "package" / "module.py"

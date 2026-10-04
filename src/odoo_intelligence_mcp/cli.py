@@ -54,12 +54,15 @@ def test_live_cov() -> None:
 
 
 def format_code() -> None:
-    subprocess.run([sys.executable, "-m", "ruff", "format", "."])
+    result = subprocess.run([sys.executable, "-m", "ruff", "format", "."])
+    if result.returncode:
+        sys.exit(result.returncode)
 
 
 def check() -> None:
     format_code()
-    subprocess.run([sys.executable, "-m", "ruff", "check", "."])
+    result = subprocess.run([sys.executable, "-m", "ruff", "check", "."])
+    sys.exit(result.returncode)
 
 
 def clean() -> None:
