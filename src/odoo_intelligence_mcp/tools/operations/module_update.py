@@ -1,11 +1,12 @@
-import asyncio
 import json
 import re
 import subprocess
 import textwrap
+from functools import partial
 from typing import Any
 
 from ...core.env import load_env_config
+from ...utils.execution_utils import run_docker_operation
 
 
 def _parse_missing_modules(output: str) -> list[str]:
@@ -21,7 +22,7 @@ def _parse_missing_modules(output: str) -> list[str]:
 
 
 async def odoo_update_module(modules: str, force_install: bool = False) -> dict[str, Any]:
-    return await asyncio.to_thread(_odoo_update_module, modules, force_install)
+    return await run_docker_operation(partial(_odoo_update_module, modules, force_install))
 
 
 def _odoo_update_module(modules: str, force_install: bool = False) -> dict[str, Any]:

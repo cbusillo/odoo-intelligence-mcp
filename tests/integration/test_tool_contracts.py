@@ -383,3 +383,40 @@ class TestToolPerformanceContracts:
                 assert len(content["matches"]["items"]) <= 100
             if "matches" in content and "pagination" in content["matches"]:
                 assert content["matches"]["pagination"]["page_size"] <= 100
+
+
+@pytest.mark.asyncio
+async def test_shared_runtime_tool_calls_do_not_overlap(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    from odoo_intelligence_mcp import server
+
+    first_started = asyncio.Event()
+    first_finished = asyncio.Event()
+    second_started = asyncio.Event()
+    mock_env = AsyncMock()
+    mock_env.cr = None
+
+    async def execute_tool(env: object, arguments: dict[str, object]) -> dict[str, object]:
+        if arguments["first"]:
+            first_started.set()
+            await first_finished.wait()
+        else:
+            second_started.set()
+        return {"success": True}
+
+    monkeypatch.setitem(server.TOOL_HANDLERS, "serialization_probe", execute_tool)
+    monkeypatch.setattr(server.odoo_env_manager, "get_environment", AsyncMock(return_value=mock_env))
+    first_request = asyncio.create_task(handle_call_tool("serialization_probe", {"first": True}))
+    second_request = None
+    try:
+        await first_started.wait()
+        second_request = asyncio.create_task(handle_call_tool("serialization_probe", {"first": False}))
+        await asyncio.sleep(0)
+        assert not second_started.is_set()
+    finally:
+        first_finished.set()
+        await first_request
+        if second_request is not None:
+            await second_request
+    assert second_started.is_set()

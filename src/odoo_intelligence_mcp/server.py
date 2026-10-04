@@ -3,6 +3,7 @@ import json
 import logging
 from importlib.metadata import version
 from typing import TYPE_CHECKING
+from weakref import WeakKeyDictionary
 
 from jsonschema import ValidationError, validate
 from mcp.server import Server
@@ -53,6 +54,8 @@ if TYPE_CHECKING:
     from .type_defs.odoo_types import CompatibleEnvironment
 
 logger = logging.getLogger(__name__)
+
+tool_call_locks: WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock] = WeakKeyDictionary()
 
 odoo_env_manager = HostOdooEnvironmentManager(lazy=True)
 
@@ -767,6 +770,13 @@ async def handle_list_tools() -> list[Tool]:
 
 
 async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> list[TextContent]:
+    event_loop = asyncio.get_running_loop()
+    tool_call_lock = tool_call_locks.setdefault(event_loop, asyncio.Lock())
+    async with tool_call_lock:
+        return await _handle_call_tool(name, arguments)
+
+
+async def _handle_call_tool(name: str, arguments: dict[str, object] | None) -> list[TextContent]:
     if arguments is None:
         arguments = {}  # Default to empty dict for tools with all optional parameters
 

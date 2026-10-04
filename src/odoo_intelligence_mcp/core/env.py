@@ -1,11 +1,10 @@
-import asyncio
 import json
 import logging
 import os
 import re
 import subprocess
 import textwrap
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ..type_defs.odoo_types import Field, Model, Registry
 from ..utils.error_utils import CodeExecutionError, DockerConnectionError, EnvironmentResolutionError
+from ..utils.execution_utils import run_docker_operation
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Iterator
@@ -1053,7 +1053,7 @@ class HostOdooEnvironment:
             return {"output": output, "raw": True}
 
     async def execute_code(self, code: str) -> dict[str, object] | str | int | float | bool | None:
-        return await asyncio.to_thread(self._execute_code, code)
+        return await run_docker_operation(partial(self._execute_code, code))
 
     def _get_docker_run_error(self, process: subprocess.CompletedProcess[str]) -> str:
         if "executable file not found" in process.stderr:

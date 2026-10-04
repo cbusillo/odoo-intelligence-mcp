@@ -1,8 +1,9 @@
-import asyncio
+from functools import partial
 from typing import Any
 
 from ...core.env import load_env_config
 from ...utils.docker_utils import DockerClientManager
+from ...utils.execution_utils import run_docker_operation
 from ...utils.response_utils import ResponseBuilder
 
 
@@ -28,7 +29,7 @@ def _get_verbose_container_info(inspect_payload: object, state_data: dict[str, A
 
 
 async def odoo_status(verbose: bool = False) -> dict[str, Any]:
-    return await asyncio.to_thread(_odoo_status, verbose)
+    return await run_docker_operation(partial(_odoo_status, verbose))
 
 
 def _odoo_status(verbose: bool = False) -> dict[str, Any]:
