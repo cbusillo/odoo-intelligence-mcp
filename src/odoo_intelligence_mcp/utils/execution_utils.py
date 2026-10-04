@@ -13,18 +13,18 @@ DOCKER_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="odoo-doc
 async def run_docker_operation[T](operation: Callable[[], T]) -> T:
     worker_future = DOCKER_EXECUTOR.submit(operation)
     operation_future = asyncio.wrap_future(worker_future)
-    cancelled = False
+    cancellation: asyncio.CancelledError | None = None
     while not operation_future.done():
-        with anyio.CancelScope(shield=cancelled):
+        with anyio.CancelScope(shield=cancellation is not None):
             try:
                 await asyncio.shield(operation_future)
-            except asyncio.CancelledError:
+            except asyncio.CancelledError as error:
                 if worker_future.cancel():
                     raise
-                cancelled = True
+                cancellation = cancellation or error
             except Exception:
                 break
     operation_future.exception()
-    if cancelled:
-        raise asyncio.CancelledError
+    if cancellation is not None:
+        raise cancellation
     return operation_future.result()

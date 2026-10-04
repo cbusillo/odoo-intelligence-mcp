@@ -21,15 +21,15 @@ async def test_cancelled_docker_call_finishes_before_releasing_its_caller() -> N
     request = asyncio.create_task(run_docker_operation(execute_operation))
     try:
         assert await asyncio.to_thread(operation_started.wait, 1)
-        request.cancel()
+        request.cancel("caller cancelled")
         await asyncio.sleep(0)
-        request.cancel()
+        request.cancel("cancelled again")
         await asyncio.sleep(0)
         assert not request.done()
         assert not operation_finished.is_set()
     finally:
         finish_operation.set()
-        with pytest.raises(asyncio.CancelledError):
+        with pytest.raises(asyncio.CancelledError, match="caller cancelled"):
             await request
     assert operation_finished.is_set()
 
@@ -86,8 +86,8 @@ async def test_anyio_cancellation_does_not_repeat_while_docker_finishes() -> Non
         assert not request.done()
     finally:
         finish_operation.set()
-        with pytest.raises(asyncio.CancelledError):
-            await request
+        await request
+    assert scope.cancelled_caught
 
 
 @pytest.mark.asyncio
