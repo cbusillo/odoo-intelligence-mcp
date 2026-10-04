@@ -11,6 +11,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.fixture
+def cli_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    (tmp_path / "ruff.toml").write_text('[lint]\nselect = ["E701", "F821"]\n')
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
 class TestCLIFunctions:
     @pytest.mark.parametrize("returncode", [0, 1, 5])
     @patch("odoo_intelligence_mcp.cli.subprocess.run")
@@ -43,16 +50,16 @@ class TestCLIFunctions:
         assert exception.value.code == (formatter_returncode or lint_returncode)
         assert mock_run.call_count == (1 if formatter_returncode else 2)
 
-    def test_check_formats_source_and_lints_it(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        source_file = tmp_path / "module.py"
-        source_file.write_text("if True: answer=1\n")
-        monkeypatch.chdir(tmp_path)
+    @pytest.mark.parametrize(("expression", "returncode"), [("1", 0), ("missing_name", 1)])
+    def test_check_formats_source_and_lints_it(self, cli_workspace: Path, expression: str, returncode: int) -> None:
+        source_file = cli_workspace / "module.py"
+        source_file.write_text(f"if True: answer={expression}\n")
 
         with pytest.raises(SystemExit) as exception:
             cli.check()
 
-        assert exception.value.code == 0
-        assert source_file.read_text() == "if True:\n    answer = 1\n"
+        assert exception.value.code == returncode
+        assert source_file.read_text() == f"if True:\n    answer = {expression}\n"
 
     def test_clean_removes_generated_artifacts_and_keeps_sources(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         source_file = tmp_path / "src" / "package" / "module.py"
