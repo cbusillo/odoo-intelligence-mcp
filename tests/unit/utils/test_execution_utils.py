@@ -54,3 +54,64 @@ async def test_docker_operation_failure_reaches_its_caller() -> None:
 
     with pytest.raises(RuntimeError, match="Docker failed"):
         await run_docker_operation(execute_operation)
+
+
+@pytest.mark.asyncio
+async def test_anyio_cancellation_does_not_repeat_while_docker_finishes() -> None:
+    import anyio
+
+    operation_started = threading.Event()
+    finish_operation = threading.Event()
+    scope_ready = asyncio.get_running_loop().create_future()
+
+    def execute_operation() -> None:
+        operation_started.set()
+        assert finish_operation.wait(timeout=2)
+
+    async def execute_request() -> None:
+        with anyio.CancelScope() as scope:
+            scope_ready.set_result(scope)
+            await run_docker_operation(execute_operation)
+
+    request = asyncio.create_task(execute_request())
+    try:
+        scope = await scope_ready
+        assert await asyncio.to_thread(operation_started.wait, 1)
+        scope.cancel()
+        await asyncio.sleep(0)
+        cancellation_count = request.cancelling()
+        for _ in range(30):
+            await asyncio.sleep(0)
+        assert request.cancelling() == cancellation_count
+        assert not request.done()
+    finally:
+        finish_operation.set()
+        with pytest.raises(asyncio.CancelledError):
+            await request
+
+
+@pytest.mark.asyncio
+async def test_cancelled_queued_docker_operation_never_starts() -> None:
+    operation_started = threading.Event()
+    finish_operation = threading.Event()
+    queued_operation_started = threading.Event()
+
+    def execute_operation() -> None:
+        operation_started.set()
+        assert finish_operation.wait(timeout=2)
+
+    first_request = asyncio.create_task(run_docker_operation(execute_operation))
+    queued_request = None
+    try:
+        assert await asyncio.to_thread(operation_started.wait, 1)
+        queued_request = asyncio.create_task(run_docker_operation(queued_operation_started.set))
+        await asyncio.sleep(0)
+        queued_request.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await queued_request
+    finally:
+        finish_operation.set()
+        await first_request
+        if queued_request is not None and not queued_request.done():
+            await queued_request
+    assert not queued_operation_started.is_set()

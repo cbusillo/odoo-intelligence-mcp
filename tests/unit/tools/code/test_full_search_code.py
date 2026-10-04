@@ -137,14 +137,22 @@ async def test_search_code_javascript_files() -> None:
 
 
 @pytest.mark.asyncio
-async def test_search_code_trailing_slash_keeps_relative_roots_under_addons() -> None:
+@pytest.mark.parametrize(
+    ("addons_path", "expected_roots"),
+    [
+        ("/opt/project/addons/", ["/opt/project/addons/models"]),
+        ("/addons", ["/addons/models", "/models"]),
+        ("addons", ["addons/models"]),
+    ],
+)
+async def test_search_code_relative_roots_preserve_parent_expansion(addons_path: str, expected_roots: list[str]) -> None:
     with (
         patch("odoo_intelligence_mcp.tools.code.search_code.load_env_config") as mock_config,
         patch("odoo_intelligence_mcp.tools.code.search_code.DockerClientManager") as mock_manager,
     ):
-        mock_config.return_value.addons_path = "/opt/project/addons/"
+        mock_config.return_value.addons_path = addons_path
         mock_config.return_value.web_container = "odoo-web-1"
         mock_manager.return_value.exec_run.return_value = {"success": True, "stdout": "[]"}
         result = await search_code("create", roots=["models"])
-    assert result["roots"] == ["/opt/project/addons/models"]
+    assert result["roots"] == expected_roots
     assert result["meta"]["resolved_roots"] == result["roots"]
