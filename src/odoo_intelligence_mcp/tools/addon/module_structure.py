@@ -78,7 +78,7 @@ if manifest_path.exists():
 for python_file in module_path.rglob("*.py"):
     relative_path = python_file.relative_to(module_path)
     category = relative_path.parts[0] if relative_path.parts else ""
-    
+
     if category == "models":
         structure["models"].append(str(relative_path))
     elif category == "controllers":

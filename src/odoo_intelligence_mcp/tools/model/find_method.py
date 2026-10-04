@@ -1,9 +1,11 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ...utils.error_utils import handle_tool_error, validate_method_name
 from ..ast import build_ast_index
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 @handle_tool_error
@@ -119,14 +121,14 @@ batch_size = 50
 for batch_start in range(0, len(model_names), batch_size):
     batch_end = min(batch_start + batch_size, len(model_names))
     batch_models = model_names[batch_start:batch_end]
-    
+
     for model_name in batch_models:
         try:
             model = env[model_name]
             model_class = type(model)
             modules = module_map.get(model_name, "")
             model_module = getattr(model, "_module", "") or ""
-            
+
             # Check in the entire MRO (Method Resolution Order) to find inherited methods
             method_found = False
             method = None
@@ -136,7 +138,7 @@ for batch_start in range(0, len(model_names), batch_size):
                     if callable(method):
                         method_found = True
                         break
-            
+
             if method_found and method:
                 # Get method info with safe serialization
                 try:
@@ -207,21 +209,21 @@ for batch_start in range(0, len(model_names), batch_size):
                         "source_preview": source_preview,
                         "has_super": "super()" in source_preview if source_preview != "Source not available" else False,
                     })
-                
+
                 # Early exit to prevent memory issues - limit total results during collection
                 if max_results is not None and len(implementations) >= max_results:  # Use pagination limit
                     break
         except Exception:
             continue
-        
+
         # Check if we need to break out of outer batch loop too
         if max_results is not None and len(implementations) >= max_results:
             break
-    
+
     # Garbage collect after each batch
     if batch_start % 100 == 0:
         gc.collect()
-    
+
     # Early termination if we have enough results
     if max_results is not None and len(implementations) >= max_results:
         break

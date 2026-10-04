@@ -1,7 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ...type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 VALID_PATTERN_TYPES = [
     "computed_fields",
@@ -95,7 +97,7 @@ processed_count = 0
 for batch_start in range(0, len(model_names), batch_size):
     batch_end = min(batch_start + batch_size, len(model_names))
     batch_models = model_names[batch_start:batch_end]
-    
+
     for model_name in batch_models:
         try:
             model = env[model_name]
@@ -104,7 +106,7 @@ for batch_start in range(0, len(model_names), batch_size):
 
             # Use model._fields to access field objects directly
             # This gives us access to the actual field attributes
-            
+
             # Collect computed fields
             for field_name, field in model._fields.items():
                 if hasattr(field, 'compute') and field.compute:
@@ -202,7 +204,7 @@ for batch_start in range(0, len(model_names), batch_size):
                         })
         except Exception:
             continue
-    
+
     # Garbage collect after each batch to free memory
     processed_count += len(batch_models)
     if processed_count % 100 == 0:

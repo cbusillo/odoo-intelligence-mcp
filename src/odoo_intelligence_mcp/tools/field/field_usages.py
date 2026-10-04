@@ -1,8 +1,10 @@
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from ...core.utils import PaginationParams, paginate_dict_list
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ...utils.error_utils import handle_tool_error, validate_field_name, validate_model_name
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 class FieldInfo(TypedDict):

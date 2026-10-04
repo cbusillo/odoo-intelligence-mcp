@@ -1,7 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ...core.utils import PaginationParams
 from ..common.fs_utils import ensure_pagination, get_models_index, not_found
+
+if TYPE_CHECKING:
+    from ...core.utils import PaginationParams
 
 
 async def get_model_info_fs(model_name: str, pagination: PaginationParams | None = None) -> dict[str, Any]:

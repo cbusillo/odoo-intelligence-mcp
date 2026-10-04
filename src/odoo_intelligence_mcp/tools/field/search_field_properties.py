@@ -1,8 +1,10 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ._common import execute_and_paginate_results
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def search_field_properties(
@@ -33,7 +35,7 @@ for model_name in model_names:
 
         # Use model._fields to access field objects directly
         matching_fields = []
-        
+
         for field_name, field in model._fields.items():
             field_matches = False
 
