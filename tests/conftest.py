@@ -334,6 +334,315 @@ def _get_special_values_response(code: str) -> dict[str, Any] | None:
     return None
 
 
+def _get_model_info_response(code: str) -> dict[str, Any] | None:
+    if "model._table" in code and "model._description" in code and "sorted(model._fields.keys())" in code:
+        # Check for invalid model
+        if "invalid.model" in code or "nonexistent.model" in code:
+            return {"error": "Model nonexistent.model not found" if "nonexistent.model" in code else "Model invalid.model not found"}
+
+        model_name = (
+            "res.partner"
+            if "res.partner" in code
+            else "product.template"
+            if "product.template" in code
+            else "sale.order"
+            if "sale.order" in code
+            else "account.move"
+        )
+
+        return {
+            "name": model_name,
+            "model": model_name,
+            "table": model_name.replace(".", "_"),
+            "description": f"{model_name.rsplit('.', maxsplit=1)[-1].title().replace('_', ' ')} Model",
+            "rec_name": "name",
+            "order": "id",
+            "total_field_count": 3,
+            "fields": {
+                "id": {"type": "integer", "string": "ID", "required": False, "readonly": True, "store": True},
+                "name": {"type": "char", "string": "Name", "required": True, "readonly": False, "store": True},
+                "email": {"type": "char", "string": "Email", "required": False, "readonly": False, "store": True},
+            },
+            "displayed_field_count": 3,
+            "pagination": {"page": 1, "page_size": 25, "total_count": 3, "has_next": False, "has_previous": False},
+            "methods_sample": ["create", "write", "unlink", "search", "read"],
+            "total_method_count": 20,
+            "_inherit": ["mail.thread", "mail.activity.mixin"] if model_name == "account.move" else [],
+            "decorators": {"api.depends": 2, "api.constrains": 1} if model_name == "product.template" else {},
+        }
+    return None
+
+
+def _get_field_usages_response(code: str) -> dict[str, Any] | None:
+    if "fields_info = model.fields_get()" in code and "views_using_field" in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        # Check for invalid field
+        if "nonexistent_field" in code:
+            return {"error": "Field nonexistent_field not found in product.template"}
+
+        model_name = (
+            "product.template"
+            if "product.template" in code
+            else "sale.order.line"
+            if "sale.order.line" in code
+            else "sale.order"
+            if "sale.order" in code
+            else "res.partner"
+        )
+        field_name = (
+            "name"
+            if "'name'" in code
+            else "product_id"
+            if "'product_id'" in code
+            else "amount_total"
+            if "'amount_total'" in code
+            else "email"
+        )
+
+        return {
+            "model": model_name,
+            "field": field_name,
+            "field_info": {
+                "type": "char" if field_name == "name" else "many2one" if field_name == "product_id" else "float",
+                "string": "Name" if field_name == "name" else "Product" if field_name == "product_id" else "Total",
+                "required": field_name == "name",
+                "readonly": False,
+                "store": True,
+            },
+            "field_type": "char" if field_name == "name" else "many2one" if field_name == "product_id" else "float",
+            "used_in_views": [
+                {"id": 1, "name": "Form View", "type": "form", "model": model_name},
+                {"id": 2, "name": "Tree View", "type": "tree", "model": model_name},
+            ],
+            "used_in_domains": [],
+            "used_in_methods": [{"method": "compute_display_name", "type": "depends"}],
+            "usage_summary": {
+                "view_count": 2,
+                "domain_count": 0,
+                "method_count": 1,
+                "total_usages": 3,
+            },
+        }
+    return None
+
+
+def _get_relationships_response(code: str) -> dict[str, Any] | None:
+    if "many2one_fields = []" in code and "one2many_fields = []" in code and "many2many_fields = []" in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        model_name = (
+            "sale.order"
+            if "sale.order" in code
+            else "sale.order.line"
+            if "sale.order.line" in code
+            else "res.partner"
+            if "res.partner" in code
+            else "product.template"
+        )
+
+        return {
+            "model": model_name,
+            "many2one_fields": [
+                {
+                    "field_name": "partner_id",
+                    "target_model": "res.partner",
+                    "string": "Customer",
+                    "required": True,
+                    "ondelete": "restrict",
+                },
+                {
+                    "field_name": "user_id",
+                    "target_model": "res.users",
+                    "string": "Salesperson",
+                    "required": False,
+                    "ondelete": "set null",
+                },
+            ],
+            "one2many_fields": [
+                {
+                    "field_name": "order_line",
+                    "target_model": "sale.order.line",
+                    "inverse_field": "order_id",
+                    "string": "Order Lines",
+                },
+            ],
+            "many2many_fields": [
+                {"field_name": "tag_ids", "target_model": "crm.tag", "relation_table": "sale_order_tag_rel", "string": "Tags"},
+            ],
+            "reverse_many2one": [],
+            "reverse_one2many": [],
+            "reverse_many2many": [],
+            "relationship_summary": {
+                "many2one_count": 2,
+                "one2many_count": 1,
+                "many2many_count": 1,
+                "total_relationships": 4,
+                "reverse_many2one_count": 0,
+                "reverse_one2many_count": 0,
+                "reverse_many2many_count": 0,
+            },
+        }
+    return None
+
+
+def _get_search_models_response(code: str) -> dict[str, Any] | None:
+    if "exact_matches = []" in code and "partial_matches = []" in code and "description_matches = []" in code:
+        pattern = next(
+            (name for name in ("res.partner", "sale", "partner", "product", "account", "xyznomatch") if f"'{name}'" in code),
+            None,
+        )
+
+        if pattern == "xyznomatch":
+            return {
+                "pattern": pattern,
+                "total_models": 0,
+                "exact_matches": [],
+                "partial_matches": [],
+                "description_matches": [],
+            }
+
+        exact_matches = []
+        partial_matches = []
+        description_matches = []
+
+        if pattern == "res.partner":
+            exact_matches = [
+                {
+                    "name": "res.partner",
+                    "description": "Partner Model",
+                    "table": "res_partner",
+                    "transient": False,
+                    "abstract": False,
+                }
+            ]
+        elif pattern == "sale":
+            partial_matches = [
+                {
+                    "name": "sale.order",
+                    "description": "Sales Order",
+                    "table": "sale_order",
+                    "transient": False,
+                    "abstract": False,
+                },
+                {
+                    "name": "sale.order.line",
+                    "description": "Sales Order Line",
+                    "table": "sale_order_line",
+                    "transient": False,
+                    "abstract": False,
+                },
+            ]
+        elif pattern == "partner":
+            description_matches = [
+                {"name": "res.partner", "description": "Partner", "table": "res_partner", "transient": False, "abstract": False}
+            ]
+        elif pattern == "product":
+            partial_matches = [
+                {
+                    "name": "product.template",
+                    "description": "Product Template",
+                    "table": "product_template",
+                    "transient": False,
+                    "abstract": False,
+                },
+                {
+                    "name": "product.product",
+                    "description": "Product",
+                    "table": "product_product",
+                    "transient": False,
+                    "abstract": False,
+                },
+            ]
+        elif pattern == "account":
+            partial_matches = [
+                {
+                    "name": "account.move",
+                    "description": "Account Move",
+                    "table": "account_move",
+                    "transient": False,
+                    "abstract": False,
+                },
+                {
+                    "name": "account.move.line",
+                    "description": "Account Move Line",
+                    "table": "account_move_line",
+                    "transient": False,
+                    "abstract": False,
+                },
+            ]
+
+        return {
+            "pattern": pattern or "test",
+            "total_models": 100,  # Arbitrary total for testing
+            "exact_matches": exact_matches,
+            "partial_matches": partial_matches,
+            "description_matches": description_matches,
+        }
+    return None
+
+
+def _get_performance_response(code: str) -> dict[str, Any] | None:
+    if "for field_name, field in model._fields.items():" in code and '"performance_issues": issues' in code:
+        # Check for invalid model
+        if "nonexistent.model" in code:
+            return {"error": "Model nonexistent.model not found"}
+
+        model_name = (
+            "sale.order"
+            if "sale.order" in code
+            else "sale.order.line"
+            if "sale.order.line" in code
+            else "product.template"
+            if "product.template" in code
+            else "account.move"
+            if "account.move" in code
+            else "res.partner"
+        )
+
+        issues = []
+        if model_name == "sale.order.line":
+            issues.append(
+                {
+                    "type": "potential_n_plus_1",
+                    "field": "product_id",
+                    "field_type": "many2one",
+                    "description": "Non-stored relational field 'product_id' might cause N+1 queries when accessed in loops",
+                    "severity": "medium",
+                }
+            )
+
+        if model_name == "account.move":
+            issues.append(
+                {
+                    "type": "missing_index",
+                    "field": "date",
+                    "description": "Field 'date' is frequently queried but may lack proper indexing",
+                    "severity": "low",
+                }
+            )
+
+        return {
+            "model": model_name,
+            "performance_issues": issues,
+            "issue_count": len(issues),
+            "recommendations": [
+                "Consider adding database indexes on frequently queried fields",
+                "Use prefetch_fields parameter for related fields in loops",
+                "Batch operations instead of individual record processing",
+                "Store computed fields that are frequently accessed",
+                "Use SQL queries for complex aggregations instead of ORM",
+                "Implement proper caching for expensive computations",
+            ],
+            "field_analysis": {} if model_name != "account.move" else {"analyzed_fields": 10},
+        }
+    return None
+
+
 @pytest.fixture
 def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
     env = MagicMock()
@@ -353,321 +662,16 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             _get_mixed_async_response,
             _get_datetime_response,
             _get_special_values_response,
+            _get_model_info_response,
+            _get_field_usages_response,
+            _get_relationships_response,
+            _get_search_models_response,
+            _get_performance_response,
         )
         for handler in response_handlers:
             response = handler(code)
             if response is not None:
                 return response
-
-        # Handle model_info queries
-        if "model._table" in code and "model._description" in code and "sorted(model._fields.keys())" in code:
-            # Check for invalid model
-            if "invalid.model" in code or "nonexistent.model" in code:
-                return {
-                    "error": "Model nonexistent.model not found" if "nonexistent.model" in code else "Model invalid.model not found"
-                }
-
-            model_name = (
-                "res.partner"
-                if "res.partner" in code
-                else "product.template"
-                if "product.template" in code
-                else "sale.order"
-                if "sale.order" in code
-                else "account.move"
-            )
-
-            return {
-                "name": model_name,
-                "model": model_name,
-                "table": model_name.replace(".", "_"),
-                "description": f"{model_name.rsplit('.', maxsplit=1)[-1].title().replace('_', ' ')} Model",
-                "rec_name": "name",
-                "order": "id",
-                "total_field_count": 3,
-                "fields": {
-                    "id": {"type": "integer", "string": "ID", "required": False, "readonly": True, "store": True},
-                    "name": {"type": "char", "string": "Name", "required": True, "readonly": False, "store": True},
-                    "email": {"type": "char", "string": "Email", "required": False, "readonly": False, "store": True},
-                },
-                "displayed_field_count": 3,
-                "pagination": {"page": 1, "page_size": 25, "total_count": 3, "has_next": False, "has_previous": False},
-                "methods_sample": ["create", "write", "unlink", "search", "read"],
-                "total_method_count": 20,
-                "_inherit": ["mail.thread", "mail.activity.mixin"] if model_name == "account.move" else [],
-                "decorators": {"api.depends": 2, "api.constrains": 1} if model_name == "product.template" else {},
-            }
-
-        # Handle field usage queries
-        if "fields_info = model.fields_get()" in code and "views_using_field" in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            # Check for invalid field
-            if "nonexistent_field" in code:
-                return {"error": "Field nonexistent_field not found in product.template"}
-
-            model_name = (
-                "product.template"
-                if "product.template" in code
-                else "sale.order.line"
-                if "sale.order.line" in code
-                else "sale.order"
-                if "sale.order" in code
-                else "res.partner"
-            )
-            field_name = (
-                "name"
-                if "'name'" in code
-                else "product_id"
-                if "'product_id'" in code
-                else "amount_total"
-                if "'amount_total'" in code
-                else "email"
-            )
-
-            return {
-                "model": model_name,
-                "field": field_name,
-                "field_info": {
-                    "type": "char" if field_name == "name" else "many2one" if field_name == "product_id" else "float",
-                    "string": "Name" if field_name == "name" else "Product" if field_name == "product_id" else "Total",
-                    "required": field_name == "name",
-                    "readonly": False,
-                    "store": True,
-                },
-                "field_type": "char" if field_name == "name" else "many2one" if field_name == "product_id" else "float",
-                "used_in_views": [
-                    {"id": 1, "name": "Form View", "type": "form", "model": model_name},
-                    {"id": 2, "name": "Tree View", "type": "tree", "model": model_name},
-                ],
-                "used_in_domains": [],
-                "used_in_methods": [{"method": "compute_display_name", "type": "depends"}],
-                "usage_summary": {
-                    "view_count": 2,
-                    "domain_count": 0,
-                    "method_count": 1,
-                    "total_usages": 3,
-                },
-            }
-
-        # Handle model relationships queries
-        if "many2one_fields = []" in code and "one2many_fields = []" in code and "many2many_fields = []" in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            model_name = (
-                "sale.order"
-                if "sale.order" in code
-                else "sale.order.line"
-                if "sale.order.line" in code
-                else "res.partner"
-                if "res.partner" in code
-                else "product.template"
-            )
-
-            return {
-                "model": model_name,
-                "many2one_fields": [
-                    {
-                        "field_name": "partner_id",
-                        "target_model": "res.partner",
-                        "string": "Customer",
-                        "required": True,
-                        "ondelete": "restrict",
-                    },
-                    {
-                        "field_name": "user_id",
-                        "target_model": "res.users",
-                        "string": "Salesperson",
-                        "required": False,
-                        "ondelete": "set null",
-                    },
-                ],
-                "one2many_fields": [
-                    {
-                        "field_name": "order_line",
-                        "target_model": "sale.order.line",
-                        "inverse_field": "order_id",
-                        "string": "Order Lines",
-                    },
-                ],
-                "many2many_fields": [
-                    {"field_name": "tag_ids", "target_model": "crm.tag", "relation_table": "sale_order_tag_rel", "string": "Tags"},
-                ],
-                "reverse_many2one": [],
-                "reverse_one2many": [],
-                "reverse_many2many": [],
-                "relationship_summary": {
-                    "many2one_count": 2,
-                    "one2many_count": 1,
-                    "many2many_count": 1,
-                    "total_relationships": 4,
-                    "reverse_many2one_count": 0,
-                    "reverse_one2many_count": 0,
-                    "reverse_many2many_count": 0,
-                },
-            }
-
-        # Handle search_models queries
-        if "exact_matches = []" in code and "partial_matches = []" in code and "description_matches = []" in code:
-            pattern = None
-            if "'res.partner'" in code:
-                pattern = "res.partner"
-            elif "'sale'" in code:
-                pattern = "sale"
-            elif "'partner'" in code:
-                pattern = "partner"
-            elif "'product'" in code:
-                pattern = "product"
-            elif "'account'" in code:
-                pattern = "account"
-            elif "'xyznomatch'" in code:
-                pattern = "xyznomatch"
-
-            if pattern == "xyznomatch":
-                return {
-                    "pattern": pattern,
-                    "total_models": 0,
-                    "exact_matches": [],
-                    "partial_matches": [],
-                    "description_matches": [],
-                }
-
-            exact_matches = []
-            partial_matches = []
-            description_matches = []
-
-            if pattern == "res.partner":
-                exact_matches = [
-                    {
-                        "name": "res.partner",
-                        "description": "Partner Model",
-                        "table": "res_partner",
-                        "transient": False,
-                        "abstract": False,
-                    }
-                ]
-            elif pattern == "sale":
-                partial_matches = [
-                    {
-                        "name": "sale.order",
-                        "description": "Sales Order",
-                        "table": "sale_order",
-                        "transient": False,
-                        "abstract": False,
-                    },
-                    {
-                        "name": "sale.order.line",
-                        "description": "Sales Order Line",
-                        "table": "sale_order_line",
-                        "transient": False,
-                        "abstract": False,
-                    },
-                ]
-            elif pattern == "partner":
-                description_matches = [
-                    {"name": "res.partner", "description": "Partner", "table": "res_partner", "transient": False, "abstract": False}
-                ]
-            elif pattern == "product":
-                partial_matches = [
-                    {
-                        "name": "product.template",
-                        "description": "Product Template",
-                        "table": "product_template",
-                        "transient": False,
-                        "abstract": False,
-                    },
-                    {
-                        "name": "product.product",
-                        "description": "Product",
-                        "table": "product_product",
-                        "transient": False,
-                        "abstract": False,
-                    },
-                ]
-            elif pattern == "account":
-                partial_matches = [
-                    {
-                        "name": "account.move",
-                        "description": "Account Move",
-                        "table": "account_move",
-                        "transient": False,
-                        "abstract": False,
-                    },
-                    {
-                        "name": "account.move.line",
-                        "description": "Account Move Line",
-                        "table": "account_move_line",
-                        "transient": False,
-                        "abstract": False,
-                    },
-                ]
-
-            return {
-                "pattern": pattern or "test",
-                "total_models": 100,  # Arbitrary total for testing
-                "exact_matches": exact_matches,
-                "partial_matches": partial_matches,
-                "description_matches": description_matches,
-            }
-
-        # Handle performance analysis queries
-        if "for field_name, field in model._fields.items():" in code and '"performance_issues": issues' in code:
-            # Check for invalid model
-            if "nonexistent.model" in code:
-                return {"error": "Model nonexistent.model not found"}
-
-            model_name = (
-                "sale.order"
-                if "sale.order" in code
-                else "sale.order.line"
-                if "sale.order.line" in code
-                else "product.template"
-                if "product.template" in code
-                else "account.move"
-                if "account.move" in code
-                else "res.partner"
-            )
-
-            issues = []
-            if model_name == "sale.order.line":
-                issues.append(
-                    {
-                        "type": "potential_n_plus_1",
-                        "field": "product_id",
-                        "field_type": "many2one",
-                        "description": "Non-stored relational field 'product_id' might cause N+1 queries when accessed in loops",
-                        "severity": "medium",
-                    }
-                )
-
-            if model_name == "account.move":
-                issues.append(
-                    {
-                        "type": "missing_index",
-                        "field": "date",
-                        "description": "Field 'date' is frequently queried but may lack proper indexing",
-                        "severity": "low",
-                    }
-                )
-
-            return {
-                "model": model_name,
-                "performance_issues": issues,
-                "issue_count": len(issues),
-                "recommendations": [
-                    "Consider adding database indexes on frequently queried fields",
-                    "Use prefetch_fields parameter for related fields in loops",
-                    "Batch operations instead of individual record processing",
-                    "Store computed fields that are frequently accessed",
-                    "Use SQL queries for complex aggregations instead of ORM",
-                    "Implement proper caching for expensive computations",
-                ],
-                "field_analysis": {} if model_name != "account.move" else {"analyzed_fields": 10},
-            }
 
         # Handle pattern analysis queries
         if '"computed_fields": []' in code and '"related_fields": []' in code and '"api_decorators": []' in code:
