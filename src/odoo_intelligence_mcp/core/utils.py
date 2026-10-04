@@ -105,7 +105,7 @@ class PaginationParams:
         return (self.page - 1) * self.page_size
 
     @classmethod
-    def from_arguments(cls, arguments: dict[str, Any]) -> "PaginationParams":
+    def from_arguments(cls, arguments: dict[str, Any]) -> PaginationParams:
         page = arguments.get("page", 1)
         page_size = arguments.get("page_size", 100)
         limit = arguments.get("limit")

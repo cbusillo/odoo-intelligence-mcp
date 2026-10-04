@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from importlib.metadata import version
+from typing import TYPE_CHECKING
 
 from jsonschema import ValidationError, validate
 from mcp.server import Server
@@ -44,9 +45,11 @@ from .tools.model import (
 )
 from .tools.operations import odoo_restart, odoo_status, odoo_update_module
 from .tools.security import check_permissions
-from .type_defs.odoo_types import CompatibleEnvironment
 from .utils.error_utils import OdooMCPError, create_error_response
 from .utils.model_utils import resolve_model_with_runner
+
+if TYPE_CHECKING:
+    from .type_defs.odoo_types import CompatibleEnvironment
 
 logger = logging.getLogger(__name__)
 

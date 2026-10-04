@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from ..type_defs.odoo_types import Environment
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from ..type_defs.odoo_types import Environment
 
 T = TypeVar("T")
 

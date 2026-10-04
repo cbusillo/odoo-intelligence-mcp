@@ -1,10 +1,13 @@
 import re
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ..type_defs.odoo_types import CompatibleEnvironment, Field, Model
 from .error_utils import CodeExecutionError
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+
+    from ..type_defs.odoo_types import CompatibleEnvironment, Field, Model
 
 
 class ModelIterator:

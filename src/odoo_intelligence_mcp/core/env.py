@@ -3,17 +3,19 @@ import logging
 import os
 import re
 import subprocess
-import sys
 import textwrap
-from collections.abc import AsyncIterator, Callable, Iterator
 from functools import lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import Field as PydanticField
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ..type_defs.odoo_types import Field, Model, Registry
 from ..utils.error_utils import CodeExecutionError, DockerConnectionError, EnvironmentResolutionError
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable, Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +71,7 @@ def _load_env_file_values(env_path_text: str) -> dict[str, str]:
     return values
 
 
-def _get_env_value(config: "EnvConfig", key: str) -> str | None:
+def _get_env_value(config: EnvConfig, key: str) -> str | None:
     env_file_path = getattr(config, "_env_file", None)
     env_priority = getattr(config, "_env_priority", None)
     if env_priority == "env_file" and env_file_path:
@@ -108,7 +110,7 @@ def _find_project_repo_root(start_dir: Path) -> Path | None:
         current = current.parent
 
 
-def _get_project_root(config: "EnvConfig") -> Path | None:
+def _get_project_root(config: EnvConfig) -> Path | None:
     project_dir = config.project_dir or _get_env_value(config, "ODOO_PROJECT_DIR")
     if project_dir:
         candidate = _expand_path(project_dir)
@@ -120,7 +122,7 @@ def _get_project_root(config: "EnvConfig") -> Path | None:
     return _find_project_repo_root(Path.cwd())
 
 
-def should_allow_autostart(config: "EnvConfig") -> bool:
+def should_allow_autostart(config: EnvConfig) -> bool:
     project_root = _get_project_root(config)
     if not project_root:
         return True
@@ -247,7 +249,7 @@ def _sanitize_container_name(container_name: str) -> str:
     return safe_name
 
 
-def _container_candidates(config: "EnvConfig", requested: str | None = None) -> list[str]:
+def _container_candidates(config: EnvConfig, requested: str | None = None) -> list[str]:
     candidates = [
         requested or "",
         config.container_name,
@@ -270,7 +272,7 @@ def _container_candidates(config: "EnvConfig", requested: str | None = None) -> 
     return unique
 
 
-def resolve_existing_container_name(config: "EnvConfig", requested: str) -> str | None:
+def resolve_existing_container_name(config: EnvConfig, requested: str) -> str | None:
     for candidate in _container_candidates(config, requested):
         safe_candidate = _sanitize_container_name(candidate)
         check_cmd = ["docker", "inspect", safe_candidate, "--format", "{{.State.Status}}"]
@@ -280,14 +282,14 @@ def resolve_existing_container_name(config: "EnvConfig", requested: str) -> str 
     return None
 
 
-def resolve_compose_env_file(config: "EnvConfig") -> Path | None:
+def resolve_compose_env_file(config: EnvConfig) -> Path | None:
     env_file_path = getattr(config, "_env_file", None)
     if env_file_path and Path(env_file_path).exists():
         return Path(env_file_path)
     return None
 
 
-def resolve_compose_files(config: "EnvConfig") -> list[str]:
+def resolve_compose_files(config: EnvConfig) -> list[str]:
     raw = config.compose_files
     if not raw:
         raw = _get_env_value(config, "DEPLOY_COMPOSE_FILES")
@@ -332,7 +334,7 @@ def _scan_compose_roots(root: Path, compose_files: list[str], max_depth: int) ->
     return None
 
 
-def resolve_compose_project_directory(config: "EnvConfig", compose_files: list[str]) -> Path | None:
+def resolve_compose_project_directory(config: EnvConfig, compose_files: list[str]) -> Path | None:
     override = config.project_dir or _get_env_value(config, "ODOO_PROJECT_DIR")
     if override:
         candidate = _expand_path(override)
@@ -361,7 +363,7 @@ def resolve_compose_project_directory(config: "EnvConfig", compose_files: list[s
     return None
 
 
-def build_compose_up_command(config: "EnvConfig", services: list[str]) -> tuple[list[str], Path | None]:
+def build_compose_up_command(config: EnvConfig, services: list[str]) -> tuple[list[str], Path | None]:
     compose_files = resolve_compose_files(config)
     project_dir = resolve_compose_project_directory(config, compose_files)
     env_file_path = resolve_compose_env_file(config)
@@ -522,7 +524,7 @@ class MockRegistry(Registry):
 
 
 class DockerRegistry:
-    def __init__(self, env: "HostOdooEnvironment") -> None:
+    def __init__(self, env: HostOdooEnvironment) -> None:
         self.env = env
         self._models: list[str] | None = None
         self.models: dict[str, type[Model]] = {}
@@ -693,7 +695,7 @@ class HostOdooEnvironmentManager:
         self.db_port = config.db_port
         self.addons_path_explicit = _get_env_value(config, "ODOO_ADDONS_PATH") is not None
 
-    async def get_environment(self) -> "HostOdooEnvironment":
+    async def get_environment(self) -> HostOdooEnvironment:
         config = self._get_config()
         self._refresh_cached(config)
         return HostOdooEnvironment(
@@ -730,10 +732,10 @@ class HostOdooEnvironment:
         self._registry: Registry | None = None
         self.addons_path_explicit = addons_path_explicit
 
-    def __getitem__(self, model_name: str) -> "ModelProxy":
+    def __getitem__(self, model_name: str) -> ModelProxy:
         return ModelProxy(self, model_name)
 
-    def __call__(self, *, _user: int | None = None, _context: dict[str, object] | None = None) -> "HostOdooEnvironment":
+    def __call__(self, *, _user: int | None = None, _context: dict[str, object] | None = None) -> HostOdooEnvironment:
         return HostOdooEnvironment(
             self.container_name,
             self.database,
@@ -749,7 +751,7 @@ class HostOdooEnvironment:
         return True
 
     @property
-    def env(self) -> "HostOdooEnvironment":
+    def env(self) -> HostOdooEnvironment:
         return self
 
     @property
@@ -1136,7 +1138,7 @@ class ModelProxy:
         self.id = 0
         self.display_name = ""
 
-    async def search(self, domain: list | None = None, limit: int | None = None, offset: int = 0) -> "ModelProxy":
+    async def search(self, domain: list | None = None, limit: int | None = None, offset: int = 0) -> ModelProxy:
         if domain is None:
             domain = []
 
@@ -1150,10 +1152,10 @@ for record in records:
         await self.env.execute_code(code)
         return self
 
-    def browse(self, _ids: int | list[int]) -> "ModelProxy":
+    def browse(self, _ids: int | list[int]) -> ModelProxy:
         return ModelProxy(self.env, self.model_name)
 
-    def create(self, _vals: dict[str, object] | list[dict[str, object]]) -> "ModelProxy":
+    def create(self, _vals: dict[str, object] | list[dict[str, object]]) -> ModelProxy:
         return ModelProxy(self.env, self.model_name)
 
     def write(self, _vals: dict[str, object]) -> bool:
@@ -1168,16 +1170,16 @@ for record in records:
     def exists(self) -> bool:
         return True
 
-    def ensure_one(self) -> "ModelProxy":
+    def ensure_one(self) -> ModelProxy:
         return self
 
     def mapped(self, _path: str) -> list[object]:
         return []
 
-    def filtered(self, _func: Callable[["ModelProxy"], bool]) -> "ModelProxy":
+    def filtered(self, _func: Callable[[ModelProxy], bool]) -> ModelProxy:
         return self
 
-    def sorted(self, _key: Callable[["ModelProxy"], object] | None = None, _reverse: bool = False) -> "ModelProxy":
+    def sorted(self, _key: Callable[[ModelProxy], object] | None = None, _reverse: bool = False) -> ModelProxy:
         return self
 
     def check_access(self, _operation: str, _raise_exception: bool = True) -> bool:
@@ -1186,7 +1188,7 @@ for record in records:
     def __getattr__(self, name: str) -> object:
         return None
 
-    def __getitem__(self, key: int) -> "ModelProxy":
+    def __getitem__(self, key: int) -> ModelProxy:
         return self
 
     def __len__(self) -> int:

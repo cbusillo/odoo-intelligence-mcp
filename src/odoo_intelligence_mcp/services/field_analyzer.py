@@ -1,11 +1,15 @@
+from typing import TYPE_CHECKING
+
 from ..tools.code.execute_code import execute_code
 from ..tools.field.field_dependencies import get_field_dependencies
 from ..tools.field.field_usages import get_field_usages
 from ..tools.field.field_value_analyzer import analyze_field_values
 from ..tools.field.search_field_type import search_field_type
 from ..tools.model.model_info import get_model_info
-from ..type_defs.odoo_types import CompatibleEnvironment
 from .base_service import BaseService, ServiceExecutionError
+
+if TYPE_CHECKING:
+    from ..type_defs.odoo_types import CompatibleEnvironment
 
 
 class FieldAnalyzer(BaseService):
