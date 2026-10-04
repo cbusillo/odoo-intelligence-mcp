@@ -1,7 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ...type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def analyze_workflow_states(

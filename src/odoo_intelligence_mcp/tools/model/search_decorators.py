@@ -1,8 +1,97 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ..ast import build_ast_index
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
+
+
+def _filter_results(items: list[dict[str, Any]], needle: str) -> list[dict[str, Any]]:
+    lowered = needle.lower()
+    filtered: list[dict[str, Any]] = []
+    for item in items:
+        methods = item.get("methods", [])
+        matched_methods = []
+        for method_entry in methods:
+            haystacks = [
+                method_entry.get("module"),
+                method_entry.get("file"),
+                method_entry.get("method"),
+                method_entry.get("signature"),
+            ]
+            if any(lowered in str(value).lower() for value in haystacks if value):
+                matched_methods.append(method_entry)
+
+        item_haystacks = [
+            item.get("model"),
+            item.get("description"),
+            item.get("module"),
+            item.get("file"),
+            item.get("source_module"),
+            item.get("class_module"),
+            item.get("class_file"),
+            item.get("module_sources"),
+            item.get("file_sources"),
+        ]
+        item_match = any(lowered in str(value).lower() for value in item_haystacks if value)
+
+        if matched_methods:
+            updated = dict(item)
+            updated["methods"] = matched_methods
+            filtered.append(updated)
+            continue
+
+        if item_match:
+            filtered.append(item)
+    return filtered
+
+
+async def _search_decorators_fs(decorator: str, pagination: PaginationParams | None, filter_text: str | None) -> dict[str, Any]:
+    idx = await build_ast_index()
+    if not isinstance(idx, dict) or "models" not in idx:
+        return {"success": False, "error": "AST index unavailable", "error_type": "AstIndexError"}
+
+    results = []
+    for model_name, meta in idx["models"].items():
+        decs = meta.get("decorators", {})
+        matches = []
+        for method_name, lst in decs.items():
+            for d in lst:
+                if d.get("type") == decorator:
+                    matches.append(
+                        {
+                            "method": method_name,
+                            "signature": f"{method_name}(self, *args, **kwargs)",
+                            "module": meta.get("module") or "",
+                            "file": meta.get("file") or "",
+                        }
+                    )
+                    break
+        if matches:
+            results.append(
+                {
+                    "model": model_name,
+                    "description": meta.get("description") or "",
+                    "module": meta.get("module") or "",
+                    "modules": meta.get("module") or "",
+                    "file": meta.get("file") or "",
+                    "methods": matches,
+                }
+            )
+
+    if filter_text:
+        results = _filter_results(results, filter_text)
+        pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size)
+
+    if pagination:
+        paginated_result = paginate_dict_list(
+            results,
+            pagination,
+            ["model", "description", "module", "modules", "file", "module_sources", "file_sources"],
+        )
+        return {"decorator": decorator, "results": paginated_result.to_dict(), "mode_used": "fs", "data_quality": "approximate"}
+    return {"decorator": decorator, "results": results, "mode_used": "fs", "data_quality": "approximate"}
 
 
 async def search_decorators(
@@ -10,45 +99,6 @@ async def search_decorators(
 ) -> dict[str, Any]:
     filter_text = pagination.filter_text if pagination else None
     original_pagination = pagination
-
-    def _filter_results(items: list[dict[str, Any]], needle: str) -> list[dict[str, Any]]:
-        lowered = needle.lower()
-        filtered: list[dict[str, Any]] = []
-        for item in items:
-            methods = item.get("methods", [])
-            matched_methods = []
-            for method_entry in methods:
-                haystacks = [
-                    method_entry.get("module"),
-                    method_entry.get("file"),
-                    method_entry.get("method"),
-                    method_entry.get("signature"),
-                ]
-                if any(lowered in str(value).lower() for value in haystacks if value):
-                    matched_methods.append(method_entry)
-
-            item_haystacks = [
-                item.get("model"),
-                item.get("description"),
-                item.get("module"),
-                item.get("file"),
-                item.get("source_module"),
-                item.get("class_module"),
-                item.get("class_file"),
-                item.get("module_sources"),
-                item.get("file_sources"),
-            ]
-            item_match = any(lowered in str(value).lower() for value in item_haystacks if value)
-
-            if matched_methods:
-                updated = dict(item)
-                updated["methods"] = matched_methods
-                filtered.append(updated)
-                continue
-
-            if item_match:
-                filtered.append(item)
-        return filtered
 
     code = f"""
 import inspect
@@ -158,50 +208,7 @@ result = {{"results": results}}
 """
 
     if mode == "fs":
-        idx = await build_ast_index()
-        if not isinstance(idx, dict) or "models" not in idx:
-            return {"success": False, "error": "AST index unavailable", "error_type": "AstIndexError"}
-
-        results = []
-        for model_name, meta in idx["models"].items():
-            decs = meta.get("decorators", {})
-            matches = []
-            for method_name, lst in decs.items():
-                for d in lst:
-                    if d.get("type") == decorator:
-                        matches.append(
-                            {
-                                "method": method_name,
-                                "signature": f"{method_name}(self, *args, **kwargs)",
-                                "module": meta.get("module") or "",
-                                "file": meta.get("file") or "",
-                            }
-                        )
-                        break
-            if matches:
-                results.append(
-                    {
-                        "model": model_name,
-                        "description": meta.get("description") or "",
-                        "module": meta.get("module") or "",
-                        "modules": meta.get("module") or "",
-                        "file": meta.get("file") or "",
-                        "methods": matches,
-                    }
-                )
-
-        if filter_text:
-            results = _filter_results(results, filter_text)
-            pagination = PaginationParams(page=pagination.page, page_size=pagination.page_size)
-
-        if pagination:
-            paginated_result = paginate_dict_list(
-                results,
-                pagination,
-                ["model", "description", "module", "modules", "file", "module_sources", "file_sources"],
-            )
-            return {"decorator": decorator, "results": paginated_result.to_dict(), "mode_used": "fs", "data_quality": "approximate"}
-        return {"decorator": decorator, "results": results, "mode_used": "fs", "data_quality": "approximate"}
+        return await _search_decorators_fs(decorator, pagination, filter_text)
 
     try:
         result_payload = await env.execute_code(code)

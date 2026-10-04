@@ -1,11 +1,14 @@
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 from odoo_intelligence_mcp.tools.code.execute_code import execute_code
 from odoo_intelligence_mcp.tools.model.view_model_usage import get_view_model_usage
 from odoo_intelligence_mcp.tools.security.permission_checker import check_permissions
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 
 
 class TestCoroutineIssues:
@@ -56,14 +59,8 @@ result = count1 + count2  # This should now work - no more coroutines
 
         env.execute_code = AsyncMock(return_value={"error": "coroutine object has no attribute id"})
 
-        # This should fail when trying to access user.id without awaiting
-        try:
-            result = await check_permissions(env, "admin", "res.partner", "read")
-            # If we get here, check if there's an error in the result
-            assert "error" in result or "coroutine" in str(result).lower()
-        except AttributeError as e:
-            # Expected error when trying to access .id on a coroutine
-            assert "coroutine" in str(e).lower() or "has no attribute" in str(e).lower()
+        result = await check_permissions(env, "admin", "res.partner", "read")
+        assert "error" in result or "coroutine" in str(result).lower()
 
     @pytest.mark.asyncio
     async def test_view_model_usage_iteration_issue_resolved(self, test_env: HostOdooEnvironment) -> None:
@@ -108,3 +105,19 @@ result = count1 + count2  # This should now work - no more coroutines
 if __name__ == "__main__":
     # Run the tests to demonstrate the issues
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.asyncio
+async def test_docker_execution_allows_event_loop_progress(test_env: HostOdooEnvironment, monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    import threading
+
+    loop_progressed = threading.Event()
+
+    def execute_until_loop_progresses(code: str) -> bool:
+        return loop_progressed.wait(timeout=1)
+
+    monkeypatch.setattr(test_env, "_execute_code", execute_until_loop_progresses)
+    asyncio.get_running_loop().call_soon(loop_progressed.set)
+    result = await test_env.execute_code("result = True")
+    assert result is True

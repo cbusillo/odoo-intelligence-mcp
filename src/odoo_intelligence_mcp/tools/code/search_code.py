@@ -1,10 +1,37 @@
-import os
 import re
+from pathlib import Path
 from typing import Any
 
 from ...core.env import load_env_config
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
 from ...utils.docker_utils import DockerClientManager
+
+
+def _resolve_search_roots(roots: list[str] | None, addons_roots: list[str]) -> tuple[list[str], list[str]]:
+    relative_roots = []
+    if roots:
+        candidate_roots = [p for p in roots if isinstance(p, str) and p.strip()]
+        expanded_roots: list[str] = []
+        for root in candidate_roots:
+            if root.startswith("/"):
+                expanded_roots.append(root)
+                continue
+            relative_roots.append(root)
+            for base in addons_roots:
+                expanded_roots.append(str(Path(base) / root))
+                parent = base.rsplit("/", maxsplit=1)[0] if "/" in base else ""
+                if base.startswith("/") and not parent:
+                    parent = "/"
+                if parent:
+                    expanded_roots.append(str(Path(parent) / root))
+        search_roots: list[str] = []
+        for path in expanded_roots:
+            if path not in search_roots:
+                search_roots.append(path)
+    else:
+        search_roots = addons_roots
+
+    return search_roots, relative_roots
 
 
 async def search_code(
@@ -33,25 +60,7 @@ async def search_code(
     config = load_env_config()
     addons_roots = [p.strip() for p in config.addons_path.split(",") if p.strip()]
     relative_roots: list[str] = []
-    if roots:
-        candidate_roots = [p for p in roots if isinstance(p, str) and p.strip()]
-        expanded_roots: list[str] = []
-        for root in candidate_roots:
-            if root.startswith("/"):
-                expanded_roots.append(root)
-                continue
-            relative_roots.append(root)
-            for base in addons_roots:
-                expanded_roots.append(os.path.join(base, root))
-                parent = os.path.dirname(base)
-                if parent:
-                    expanded_roots.append(os.path.join(parent, root))
-        search_roots: list[str] = []
-        for path in expanded_roots:
-            if path not in search_roots:
-                search_roots.append(path)
-    else:
-        search_roots = addons_roots
+    search_roots, relative_roots = _resolve_search_roots(roots, addons_roots)
 
     if not search_roots:
         return {
@@ -144,6 +153,8 @@ print(json.dumps(results))
         payload["meta"] = {
             "relative_roots": relative_roots,
             "resolved_roots": search_roots,
-            "hint": "Relative roots were expanded against ODOO_ADDONS_PATH and its parent directories. Use absolute paths for precision.",
+            "hint": (
+                "Relative roots were expanded against ODOO_ADDONS_PATH and its parent directories. Use absolute paths for precision."
+            ),
         }
     return validate_response_size(payload)

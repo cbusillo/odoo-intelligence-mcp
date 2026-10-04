@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 from unittest.mock import MagicMock
 
-from odoo_intelligence_mcp.type_defs.odoo_types import Environment, Field, Model
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import Environment, Field, Model
 
 
 class MockModel(Protocol):

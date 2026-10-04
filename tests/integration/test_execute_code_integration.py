@@ -1,11 +1,14 @@
 import subprocess
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
 
 from odoo_intelligence_mcp.tools.code.execute_code import execute_code, odoo_shell
-from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
-from tests.fixtures.types import MockSubprocessRun
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
+    from tests.fixtures.types import MockSubprocessRun
 
 
 class TestExecuteCodeIntegration:

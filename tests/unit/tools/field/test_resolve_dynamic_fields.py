@@ -1,8 +1,11 @@
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 import pytest
 
 from odoo_intelligence_mcp.tools.field.resolve_dynamic_fields import resolve_dynamic_fields
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 
 @pytest.mark.asyncio

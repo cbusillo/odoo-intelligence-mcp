@@ -215,12 +215,12 @@ class TestDockerFailureModes:
     @pytest.mark.asyncio
     async def test_environment_cleanup_on_failure(self) -> None:
         with patch("odoo_intelligence_mcp.core.env.subprocess.run") as mock_run:
-            mock_run.side_effect = Exception("Unexpected error")
+            mock_run.side_effect = RuntimeError("Unexpected error")
 
             manager = HostOdooEnvironmentManager()
             env = await manager.get_environment()
 
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Unexpected error"):
                 await env.execute_code("result = 1")
 
             manager.invalidate_environment_cache()

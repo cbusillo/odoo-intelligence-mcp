@@ -1,4 +1,7 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from ...core.utils import PaginationParams
+from ._common import execute_and_paginate_results
 
 VALID_FIELD_TYPES = [
     "many2one",
@@ -16,9 +19,9 @@ VALID_FIELD_TYPES = [
     "json",
 ]
 
-from ...core.utils import PaginationParams
-from ...type_defs.odoo_types import CompatibleEnvironment
-from ._common import execute_and_paginate_results
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def search_field_type(
@@ -60,14 +63,14 @@ batch_size = 25
 for batch_start in range(0, len(model_names), batch_size):
     if len(results) >= max_results:
         break
-        
+
     batch_end = min(batch_start + batch_size, len(model_names))
     batch_models = model_names[batch_start:batch_end]
-    
+
     for model_name in batch_models:
         if len(results) >= max_results:
             break
-            
+
         try:
             model = env[model_name]
 
@@ -90,7 +93,7 @@ for batch_start in range(0, len(model_names), batch_size):
                             field_info["inverse_name"] = field_data.get("inverse_name", "")[:100]
 
                     matching_fields.append(field_info)
-                    
+
                     # Limit fields per model to avoid huge results
                     if len(matching_fields) >= 20:
                         break
@@ -103,7 +106,7 @@ for batch_start in range(0, len(model_names), batch_size):
                 }})
         except Exception:
             continue
-    
+
     # Garbage collect after each batch
     if batch_start % 50 == 0:
         gc.collect()

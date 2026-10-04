@@ -75,7 +75,7 @@ async def test_read_with_pattern_search() -> None:
     """Test pattern search with context."""
     test_content = """class TestModel(models.Model):
     _name = 'test.model'
-    
+
     def compute_total(self):
         total = 0
         for line in self.lines:
@@ -204,58 +204,62 @@ async def test_read_docker_connection_error() -> None:
 @pytest.mark.asyncio
 async def test_read_file_with_relative_path_search() -> None:
     """Test searching for files using relative paths in addon directories."""
-    with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
-        with patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths:
-            mock_paths.return_value = ["/odoo/addons", "/opt/project/addons"]
+    with (
+        patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker,
+        patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths,
+    ):
+        mock_paths.return_value = ["/odoo/addons", "/opt/project/addons"]
 
-            mock_instance = mock_docker.return_value
+        mock_instance = mock_docker.return_value
 
-            # Mock get_container to return success
-            mock_instance.get_container.return_value = {"success": True}
+        # Mock get_container to return success
+        mock_instance.get_container.return_value = {"success": True}
 
-            # Setup sequence of exec_run calls
-            mock_instance.exec_run.side_effect = [
-                {"success": False, "exit_code": 1, "stdout": "", "stderr": "not found"},  # First try (absolute path) fails
-                {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
-                {
-                    "success": True,
-                    "exit_code": 0,
-                    "stdout": "# Product module code\nclass Product:\n    pass",
-                    "stderr": "",
-                },  # cat succeeds
-            ]
+        # Setup sequence of exec_run calls
+        mock_instance.exec_run.side_effect = [
+            {"success": False, "exit_code": 1, "stdout": "", "stderr": "not found"},  # First try (absolute path) fails
+            {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
+            {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "# Product module code\nclass Product:\n    pass",
+                "stderr": "",
+            },  # cat succeeds
+        ]
 
-            result = await read_odoo_file("product/models/product.py")
+        result = await read_odoo_file("product/models/product.py")
 
-            assert result["success"] is True
-            assert "Product module code" in result["content"]
-            # Path could be from either addon path
-            assert result["path"] in ["/odoo/addons/product/models/product.py", "/opt/project/addons/product/models/product.py"]
+        assert result["success"] is True
+        assert "Product module code" in result["content"]
+        # Path could be from either addon path
+        assert result["path"] in ["/odoo/addons/product/models/product.py", "/opt/project/addons/product/models/product.py"]
 
 
 @pytest.mark.asyncio
 async def test_read_file_with_addon_prefix_path() -> None:
     """Test reading files with addons/ or enterprise/ prefix."""
-    with patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker:
-        with patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths:
-            mock_paths.return_value = ["/odoo/addons", "/opt/enterprise"]
+    with (
+        patch("odoo_intelligence_mcp.tools.code.read_odoo_file.DockerClientManager") as mock_docker,
+        patch("odoo_intelligence_mcp.tools.addon.get_addon_paths.get_addon_paths_from_container") as mock_paths,
+    ):
+        mock_paths.return_value = ["/odoo/addons", "/opt/enterprise"]
 
-            mock_instance = mock_docker.return_value
+        mock_instance = mock_docker.return_value
 
-            # Mock get_container to return success
-            mock_instance.get_container.return_value = {"success": True}
+        # Mock get_container to return success
+        mock_instance.get_container.return_value = {"success": True}
 
-            # Setup sequence of exec_run calls
-            mock_instance.exec_run.side_effect = [
-                {"success": False, "exit_code": 1, "stdout": "", "stderr": "not found"},  # First try (absolute path) fails
-                {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
-                {"success": True, "exit_code": 0, "stdout": "# Enterprise module", "stderr": ""},  # cat succeeds
-            ]
+        # Setup sequence of exec_run calls
+        mock_instance.exec_run.side_effect = [
+            {"success": False, "exit_code": 1, "stdout": "", "stderr": "not found"},  # First try (absolute path) fails
+            {"success": True, "exit_code": 0, "stdout": "", "stderr": ""},  # test -f succeeds
+            {"success": True, "exit_code": 0, "stdout": "# Enterprise module", "stderr": ""},  # cat succeeds
+        ]
 
-            result = await read_odoo_file("enterprise/hr_payroll/models/hr_payslip.py")
+        result = await read_odoo_file("enterprise/hr_payroll/models/hr_payslip.py")
 
-            assert result["success"] is True
-            assert "Enterprise module" in result["content"]
+        assert result["success"] is True
+        assert "Enterprise module" in result["content"]
 
 
 @pytest.mark.asyncio

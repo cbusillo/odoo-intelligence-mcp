@@ -372,19 +372,19 @@ result = json.dumps(data)
 import os
 os.system('ls')
 """
-        is_valid, message, sanitized = validate_and_sanitize_code(code)
+        is_valid, message, _sanitized = validate_and_sanitize_code(code)
         assert is_valid is False
         assert "dangerous module 'os'" in message
 
     def test_validate_and_sanitize_with_whitespace(self) -> None:
         code = "  \n\n  x = 1  \n\n  "
-        is_valid, message, sanitized = validate_and_sanitize_code(code)
+        is_valid, _message, sanitized = validate_and_sanitize_code(code)
         assert is_valid is True
         assert sanitized == "x = 1"
 
     def test_validate_and_sanitize_syntax_error(self) -> None:
         code = "def broken("
-        is_valid, message, sanitized = validate_and_sanitize_code(code)
+        is_valid, message, _sanitized = validate_and_sanitize_code(code)
         assert is_valid is False
         assert "Syntax error" in message
 

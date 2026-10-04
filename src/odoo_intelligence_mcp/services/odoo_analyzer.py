@@ -1,11 +1,13 @@
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..tools.addon import addon_dependencies, module_structure
 from ..tools.code.execute_code import execute_code
 from ..tools.code.search_code import search_code
 from ..tools.operations import container_logs, container_restart, container_status, module_update
 from .base_service import BaseService, ServiceExecutionError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 HIGH_COMPLEXITY_FILE_COUNT = 20
 MEDIUM_COMPLEXITY_FILE_COUNT = 10

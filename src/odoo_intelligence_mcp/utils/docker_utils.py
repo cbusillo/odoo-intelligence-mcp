@@ -4,6 +4,8 @@ from typing import Any
 
 from ..core.env import build_compose_up_command, load_env_config, resolve_existing_container_name, should_allow_autostart
 
+CONTAINER_NAME_SEGMENTS = 3
+
 COMPOSE_TIMEOUT = 600
 
 
@@ -107,7 +109,7 @@ class DockerClientManager:
             if isinstance(cmd, str):
                 exec_cmd = ["docker", "exec", container_name, "sh", "-c", cmd]
             else:
-                exec_cmd = ["docker", "exec", container_name] + cmd
+                exec_cmd = ["docker", "exec", container_name, *cmd]
 
             # Handle optional parameters
             timeout = kwargs.get("timeout", 30)
@@ -163,35 +165,37 @@ class DockerClientManager:
             if not should_allow_autostart(config):
                 return False
             # First try docker start (for existing stopped containers)
-            start_result = subprocess.run(["docker", "start", container_name], capture_output=True, text=True, timeout=10)
+            start_result = subprocess.run(
+                ["/usr/bin/env", "docker", "start", container_name], capture_output=True, text=True, timeout=10
+            )
 
             if start_result.returncode == 0:
                 return True
 
             # If container doesn't exist, try docker compose
-            if "no such container" in start_result.stderr.lower() or "not found" in start_result.stderr.lower():
-                # Extract service name from container name (e.g., "odoo-web-1" -> "web")
-                if "-" in container_name:
-                    parts = container_name.split("-")
-                    if len(parts) >= 3:  # e.g., ["odoo", "web", "1"]
-                        service_name = parts[-2]  # Get "web" from "odoo-web-1"
+            if (
+                "no such container" in start_result.stderr.lower() or "not found" in start_result.stderr.lower()
+            ) and "-" in container_name:
+                parts = container_name.split("-")
+                if len(parts) >= CONTAINER_NAME_SEGMENTS:  # e.g., ["odoo", "web", "1"]
+                    service_name = parts[-2]  # Get "web" from "odoo-web-1"
 
-                        # Try to find the compose file directory
-                        config = load_env_config()
-                        compose_cmd, project_dir = build_compose_up_command(config, [service_name])
-                        if project_dir:
-                            try:
-                                compose_result = subprocess.run(
-                                    compose_cmd,
-                                    cwd=str(project_dir),
-                                    capture_output=True,
-                                    text=True,
-                                    timeout=COMPOSE_TIMEOUT,
-                                )
-                                if compose_result.returncode == 0:
-                                    return True
-                            except subprocess.TimeoutExpired, FileNotFoundError, OSError:
-                                return False
+                    # Try to find the compose file directory
+                    config = load_env_config()
+                    compose_cmd, project_dir = build_compose_up_command(config, [service_name])
+                    if project_dir:
+                        try:
+                            compose_result = subprocess.run(
+                                compose_cmd,
+                                cwd=str(project_dir),
+                                capture_output=True,
+                                text=True,
+                                timeout=COMPOSE_TIMEOUT,
+                            )
+                            if compose_result.returncode == 0:
+                                return True
+                        except subprocess.TimeoutExpired, FileNotFoundError, OSError:
+                            return False
 
         except subprocess.TimeoutExpired, FileNotFoundError:
             pass
@@ -200,7 +204,7 @@ class DockerClientManager:
 
 
 # Compatibility exceptions for existing code that might catch these
-class NotFound(Exception):
+class NotFound(Exception):  # noqa: N818 - Retain the public Docker compatibility exception name.
     pass
 
 

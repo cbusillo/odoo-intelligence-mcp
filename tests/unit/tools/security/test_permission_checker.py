@@ -1,9 +1,11 @@
-from typing import Any
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from odoo_intelligence_mcp.tools.security.permission_checker import check_permissions
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 
 # noinspection PyUnusedLocal
@@ -420,3 +422,19 @@ class TestPermissionCheckerCoroutineFix:
         manager_record_rule = next(r for r in result["record_rules"] if "manager" in r["name"])
         assert manager_record_rule["applies_to_user"] is True
         assert manager_record_rule["permissions"]["write"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user", ["admin", "quote'\"\nresult = 0"])
+@pytest.mark.parametrize("model", ["missing.model", "missing'\"\nresult = 0"])
+async def test_permission_script_preserves_input_literals(mock_odoo_env: MagicMock, user: str, model: str) -> None:
+    async def execute_generated_code(code: str) -> dict[str, Any]:
+        namespace = {"env": {}}
+        exec(compile(code, "<permission-check>", "exec"), namespace)  # noqa: S102 - Execute the generated tool script against an empty fake environment.
+        assert namespace["user"] == user
+        assert namespace["model"] == model
+        return namespace["result"]
+
+    mock_odoo_env.execute_code = execute_generated_code
+    result = await check_permissions(mock_odoo_env, user, model, "read")
+    assert result["error"] == f"Model {model} not found"

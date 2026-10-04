@@ -1,6 +1,7 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ...type_defs.odoo_types import CompatibleEnvironment
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def analyze_field_values(

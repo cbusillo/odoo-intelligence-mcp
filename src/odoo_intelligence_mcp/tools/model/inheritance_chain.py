@@ -1,7 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ...type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def analyze_inheritance_chain(
@@ -135,10 +137,7 @@ else:
         return result
 
     # Extract the actual result data from execute_code response
-    if "result" in result and isinstance(result["result"], dict):
-        data = result["result"]
-    else:
-        data = result
+    data = result["result"] if "result" in result and isinstance(result["result"], dict) else result
 
     # Apply pagination to large lists if provided
     if isinstance(data, dict) and pagination:

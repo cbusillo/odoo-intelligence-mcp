@@ -1,8 +1,10 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ...utils.error_utils import handle_tool_error
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 @handle_tool_error
@@ -59,10 +61,7 @@ result = {{
     result = await env.execute_code(code)
 
     # Extract the actual result data from execute_code response
-    if "result" in result and isinstance(result["result"], dict):
-        data = result["result"]
-    else:
-        data = result
+    data = result["result"] if "result" in result and isinstance(result["result"], dict) else result
 
     if pagination and "exact_matches" in data:
         # Combine all matches for pagination

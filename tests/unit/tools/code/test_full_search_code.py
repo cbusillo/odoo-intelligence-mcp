@@ -18,7 +18,8 @@ async def test_search_code_basic_pattern() -> None:
 
         result = await search_code("test_method")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert "pagination" in result["results"]
     assert len(result["results"]["items"]) == 1
     assert result["results"]["items"][0]["line"] == 5
@@ -44,7 +45,8 @@ async def test_search_code_xml_files() -> None:
 
         result = await search_code("test\\.model", "xml")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert "pagination" in result["results"]
 
 
@@ -69,7 +71,8 @@ async def test_search_code_with_pagination() -> None:
         pagination = PaginationParams(limit=10, offset=0)
         result = await search_code("test_method", pagination=pagination)
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert "pagination" in result["results"]
     assert result["results"]["pagination"]["page_size"] == 10
 
@@ -81,7 +84,8 @@ async def test_search_code_no_matches() -> None:
 
         result = await search_code("nonexistent_pattern")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert len(result["results"]["items"]) == 0
     assert result["results"]["pagination"]["total_count"] == 0
 
@@ -125,7 +129,30 @@ async def test_search_code_javascript_files() -> None:
 
         result = await search_code("testFunction", "js")
 
-    assert "results" in result and "items" in result["results"]
+    assert "results" in result
+    assert "items" in result["results"]
     assert len(result["results"]["items"]) == 1
     assert result["results"]["items"][0]["file"].endswith(".js")
     assert "testFunction" in result["results"]["items"][0]["match"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("addons_path", "expected_roots"),
+    [
+        ("/opt/project/addons/", ["/opt/project/addons/models"]),
+        ("/addons", ["/addons/models", "/models"]),
+        ("addons", ["addons/models"]),
+    ],
+)
+async def test_search_code_relative_roots_preserve_parent_expansion(addons_path: str, expected_roots: list[str]) -> None:
+    with (
+        patch("odoo_intelligence_mcp.tools.code.search_code.load_env_config") as mock_config,
+        patch("odoo_intelligence_mcp.tools.code.search_code.DockerClientManager") as mock_manager,
+    ):
+        mock_config.return_value.addons_path = addons_path
+        mock_config.return_value.web_container = "odoo-web-1"
+        mock_manager.return_value.exec_run.return_value = {"success": True, "stdout": "[]"}
+        result = await search_code("create", roots=["models"])
+    assert result["roots"] == expected_roots
+    assert result["meta"]["resolved_roots"] == result["roots"]

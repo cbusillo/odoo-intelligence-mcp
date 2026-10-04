@@ -195,13 +195,11 @@ class OdooStaticAnalyzer:
             return {}
 
         model_info = self.analyze_model_file(file_path)
-        state_fields = {}
-
-        for field_name, field_info in model_info.get("fields", {}).items():
-            if field_info["type"] == "Selection" and ("state" in field_name.lower() or "status" in field_name.lower()):
-                state_fields[field_name] = field_info
-
-        return state_fields
+        return {
+            field_name: field_info
+            for field_name, field_info in model_info.get("fields", {}).items()
+            if field_info["type"] == "Selection" and ("state" in field_name.lower() or "status" in field_name.lower())
+        }
 
     def find_computed_fields(self, model_name: str) -> dict[str, Any]:
         file_path = self.find_model_file(model_name)
@@ -313,7 +311,4 @@ class OdooStaticAnalyzer:
         if not args_str:
             return []
 
-        args = []
-        for arg in re.findall(r'["\']([^"\']+)["\']', args_str):
-            args.append(arg)
-        return args
+        return re.findall(r'["\']([^"\']+)["\']', args_str)

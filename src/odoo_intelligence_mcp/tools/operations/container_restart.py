@@ -5,6 +5,24 @@ from ...utils.docker_utils import DockerClientManager
 from ...utils.response_utils import ResponseBuilder
 
 
+def _parse_service_names(services: str, container_prefix: str, default_services: list[str]) -> list[str]:
+    service_list = []
+    for s in services.split(","):
+        service = s.strip()
+        if not service:
+            continue
+        if container_prefix and service.startswith(f"{container_prefix}-"):
+            service_list.append(service)
+        elif container_prefix:
+            service_list.append(f"{container_prefix}-{service}")
+        else:
+            service_list.append(service)
+    if not service_list:
+        service_list = default_services
+
+    return service_list
+
+
 async def odoo_restart(services: str | None = None) -> dict[str, Any]:
     try:
         docker_manager = DockerClientManager()
@@ -34,19 +52,7 @@ async def odoo_restart(services: str | None = None) -> dict[str, Any]:
                     continue
                 service_list.append(service_name)
         else:
-            service_list = []
-            for s in services.split(","):
-                service = s.strip()
-                if not service:
-                    continue
-                if container_prefix and service.startswith(f"{container_prefix}-"):
-                    service_list.append(service)
-                elif container_prefix:
-                    service_list.append(f"{container_prefix}-{service}")
-                else:
-                    service_list.append(service)
-            if not service_list:
-                service_list = default_services
+            service_list = _parse_service_names(services, container_prefix, default_services)
         results: dict[str, Any] = {}
         if not service_list:
             return ResponseBuilder.error(

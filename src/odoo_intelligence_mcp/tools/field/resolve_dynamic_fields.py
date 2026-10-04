@@ -1,7 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ...type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def resolve_dynamic_fields(
@@ -148,7 +150,11 @@ else:
                     runtime_field_info = {{
                         "field": field_name,
                         "type": "dynamic_selection",
-                        "selection_method": field_obj.selection.__name__ if hasattr(field_obj.selection, "__name__") else str(field_obj.selection),
+                        "selection_method": (
+                            field_obj.selection.__name__
+                            if hasattr(field_obj.selection, "__name__")
+                            else str(field_obj.selection)
+                        ),
                     }}
 
                     try:

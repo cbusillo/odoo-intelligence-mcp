@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from odoo_intelligence_mcp.tools.model.model_info import get_model_info
-from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestModelInfoIntegration:
@@ -26,7 +30,7 @@ class TestModelInfoIntegration:
 
         # Check that at least one field exists and has proper structure
         if result["fields"]:
-            first_field_name = list(result["fields"].keys())[0]
+            first_field_name = next(iter(result["fields"].keys()))
             first_field = result["fields"][first_field_name]
             assert "type" in first_field
             assert "string" in first_field

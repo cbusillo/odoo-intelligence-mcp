@@ -39,7 +39,8 @@ async def test_field_query_list_alias_lists_fields() -> None:
         out = await handle_call_tool("field_query", {"operation": "list", "model_name": "res.partner", "page": 1, "page_size": 1})
         content = json.loads(out[0].text)
         assert content.get("model") == "res.partner"
-        assert "fields" in content and "items" in content["fields"]
+        assert "fields" in content
+        assert "items" in content["fields"]
 
 
 @pytest.mark.asyncio

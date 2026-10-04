@@ -160,6 +160,4 @@ def _is_sensitive_path(path: Path) -> bool:
     if path.name in sensitive_names:
         return True
     path_parts = {part for part in path.parts if part}
-    if ".git" in path_parts:
-        return True
-    return False
+    return ".git" in path_parts

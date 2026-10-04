@@ -1,7 +1,9 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams, paginate_dict_list, validate_response_size
-from ...type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 async def analyze_performance(
@@ -109,10 +111,7 @@ else:
             return raw_result
 
         # Extract the actual result data from execute_code response
-        if "result" in raw_result and isinstance(raw_result["result"], dict):
-            data = raw_result["result"]
-        else:
-            data = raw_result
+        data = raw_result["result"] if "result" in raw_result and isinstance(raw_result["result"], dict) else raw_result
 
         # Apply pagination to performance_issues list
         paginated_result = data.copy()

@@ -1,10 +1,13 @@
 import sys
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from odoo_intelligence_mcp import cli
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestCLIFunctions:

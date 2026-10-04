@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from odoo_intelligence_mcp.tools.model.model_relationships import get_model_relationships
-from tests.fixtures.types import MockOdooEnvironment
+
+if TYPE_CHECKING:
+    from tests.fixtures.types import MockOdooEnvironment
 
 
 @pytest.mark.asyncio

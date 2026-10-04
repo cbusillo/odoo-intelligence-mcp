@@ -1,8 +1,10 @@
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from ...core.utils import PaginationParams, paginate_dict_list
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ...utils.error_utils import handle_tool_error, validate_field_name, validate_model_name
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 class FieldInfo(TypedDict):
@@ -250,10 +252,7 @@ else:
         return result
 
     # Extract the actual result data from execute_code response
-    if "result" in result and isinstance(result["result"], dict):
-        data = result["result"]
-    else:
-        data = result
+    data = result["result"] if "result" in result and isinstance(result["result"], dict) else result
 
     # Combine all usages for pagination
     all_usages = []

@@ -26,7 +26,7 @@ class TestMockRegistryIteration:
         registry = MockRegistry()
 
         # Mock the internal models dict to contain some models
-        registry._models = {"res.partner": MockModel, "product.template": MockModel, "motor.product": MockModel}  # type: ignore[assignment]
+        registry._models = {"res.partner": MockModel, "product.template": MockModel, "motor.product": MockModel}
 
         # Iteration should yield the model names
         model_names = list(registry)
@@ -38,12 +38,10 @@ class TestMockRegistryIteration:
     def test_mock_registry_for_loop_pattern(self) -> None:
         """Test the common for loop pattern used in tools."""
         registry = MockRegistry()
-        registry._models = {"sale.order": MockModel, "purchase.order": MockModel}  # type: ignore[assignment]
+        registry._models = {"sale.order": MockModel, "purchase.order": MockModel}
 
         # This is the pattern used in find_method, search_decorators, etc.
-        collected_names = []
-        for model_name in registry:
-            collected_names.append(model_name)
+        collected_names = list(registry)
 
         assert len(collected_names) == 2
         assert "sale.order" in collected_names
@@ -163,9 +161,7 @@ class TestRegistryIntegrationPatterns:
         env._registry._models = {"product.template": MockModel, "stock.move": MockModel}
 
         # This pattern is used in search_decorators
-        collected_models = []
-        for model_name in env.registry:
-            collected_models.append(model_name)
+        collected_models = list(env.registry)
 
         assert len(collected_models) == 2
         assert "product.template" in collected_models
@@ -251,7 +247,7 @@ class TestRegistryEdgeCases:
     def test_registry_contains_check(self) -> None:
         """Test 'in' operator with registry."""
         registry = MockRegistry()
-        registry._models = {"res.partner": MockModel, "product.template": MockModel}  # type: ignore[assignment]
+        registry._models = {"res.partner": MockModel, "product.template": MockModel}
 
         # Should support 'in' checks
         assert "res.partner" in registry
@@ -261,7 +257,7 @@ class TestRegistryEdgeCases:
     def test_registry_len(self) -> None:
         """Test len() on registry."""
         registry = MockRegistry()
-        registry._models = {"model.one": MockModel, "model.two": MockModel, "model.three": MockModel}  # type: ignore[assignment]
+        registry._models = {"model.one": MockModel, "model.two": MockModel, "model.three": MockModel}
 
         assert len(registry) == 3
 

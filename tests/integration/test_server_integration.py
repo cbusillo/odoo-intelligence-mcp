@@ -109,7 +109,7 @@ class TestServerIntegration:
                             assert matches["pagination"]["page_size"] == 50
                 else:
                     # For other tools, check pagination in execute_code call
-                    call_args = mock_env.execute_code.call_args[0][0]
+                    mock_env.execute_code.call_args[0][0]
                     # These tools may not use offset/limit directly in code
                     # Just verify the execute_code was called
                     assert mock_env.execute_code.called
@@ -178,15 +178,17 @@ class TestServerIntegration:
         ]
 
         for tool_name, required_args in tools_with_optionals:
-            with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-                with patch("subprocess.run") as mock_run:
-                    mock_run.return_value.returncode = 0
-                    mock_run.return_value.stdout = "success"
+            with (
+                patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env),
+                patch("subprocess.run") as mock_run,
+            ):
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = "success"
 
-                    result = await handle_call_tool(tool_name, required_args)
-                    assert len(result) == 1
-                    content = json.loads(result[0].text)
-                    assert "error" not in content or content.get("success") is False
+                result = await handle_call_tool(tool_name, required_args)
+                assert len(result) == 1
+                content = json.loads(result[0].text)
+                assert "error" not in content or content.get("success") is False
 
 
 class TestToolResponseContracts:

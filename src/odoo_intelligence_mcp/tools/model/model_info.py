@@ -1,8 +1,10 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...core.utils import PaginationParams
-from ...type_defs.odoo_types import CompatibleEnvironment
 from ...utils.error_utils import handle_tool_error, validate_model_name
+
+if TYPE_CHECKING:
+    from ...type_defs.odoo_types import CompatibleEnvironment
 
 
 @handle_tool_error
@@ -36,10 +38,10 @@ else:
 
     # Get all field names sorted for consistent pagination
     all_field_names = sorted(model._fields.keys())
-    
+
     # Apply pagination to fields
     paginated_field_names = all_field_names[start_idx:end_idx]
-    
+
     fields_info = {{}}
     for field_name in paginated_field_names:
         field = model._fields[field_name]
@@ -64,7 +66,7 @@ else:
 
     basic_info["fields"] = fields_info
     basic_info["displayed_field_count"] = len(fields_info)
-    
+
     # Pagination info
     basic_info["pagination"] = {{
         "page": {pagination.page},
@@ -85,7 +87,10 @@ else:
                     break
 
     basic_info["methods_sample"] = methods
-    basic_info["total_method_count"] = len([n for n in dir(model_class) if not n.startswith('_') or n in ['_compute_display_name', '_search']])
+    basic_info["total_method_count"] = len([
+        name for name in dir(model_class)
+        if not name.startswith('_') or name in ['_compute_display_name', '_search']
+    ])
 
     result = basic_info
 """

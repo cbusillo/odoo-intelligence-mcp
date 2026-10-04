@@ -134,7 +134,7 @@ class TestCommandInjectionPrevention:
                     MagicMock(returncode=0, stdout="Module updated", stderr=""),  # docker exec
                 ]
 
-                result = await odoo_update_module(dangerous_input)
+                await odoo_update_module(dangerous_input)
 
                 # Check that subprocess.run was called for the module update
                 if mock_run.call_count >= 2:

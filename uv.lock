@@ -355,6 +355,7 @@ name = "odoo-intelligence-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "coverage" },
     { name = "hatchling" },
     { name = "jsonschema" },
@@ -390,6 +391,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio" },
     { name = "coverage" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
     { name = "hatchling" },

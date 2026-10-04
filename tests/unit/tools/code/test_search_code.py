@@ -32,7 +32,8 @@ async def test_search_code_basic() -> None:
         assert result.get("success") is True
         assert result.get("mode_used") == "fs"
         assert result.get("data_quality") == "approximate"
-        assert "results" in result and "items" in result["results"]
+        assert "results" in result
+        assert "items" in result["results"]
         assert "pagination" in result["results"]
 
         # Should find the pattern in the file

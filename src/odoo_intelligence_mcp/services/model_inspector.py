@@ -1,5 +1,4 @@
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..tools.addon import addon_dependencies
 from ..tools.analysis import pattern_analysis, performance_analysis, workflow_states
@@ -11,6 +10,9 @@ from ..tools.model import (
 )
 from ..tools.model.search_models import search_models
 from .base_service import BaseService, ServiceError, ServiceExecutionError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Quality score thresholds
 MAX_UNEXPOSED_FIELDS_THRESHOLD = 5

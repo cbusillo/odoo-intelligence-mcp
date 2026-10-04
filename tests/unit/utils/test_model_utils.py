@@ -91,7 +91,7 @@ class TestModelIterator:
         assert ("amount", mock_field3) in fields
 
     def test_iter_model_fields_with_filter(self, iterator: ModelIterator, mock_env: MagicMock) -> None:
-        mock_field1, mock_field2, mock_field3 = TestModelIterator._setup_mock_model_fields(mock_env)
+        _mock_field1, mock_field2, _mock_field3 = TestModelIterator._setup_mock_model_fields(mock_env)
 
         # noinspection PyUnusedLocal
         def field_filter(name: str, field: Any) -> bool:
@@ -119,7 +119,7 @@ class TestModelIterator:
         mock_env.get_model_names = AsyncMock(return_value=[])
         iterator = ModelIterator(mock_env)
         models = []
-        async for model_name, model in iterator.iter_models():
+        async for model_name, _model in iterator.iter_models():
             models.append(model_name)
         assert models == []
 

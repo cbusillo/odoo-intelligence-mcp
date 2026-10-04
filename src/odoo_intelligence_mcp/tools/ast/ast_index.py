@@ -174,7 +174,10 @@ for root in roots:
                                         if ftype == 'many2one':
                                             rel = kwarg_val(elem.value.keywords, 'comodel_name') or first_arg_str(elem.value)
                                         elif ftype in ('one2many', 'many2many'):
-                                            rel = kwarg_val(elem.value.keywords, 'comodel_name') or kwarg_val(elem.value.keywords, 'relation')
+                                            rel = (
+                                                kwarg_val(elem.value.keywords, 'comodel_name')
+                                                or kwarg_val(elem.value.keywords, 'relation')
+                                            )
                                             inverse = kwarg_val(elem.value.keywords, 'inverse_name')
                                         elif ftype == 'selection':
                                             sel = kwarg_val(elem.value.keywords, 'selection')
@@ -227,7 +230,6 @@ print(json.dumps(index))
         }
     try:
         raw = exec_result.get("stdout", "{}")
-        data = __import__("json").loads(raw)
-        return data
+        return __import__("json").loads(raw)
     except Exception as e:
         return {"success": False, "error": f"Failed to parse AST index: {e!s}", "error_type": type(e).__name__}

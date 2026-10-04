@@ -2,6 +2,10 @@ import json
 from typing import Any, TypeVar
 
 T = TypeVar("T")
+DEFAULT_PAGE_SIZE = 100
+RESPONSE_SIZE_WARNING_TOKENS = 15000
+TRUNCATED_LIST_LENGTH = 10
+TRUNCATED_STRING_LENGTH = 1000
 
 
 def get_required(arguments: dict[str, Any], key: str) -> str:
@@ -47,7 +51,7 @@ def get_optional_list(arguments: dict[str, Any], key: str, default: list | None 
 
 class PaginatedResponse[T]:
     def __init__(
-        self, items: list[T], total_count: int, page: int = 1, page_size: int = 100, filter_applied: str | None = None
+        self, items: list[T], total_count: int, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE, filter_applied: str | None = None
     ) -> None:
         self.items = items
         self.total_count = total_count
@@ -86,13 +90,13 @@ class PaginationParams:
     def __init__(
         self,
         page: int = 1,
-        page_size: int = 100,
+        page_size: int = DEFAULT_PAGE_SIZE,
         limit: int | None = None,
         offset: int | None = None,
         filter_text: str | None = None,
     ) -> None:
         if limit is not None and offset is not None:
-            self.page = (offset // (limit or 100)) + 1
+            self.page = (offset // (limit or DEFAULT_PAGE_SIZE)) + 1
             self.page_size = limit
         else:
             self.page = max(1, page)
@@ -105,9 +109,9 @@ class PaginationParams:
         return (self.page - 1) * self.page_size
 
     @classmethod
-    def from_arguments(cls, arguments: dict[str, Any]) -> "PaginationParams":
+    def from_arguments(cls, arguments: dict[str, Any]) -> PaginationParams:
         page = arguments.get("page", 1)
-        page_size = arguments.get("page_size", 100)
+        page_size = arguments.get("page_size", DEFAULT_PAGE_SIZE)
         limit = arguments.get("limit")
         offset = arguments.get("offset")
         filter_text = arguments.get("filter")
@@ -192,13 +196,28 @@ def check_response_size(data: dict[str, Any], max_tokens: int = 25000) -> bool:
         return True
 
 
+def _truncate_large_fields(data: dict[str, Any]) -> None:
+    # Try to intelligently truncate large fields
+    for key, value in list(data.items()):
+        if isinstance(value, list) and len(value) > TRUNCATED_LIST_LENGTH:
+            data[key] = value[:TRUNCATED_LIST_LENGTH]
+            if "truncated_fields" not in data:
+                data["truncated_fields"] = []
+            data["truncated_fields"].append(key)
+        elif isinstance(value, str) and len(value) > TRUNCATED_STRING_LENGTH:
+            data[key] = value[:TRUNCATED_STRING_LENGTH] + "... (truncated)"
+            if "truncated_fields" not in data:
+                data["truncated_fields"] = []
+            data["truncated_fields"].append(key)
+
+
 def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dict[str, Any]:
     try:
         json_str = json.dumps(data, default=str)
         estimated_tokens = len(json_str) // 4
 
         # Add size warning for large responses
-        if estimated_tokens > 15000:  # 15K token warning threshold
+        if estimated_tokens > RESPONSE_SIZE_WARNING_TOKENS:  # 15K token warning threshold
             if "meta" not in data:
                 data["meta"] = {}
             data["meta"]["size_warning"] = {
@@ -252,18 +271,7 @@ def validate_response_size(data: dict[str, Any], max_tokens: int = 25000) -> dic
                     "message": "Response truncated due to size. Use page/page_size/filter to get complete data.",
                 }
 
-                # Try to intelligently truncate large fields
-                for key, value in list(data.items()):
-                    if isinstance(value, list) and len(value) > 10:
-                        data[key] = value[:10]
-                        if "truncated_fields" not in data:
-                            data["truncated_fields"] = []
-                        data["truncated_fields"].append(key)
-                    elif isinstance(value, str) and len(value) > 1000:
-                        data[key] = value[:1000] + "... (truncated)"
-                        if "truncated_fields" not in data:
-                            data["truncated_fields"] = []
-                        data["truncated_fields"].append(key)
+                _truncate_large_fields(data)
 
         return data
     except TypeError, ValueError:

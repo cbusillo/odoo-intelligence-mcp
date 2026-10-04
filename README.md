@@ -190,4 +190,6 @@ uv run ruff check .
 Run JetBrains (PyCharm) inspections on changed files with the `jetbrains-inspection` skill; `.github/github.json` lists
 the scope order.
 
+The GitHub Actions `test` job runs `uv run ruff check .` before the no-live-stack tests and the 75% coverage gate.
+
 See AGENTS.md for workflow, formatting, and testing conventions.

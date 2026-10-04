@@ -24,7 +24,7 @@ async def analyze_inheritance_chain_fs(model_name: str, pagination: PaginationPa
 
     inherited_fields = {}
     # Static approximation: mark fields with same name as inherited if defined on inherits model
-    for fname in meta.get("fields", {}).keys():
+    for fname in meta.get("fields", {}):
         for inh in inherits:
             inh_fields = models.get(inh, {}).get("fields", {}) if inh in models else {}
             if fname in inh_fields:

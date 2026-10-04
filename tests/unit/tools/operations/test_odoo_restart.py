@@ -1,11 +1,13 @@
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from odoo_intelligence_mcp.tools.operations.container_restart import odoo_restart
 from tests.fixtures import get_expected_container_names
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def create_mock_docker_manager(

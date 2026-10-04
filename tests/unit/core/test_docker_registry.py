@@ -1,9 +1,12 @@
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from odoo_intelligence_mcp.core.env import DockerRegistry, HostOdooEnvironment, load_env_config
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class TestDockerRegistryIteration:
@@ -132,7 +135,5 @@ class TestExpectedBehavior:
         assert "res.partner" in models
 
         # Should work in for loops
-        collected = []
-        for model in registry:
-            collected.append(model)
+        collected = list(registry)
         assert len(collected) == 3
