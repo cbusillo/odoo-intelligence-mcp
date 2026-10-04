@@ -453,7 +453,7 @@ async def _handle_model_query(env: CompatibleEnvironment, arguments: dict[str, o
 
     if operation == "info":
         return await _handle_model_info(env, arguments)
-    elif operation == "search" or operation == "list":
+    elif operation in {"search", "list"}:
         # alias: list -> search (default to pattern ".*" if missing)
         if operation == "list" and "pattern" not in arguments:
             arguments = {**arguments, "pattern": ".*"}

@@ -107,7 +107,7 @@ class DockerClientManager:
             if isinstance(cmd, str):
                 exec_cmd = ["docker", "exec", container_name, "sh", "-c", cmd]
             else:
-                exec_cmd = ["docker", "exec", container_name] + cmd
+                exec_cmd = ["docker", "exec", container_name, *cmd]
 
             # Handle optional parameters
             timeout = kwargs.get("timeout", 30)

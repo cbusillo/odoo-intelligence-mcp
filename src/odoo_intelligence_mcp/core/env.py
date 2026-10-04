@@ -48,9 +48,8 @@ def _parse_env_line(line: str) -> tuple[str, str] | None:
     value = value.strip()
     if value and value[0] in {'"', "'"} and value[-1:] == value[:1]:
         value = value[1:-1]
-    else:
-        if "#" in value:
-            value = value.split("#", 1)[0].rstrip()
+    elif "#" in value:
+        value = value.split("#", 1)[0].rstrip()
     return key, value
 
 
@@ -88,8 +87,7 @@ def _get_env_value(config: EnvConfig, key: str) -> str | None:
 def _split_env_list(raw: str) -> list[str]:
     if not raw:
         return []
-    parts = [segment.strip() for segment in re.split(r"[,:]", raw) if segment.strip()]
-    return parts
+    return [segment.strip() for segment in re.split(r"[,:]", raw) if segment.strip()]
 
 
 def _expand_path(raw: str | Path) -> Path:
@@ -243,7 +241,14 @@ def _resolve_stack_env_file() -> Path | None:
 
 
 def _sanitize_container_name(container_name: str) -> str:
-    safe_name = container_name.split(";")[0].split("&&")[0].split("|")[0].split("`")[0].split("$(")[0].strip()
+    safe_name = (
+        container_name.split(";", maxsplit=1)[0]
+        .split("&&", maxsplit=1)[0]
+        .split("|", maxsplit=1)[0]
+        .split("`", maxsplit=1)[0]
+        .split("$(", maxsplit=1)[0]
+        .strip()
+    )
     if not re.fullmatch(r"^[a-zA-Z0-9_\-.]+$", safe_name):
         return "odoo-script-runner-1"
     return safe_name
@@ -308,9 +313,8 @@ def _compose_files_exist(base: Path, compose_files: list[str]) -> bool:
         if path.is_absolute():
             if not path.exists():
                 return False
-        else:
-            if not (base / path).exists():
-                return False
+        elif not (base / path).exists():
+            return False
     return True
 
 
@@ -371,10 +375,7 @@ def build_compose_up_command(config: EnvConfig, services: list[str]) -> tuple[li
     if project_dir:
         for entry in compose_files:
             resolved = _expand_path(entry)
-            if not resolved.is_absolute():
-                resolved = (project_dir / resolved).resolve()
-            else:
-                resolved = resolved.resolve()
+            resolved = (project_dir / resolved).resolve() if not resolved.is_absolute() else resolved.resolve()
             resolved_compose_files.append(resolved)
 
         base_candidates = [project_dir / "docker-compose.yml", project_dir / "compose.yml"]
@@ -508,7 +509,7 @@ class MockRegistry(Registry):
         self._models: dict[str, type[Model]] = {}
 
     def _get_models_dict(self) -> dict[str, type[Model]]:
-        return self._models if self._models else self.models
+        return self._models or self.models
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._get_models_dict())
