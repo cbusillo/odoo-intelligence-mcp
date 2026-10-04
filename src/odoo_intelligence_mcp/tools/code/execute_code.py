@@ -11,6 +11,32 @@ if TYPE_CHECKING:
     from ...type_defs.odoo_types import CompatibleEnvironment
 
 
+def _format_execution_result(result: object) -> dict[str, Any]:
+    # The Docker execution returns raw results, format them appropriately
+    if isinstance(result, dict):
+        if "error" in result:
+            return {
+                "success": False,
+                "error": result["error"],
+                "error_type": result.get("error_type", "ExecutionError"),
+                "hint": "Make sure to use 'env' to access Odoo models, e.g., env['product.template'].search([])",
+            }
+        elif "output" in result and result.get("raw"):
+            # Raw output from Docker
+            return {"success": True, "output": result["output"]}
+        elif "result_type" in result and result["result_type"] == "recordset":
+            # Recordset from Docker
+            return {"success": True, **result}
+        elif "success" in result:
+            # Already formatted response from mock or Docker
+            return result
+        else:
+            return {"success": True, "result": result}
+    else:
+        # Handle non-dict results (str, int, float, bool, None)
+        return {"success": True, "result": result}
+
+
 # noinspection PyTooManyReturnStatements
 async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
     try:
@@ -34,29 +60,7 @@ async def execute_code(env: CompatibleEnvironment, code: str) -> dict[str, Any]:
                     "hint": "Ensure Docker container is running and accessible",
                 }
 
-            # The Docker execution returns raw results, format them appropriately
-            if isinstance(result, dict):
-                if "error" in result:
-                    return {
-                        "success": False,
-                        "error": result["error"],
-                        "error_type": result.get("error_type", "ExecutionError"),
-                        "hint": "Make sure to use 'env' to access Odoo models, e.g., env['product.template'].search([])",
-                    }
-                elif "output" in result and result.get("raw"):
-                    # Raw output from Docker
-                    return {"success": True, "output": result["output"]}
-                elif "result_type" in result and result["result_type"] == "recordset":
-                    # Recordset from Docker
-                    return {"success": True, **result}
-                elif "success" in result:
-                    # Already formatted response from mock or Docker
-                    return result
-                else:
-                    return {"success": True, "result": result}
-            else:
-                # Handle non-dict results (str, int, float, bool, None)
-                return {"success": True, "result": result}
+            return _format_execution_result(result)
         else:
             # Fallback to local execution for testing with mock environments
             namespace = {

@@ -7,7 +7,27 @@ from ...core.utils import PaginationParams, paginate_dict_list
 from ...utils.docker_utils import DockerClientManager
 
 
-async def run_tests(
+def _add_test_failure_details(result_dict: dict[str, Any], output: str, exit_code: int) -> None:
+    # Check for specific database errors
+    if "unique constraint" in output.lower() or "constraint violation" in output.lower():
+        result_dict["error"] = (
+            "Database constraint violation detected. Try using '--test-tags' to run specific tests or clean test data."
+        )
+        result_dict["error_type"] = "DatabaseConstraintError"
+        result_dict["recommendation"] = "Consider running tests with specific tags or on a clean test database"
+    elif "lock timeout" in output.lower() or "could not obtain lock" in output.lower():
+        result_dict["error"] = "Database lock timeout. The database may be in use by another Odoo instance."
+        result_dict["error_type"] = "DatabaseLockError"
+        result_dict["recommendation"] = "Stop other Odoo instances or wait for current operations to complete"
+    elif "ERROR" in output or "CRITICAL" in output:
+        result_dict["error"] = f"Test execution failed with return code {exit_code}. Check output_chunks for details."
+        result_dict["error_type"] = "TestExecutionError"
+    else:
+        result_dict["error"] = f"Tests failed with return code {exit_code}"
+        result_dict["error_type"] = "TestExecutionError"
+
+
+async def run_tests(  # noqa: PLR0913, PLR0917 - Preserve the existing public call signature.
     module: str,
     test_class: str | None = None,
     test_method: str | None = None,
@@ -130,23 +150,7 @@ async def run_tests(
 
         # Add error field when tests fail for consistency with other tools
         if exit_code != 0:
-            # Check for specific database errors
-            if "unique constraint" in output.lower() or "constraint violation" in output.lower():
-                result_dict["error"] = (
-                    "Database constraint violation detected. Try using '--test-tags' to run specific tests or clean test data."
-                )
-                result_dict["error_type"] = "DatabaseConstraintError"
-                result_dict["recommendation"] = "Consider running tests with specific tags or on a clean test database"
-            elif "lock timeout" in output.lower() or "could not obtain lock" in output.lower():
-                result_dict["error"] = "Database lock timeout. The database may be in use by another Odoo instance."
-                result_dict["error_type"] = "DatabaseLockError"
-                result_dict["recommendation"] = "Stop other Odoo instances or wait for current operations to complete"
-            elif "ERROR" in output or "CRITICAL" in output:
-                result_dict["error"] = f"Test execution failed with return code {exit_code}. Check output_chunks for details."
-                result_dict["error_type"] = "TestExecutionError"
-            else:
-                result_dict["error"] = f"Tests failed with return code {exit_code}"
-                result_dict["error_type"] = "TestExecutionError"
+            _add_test_failure_details(result_dict, output, exit_code)
 
         return result_dict
 

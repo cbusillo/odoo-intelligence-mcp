@@ -6,8 +6,7 @@ from .pattern_analysis import VALID_PATTERN_TYPES
 
 
 async def analyze_patterns_fs(pattern_type: str = "all", pagination: PaginationParams | None = None) -> dict[str, Any]:
-    if pagination is None:
-        pagination = PaginationParams()
+    pagination = pagination or PaginationParams()
     pattern_type = (pattern_type or "all").strip()
     if pattern_type not in VALID_PATTERN_TYPES:
         return {

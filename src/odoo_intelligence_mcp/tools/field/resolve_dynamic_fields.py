@@ -150,7 +150,11 @@ else:
                     runtime_field_info = {{
                         "field": field_name,
                         "type": "dynamic_selection",
-                        "selection_method": field_obj.selection.__name__ if hasattr(field_obj.selection, "__name__") else str(field_obj.selection),
+                        "selection_method": (
+                            field_obj.selection.__name__
+                            if hasattr(field_obj.selection, "__name__")
+                            else str(field_obj.selection)
+                        ),
                     }}
 
                     try:

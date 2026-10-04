@@ -87,7 +87,10 @@ else:
                     break
 
     basic_info["methods_sample"] = methods
-    basic_info["total_method_count"] = len([n for n in dir(model_class) if not n.startswith('_') or n in ['_compute_display_name', '_search']])
+    basic_info["total_method_count"] = len([
+        name for name in dir(model_class)
+        if not name.startswith('_') or name in ['_compute_display_name', '_search']
+    ])
 
     result = basic_info
 """

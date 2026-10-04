@@ -44,7 +44,11 @@ else:
             if field_obj:
                 if hasattr(field_obj, "compute") and field_obj.compute:
                     # Handle case where compute is a method name (string) or method object
-                    compute_method = getattr(model, field_obj.compute, None) if isinstance(field_obj.compute, str) else field_obj.compute
+                    compute_method = (
+                        getattr(model, field_obj.compute, None)
+                        if isinstance(field_obj.compute, str)
+                        else field_obj.compute
+                    )
                     if compute_method and hasattr(compute_method, "_depends"):
                         dependencies["direct_dependencies"] = list(getattr(compute_method, "_depends", []))
                 elif hasattr(field_obj, "related") and field_obj.related:
@@ -57,7 +61,11 @@ else:
             if field_info.get("related"):
                 dependencies["direct_dependencies"] = [field_info["related"]]
             elif field_info.get("depends"):
-                dependencies["direct_dependencies"] = field_info["depends"] if isinstance(field_info["depends"], list) else [field_info["depends"]]
+                dependencies["direct_dependencies"] = (
+                    field_info["depends"]
+                    if isinstance(field_info["depends"], list)
+                    else [field_info["depends"]]
+                )
 
         # Find fields that depend on this field (reverse lookup)
         try:
@@ -67,7 +75,11 @@ else:
 
                     # Check if this field is in depends
                     if other_field_info.get("depends"):
-                        depends_list = other_field_info["depends"] if isinstance(other_field_info["depends"], list) else [other_field_info["depends"]]
+                        depends_list = (
+                            other_field_info["depends"]
+                            if isinstance(other_field_info["depends"], list)
+                            else [other_field_info["depends"]]
+                        )
                         if field_name in depends_list or any(field_name in dep for dep in depends_list):
                             field_deps.extend(depends_list)
 
@@ -81,7 +93,11 @@ else:
                     try:
                         other_field_obj = model._fields.get(fname)
                         if other_field_obj and hasattr(other_field_obj, "compute") and other_field_obj.compute:
-                            compute_method = getattr(model, other_field_obj.compute, None) if isinstance(other_field_obj.compute, str) else None
+                            compute_method = (
+                                getattr(model, other_field_obj.compute, None)
+                                if isinstance(other_field_obj.compute, str)
+                                else None
+                            )
                             if compute_method and hasattr(compute_method, "_depends"):
                                 compute_deps = list(compute_method._depends)
                                 if field_name in compute_deps or any(field_name in dep for dep in compute_deps):
