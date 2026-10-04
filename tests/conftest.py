@@ -840,6 +840,145 @@ def _get_field_properties_response(code: str) -> dict[str, Any] | None:
     return None
 
 
+def _get_dynamic_fields_response(code: str) -> dict[str, Any] | None:
+    if '"computed_fields": {}' in code and '"related_fields": {}' in code and '"runtime_fields": []' in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        # Extract model_name from code
+        import re
+
+        model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+        model_name = model_match.group(1) if model_match else "sale.order"
+
+        return {
+            "model": model_name,
+            "computed_fields": create_paginated_response([]),
+            "related_fields": create_paginated_response([]),
+            "field_dependencies": {},
+            "runtime_fields": [],
+            "reverse_dependencies": {},
+            "dependency_graph": create_paginated_response([]),
+            "summary": {
+                "total_computed": 0,
+                "total_related": 0,
+                "total_dependencies": 0,
+            },
+        }
+    return None
+
+
+def _get_decorator_methods_response(code: str) -> dict[str, Any] | None:
+    if "decorator = " in code and "inspect.getmembers(model_class, inspect.isfunction)" in code:
+        # Extract decorator type from code
+        import re
+
+        decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
+        decorator_type = decorator_match.group(1) if decorator_match else "depends"
+
+        # Return empty results for invalid decorator types
+        if decorator_type not in ["depends", "constrains", "onchange", "model_create_multi"]:
+            return {"results": []}
+
+        return {
+            "results": [
+                {
+                    "model": "sale.order",
+                    "description": "Sales Order",
+                    "methods": [{"method": "_compute_depends", "depends_on": ["field1", "field2"], "signature": "(self)"}],
+                }
+            ]
+        }
+    return None
+
+
+def _get_fields_by_property_response(code: str) -> dict[str, Any] | None:
+    if "fields_by_property = []" in code and "'property': property_type" in code:
+        # Check for invalid property
+        if "invalid_property" in code:
+            return {"error": "Unsupported property type: invalid_property"}
+
+        property_type = (
+            "computed"
+            if "'computed'" in code
+            else "related"
+            if "'related'" in code
+            else "stored"
+            if "'stored'" in code
+            else "required"
+            if "'required'" in code
+            else "readonly"
+        )
+
+        return {
+            "property": property_type,
+            "fields": [],
+            "total_fields": 0,
+            "models_scanned": 100,
+        }
+    return None
+
+
+def _get_computed_properties_response(code: str) -> dict[str, Any] | None:
+    if "model_names = list(env.registry.models.keys())" in code and "field_data.get('compute')" in code:
+        # Extract property_type from code
+        import re
+
+        property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
+        property_type = property_match.group(1) if property_match else "computed"
+
+        if property_type == "invalid_property":
+            return {"error": "Invalid property type. Valid properties: computed, related, stored, required, readonly"}
+
+        return {
+            "property": property_type,
+            "fields": create_paginated_response(
+                [
+                    {"model": "sale.order", "field": "amount_total", "type": "float"},
+                    {"model": "res.partner", "field": "display_name", "type": "char"},
+                ]
+            ),
+            "total_fields": 2,
+            "models_scanned": 100,
+        }
+    return None
+
+
+def _get_method_implementations_response(code: str) -> dict[str, Any] | None:
+    if "model_names = list(env.registry.models.keys())" in code and "hasattr(model_class, method_name)" in code:
+        # Extract method_name from code
+        import re
+
+        method_match = re.search(r"method_name = ['\"]([^'\"]+)['\"]", code)
+        method_name = method_match.group(1) if method_match else "create"
+
+        if method_name == "nonexistent_method":
+            return {"implementations": {"items": [], "pagination": {}}}  # Return empty implementations
+
+        # Return list of implementations (the function wraps this in the result dict)
+        implementations_list: list[dict[str, Any]] = [
+            {
+                "model": "sale.order",
+                "module": "odoo.addons.sale.models.sale_order",
+                "signature": "(self, vals)",
+                "doc": "",
+                "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
+                "has_super": True,
+            },
+            {
+                "model": "res.partner",
+                "module": "odoo.addons.base.models.res_partner",
+                "signature": "(self, vals)",
+                "doc": "",
+                "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
+                "has_super": False,
+            },
+        ]
+        return {"implementations": {"items": implementations_list, "pagination": {}}}
+    return None
+
+
 @pytest.fixture
 def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
     env = MagicMock()
@@ -869,140 +1008,16 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             _get_field_dependencies_response,
             _get_field_values_response,
             _get_field_properties_response,
+            _get_dynamic_fields_response,
+            _get_decorator_methods_response,
+            _get_fields_by_property_response,
+            _get_computed_properties_response,
+            _get_method_implementations_response,
         )
         for handler in response_handlers:
             response = handler(code)
             if response is not None:
                 return response
-
-        # Handle resolve dynamic fields queries
-        if '"computed_fields": {}' in code and '"related_fields": {}' in code and '"runtime_fields": []' in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            # Extract model_name from code
-            import re
-
-            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
-            model_name = model_match.group(1) if model_match else "sale.order"
-
-            return {
-                "model": model_name,
-                "computed_fields": create_paginated_response([]),
-                "related_fields": create_paginated_response([]),
-                "field_dependencies": {},
-                "runtime_fields": [],
-                "reverse_dependencies": {},
-                "dependency_graph": create_paginated_response([]),
-                "summary": {
-                    "total_computed": 0,
-                    "total_related": 0,
-                    "total_dependencies": 0,
-                },
-            }
-
-        # Handle search decorator queries
-        if "decorator = " in code and "inspect.getmembers(model_class, inspect.isfunction)" in code:
-            # Extract decorator type from code
-            import re
-
-            decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
-            decorator_type = decorator_match.group(1) if decorator_match else "depends"
-
-            # Return empty results for invalid decorator types
-            if decorator_type not in ["depends", "constrains", "onchange", "model_create_multi"]:
-                return {"results": []}
-
-            return {
-                "results": [
-                    {
-                        "model": "sale.order",
-                        "description": "Sales Order",
-                        "methods": [{"method": "_compute_depends", "depends_on": ["field1", "field2"], "signature": "(self)"}],
-                    }
-                ]
-            }
-
-        # Handle search field properties queries
-        if "fields_by_property = []" in code and "'property': property_type" in code:
-            # Check for invalid property
-            if "invalid_property" in code:
-                return {"error": "Unsupported property type: invalid_property"}
-
-            property_type = (
-                "computed"
-                if "'computed'" in code
-                else "related"
-                if "'related'" in code
-                else "stored"
-                if "'stored'" in code
-                else "required"
-                if "'required'" in code
-                else "readonly"
-            )
-
-            return {
-                "property": property_type,
-                "fields": [],
-                "total_fields": 0,
-                "models_scanned": 100,
-            }
-
-        # Handle search_field_properties queries first (more specific)
-        if "model_names = list(env.registry.models.keys())" in code and "field_data.get('compute')" in code:
-            # Extract property_type from code
-            import re
-
-            property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
-            property_type = property_match.group(1) if property_match else "computed"
-
-            if property_type == "invalid_property":
-                return {"error": "Invalid property type. Valid properties: computed, related, stored, required, readonly"}
-
-            return {
-                "property": property_type,
-                "fields": create_paginated_response(
-                    [
-                        {"model": "sale.order", "field": "amount_total", "type": "float"},
-                        {"model": "res.partner", "field": "display_name", "type": "char"},
-                    ]
-                ),
-                "total_fields": 2,
-                "models_scanned": 100,
-            }
-
-        # Handle find_method queries
-        if "model_names = list(env.registry.models.keys())" in code and "hasattr(model_class, method_name)" in code:
-            # Extract method_name from code
-            import re
-
-            method_match = re.search(r"method_name = ['\"]([^'\"]+)['\"]", code)
-            method_name = method_match.group(1) if method_match else "create"
-
-            if method_name == "nonexistent_method":
-                return {"implementations": {"items": [], "pagination": {}}}  # Return empty implementations
-
-            # Return list of implementations (the function wraps this in the result dict)
-            implementations_list: list[dict[str, Any]] = [
-                {
-                    "model": "sale.order",
-                    "module": "odoo.addons.sale.models.sale_order",
-                    "signature": "(self, vals)",
-                    "doc": "",
-                    "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
-                    "has_super": True,
-                },
-                {
-                    "model": "res.partner",
-                    "module": "odoo.addons.base.models.res_partner",
-                    "signature": "(self, vals)",
-                    "doc": "",
-                    "source_preview": "  1: def create(self, vals):\n  2:     # Implementation",
-                    "has_super": False,
-                },
-            ]
-            return {"implementations": {"items": implementations_list, "pagination": {}}}
 
         # Handle search_decorators queries
         if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
