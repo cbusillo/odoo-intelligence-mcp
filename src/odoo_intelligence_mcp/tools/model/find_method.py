@@ -256,7 +256,7 @@ result = implementations  # Limited collection
     import json
 
     result_size = len(json.dumps(result))
-    if result_size > METHOD_RESPONSE_MAX_TOKENS:  # 25KB limit
+    if result_size > METHOD_RESPONSE_MAX_CHARACTERS:  # 25KB limit
         # Truncate the actual items to fit within limit
         items = result["implementations"]["items"]
         truncated_items = []
@@ -264,7 +264,7 @@ result = implementations  # Limited collection
 
         for item in items:
             item_size = len(json.dumps(item))
-            if current_size + item_size > METHOD_RESPONSE_TRUNCATION_TOKENS:  # Leave some buffer
+            if current_size + item_size > METHOD_RESPONSE_TRUNCATION_CHARACTERS:  # Leave some buffer
                 break
             truncated_items.append(item)
             current_size += item_size
@@ -276,8 +276,8 @@ result = implementations  # Limited collection
     return validate_response_size(result)
 
 
-METHOD_RESPONSE_MAX_TOKENS = 25000
-METHOD_RESPONSE_TRUNCATION_TOKENS = 20000
+METHOD_RESPONSE_MAX_CHARACTERS = 25000
+METHOD_RESPONSE_TRUNCATION_CHARACTERS = 20000
 
 
 async def find_models_with_method(

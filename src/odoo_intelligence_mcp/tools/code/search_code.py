@@ -19,7 +19,9 @@ def _resolve_search_roots(roots: list[str] | None, addons_roots: list[str]) -> t
             relative_roots.append(root)
             for base in addons_roots:
                 expanded_roots.append(str(Path(base) / root))
-                parent = str(Path(base).parent) if Path(base).parent != Path() else ""
+                parent = base.rsplit("/", maxsplit=1)[0] if "/" in base else ""
+                if base.startswith("/") and not parent:
+                    parent = "/"
                 if parent:
                     expanded_roots.append(str(Path(parent) / root))
         search_roots: list[str] = []
