@@ -185,7 +185,11 @@ workspace to be available.
 ```bash
 uv run mcp-format  # ruff format
 uv run ruff check .
+uv run mcp-check   # format, then lint
 ```
+
+`mcp-format` returns the formatter's exit status. `mcp-check` stops if formatting fails;
+otherwise it returns Ruff's lint exit status. Both commands exit successfully when their checks succeed.
 
 Run JetBrains (PyCharm) inspections on changed files with the `jetbrains-inspection` skill; `.github/github.json` lists
 the scope order.
