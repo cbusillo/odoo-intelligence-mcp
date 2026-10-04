@@ -194,123 +194,169 @@ def create_paginated_response(items: list[dict[str, Any]], page: int = 1, page_s
     }
 
 
+def _get_invalid_model_response(code: str) -> dict[str, Any] | None:
+    if "invalid.model" in code or "nonexistent.model" in code:
+        model = "nonexistent.model" if "nonexistent.model" in code else "invalid.model"
+        return {"error": f"Model {model} not found"}
+    return None
+
+
+def _get_arithmetic_response(code: str) -> dict[str, Any] | None:
+    code_patterns = [
+        ("result = 2 + 2", {"success": True, "result": 4}),
+        ("1 / 0", {"success": False, "error": "ZeroDivisionError: division by zero", "error_type": "ZeroDivisionError"}),
+        (
+            "import non_existent_module",
+            {
+                "success": False,
+                "error": "ModuleNotFoundError: No module named 'non_existent_module'",
+                "error_type": "ModuleNotFoundError",
+            },
+        ),
+        ("result = 10 + 45", {"success": True, "result": 55}),
+        ("result = sum(range(1, 11))", {"success": True, "result": 55}),
+        ("result = lambda x: x + 1", {"success": True, "result": "<lambda>", "result_type": "function"}),
+    ]
+
+    # Check simple string patterns
+    for pattern, response in code_patterns:
+        if pattern in code:
+            return response
+    return None
+
+
+def _get_partner_search_response(code: str) -> dict[str, Any] | None:
+    if "res.partner" in code and "search" in code and "is_company" in code:
+        return {
+            "success": True,
+            "result": [
+                {"name": "Company A", "email": "a@company.com"},
+                {"name": "Company B", "email": "b@company.com"},
+                {"name": "Company C", "email": "c@company.com"},
+            ],
+        }
+    elif "res.partner" in code and "search([])" in code:
+        # For recordset test
+        return {
+            "success": True,
+            "result_type": "recordset",
+            "model": "res.partner",
+            "count": 5,
+            "ids": [1, 2, 3, 4, 5],
+            "display_names": ["Partner 1", "Partner 2"],
+        }
+    return None
+
+
+def _get_partner_limit_response(code: str) -> dict[str, Any] | None:
+    if "env['res.partner']" in code and "limit=1" in code:
+        return {
+            "success": True,
+            "result_type": "recordset",
+            "model": "res.partner",
+            "count": 1,
+            "ids": [1],
+            "display_names": ["Test Partner"],
+        }
+    return None
+
+
+def _get_mapped_prices_response(code: str) -> dict[str, Any] | None:
+    if "product.template" in code and "mapped" in code and "from collections import Counter" not in code:
+        return {"success": True, "result": [100.0, 200.0, 150.0]}
+    return None
+
+
+def _get_sql_query_response(code: str) -> dict[str, Any] | None:
+    if "env.cr.execute" in code and "dictfetchall" in code:
+        return {
+            "success": True,
+            "result": [
+                {"name": "Big Corp", "order_count": 15, "total_sales": 50000.0},
+                {"name": "Medium Co", "order_count": 8, "total_sales": 25000.0},
+                {"name": "Small Ltd", "order_count": 3, "total_sales": 12000.0},
+            ],
+        }
+    return None
+
+
+def _get_empty_result_response(code: str) -> dict[str, Any] | None:
+    if "x = 10; y = 20" in code or ("print('hello')" in code and "result" not in code):
+        return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
+    return None
+
+
+def _get_mixed_statements_response(code: str) -> dict[str, Any] | None:
+    if "x = 10" in code and "y = 20" in code and "partner.id" in code:
+        return {"success": True, "result": {"calculation": 30, "partner_id": 123, "test_partners_count": 1}}
+    return None
+
+
+def _get_count_arithmetic_response(code: str) -> dict[str, Any] | None:
+    if "product.template'].search_count" in code and "motor'].search_count" in code:
+        return {"success": True, "result": {"total": 125, "ratio": 0.25, "difference": 75, "product": 200}}
+    return None
+
+
+def _get_mixed_async_response(code: str) -> dict[str, Any] | None:
+    if "total_partners" in code and "active_users" in code:
+        return {
+            "success": True,
+            "result": {
+                "counts": {"partners": 150, "users": 10, "ratio": 15.0},
+                "active_users": 10,
+                "admin": {"id": 1, "name": "Administrator", "login": "admin", "is_admin": True},
+                "summary": "150 partners, 10 total users, 8 active users",
+            },
+        }
+    return None
+
+
+def _get_datetime_response(code: str) -> dict[str, Any] | None:
+    if "from datetime import datetime" in code and "timedelta(days=30)" in code:
+        return {"success": True, "result": {"current": "2024-01-01T12:00:00", "future": "2024-01-31T12:00:00", "days_diff": 30}}
+    return None
+
+
+def _get_special_values_response(code: str) -> dict[str, Any] | None:
+    special_responses = {
+        "future_date": {"success": True, "result": {"current": "2024-01-01", "future": "2025-01-01", "formatted": "Monday"}},
+        # Remove the datetime pattern that's too broad
+        "calculations": {"success": True, "result": {"calculation": 155, "text": "Result is 155"}},
+        # Remove lambda pattern too
+        "count_draft": {"success": True, "result": {"total": 30, "by_state": {"draft": 10, "confirmed": 15, "done": 5}}},
+        "test data": {"success": True, "result": {"calculation": 30, "partner_id": 123, "test_partners_count": 1}},
+    }
+
+    for pattern, response in special_responses.items():
+        if pattern in code:
+            return response
+    return None
+
+
 @pytest.fixture
 def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
     env = MagicMock()
     env.__getitem__.return_value = MagicMock()
 
     def _get_mock_response_for_code(code: str) -> dict[str, Any]:
-        """Get mock response based on code patterns."""
-        # Check for invalid models
-        if "invalid.model" in code or "nonexistent.model" in code:
-            model = "nonexistent.model" if "nonexistent.model" in code else "invalid.model"
-            return {"error": f"Model {model} not found"}
-        code_patterns = [
-            ("result = 2 + 2", {"success": True, "result": 4}),
-            ("1 / 0", {"success": False, "error": "ZeroDivisionError: division by zero", "error_type": "ZeroDivisionError"}),
-            (
-                "import non_existent_module",
-                {
-                    "success": False,
-                    "error": "ModuleNotFoundError: No module named 'non_existent_module'",
-                    "error_type": "ModuleNotFoundError",
-                },
-            ),
-            ("result = 10 + 45", {"success": True, "result": 55}),
-            ("result = sum(range(1, 11))", {"success": True, "result": 55}),
-            ("result = lambda x: x + 1", {"success": True, "result": "<lambda>", "result_type": "function"}),
-        ]
-
-        # Check simple string patterns
-        for pattern, response in code_patterns:
-            if pattern in code:
-                return response
-
-        # Check complex patterns
-        if "res.partner" in code and "search" in code and "is_company" in code:
-            return {
-                "success": True,
-                "result": [
-                    {"name": "Company A", "email": "a@company.com"},
-                    {"name": "Company B", "email": "b@company.com"},
-                    {"name": "Company C", "email": "c@company.com"},
-                ],
-            }
-        elif "res.partner" in code and "search([])" in code:
-            # For recordset test
-            return {
-                "success": True,
-                "result_type": "recordset",
-                "model": "res.partner",
-                "count": 5,
-                "ids": [1, 2, 3, 4, 5],
-                "display_names": ["Partner 1", "Partner 2"],
-            }
-
-        if "env['res.partner']" in code and "limit=1" in code:
-            return {
-                "success": True,
-                "result_type": "recordset",
-                "model": "res.partner",
-                "count": 1,
-                "ids": [1],
-                "display_names": ["Test Partner"],
-            }
-
-        if "product.template" in code and "mapped" in code and "from collections import Counter" not in code:
-            return {"success": True, "result": [100.0, 200.0, 150.0]}
-
-        # Handle SQL query patterns
-        if "env.cr.execute" in code and "dictfetchall" in code:
-            return {
-                "success": True,
-                "result": [
-                    {"name": "Big Corp", "order_count": 15, "total_sales": 50000.0},
-                    {"name": "Medium Co", "order_count": 8, "total_sales": 25000.0},
-                    {"name": "Small Ltd", "order_count": 3, "total_sales": 12000.0},
-                ],
-            }
-
-        # Handle no result case
-        if "x = 10; y = 20" in code or ("print('hello')" in code and "result" not in code):
-            return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
-
-        # Handle multiple statements test
-        if "x = 10" in code and "y = 20" in code and "partner.id" in code:
-            return {"success": True, "result": {"calculation": 30, "partner_id": 123, "test_partners_count": 1}}
-
-        # Handle search_count arithmetic operations
-        if "product.template'].search_count" in code and "motor'].search_count" in code:
-            return {"success": True, "result": {"total": 125, "ratio": 0.25, "difference": 75, "product": 200}}
-
-        # Handle mixed async operations
-        if "total_partners" in code and "active_users" in code:
-            return {
-                "success": True,
-                "result": {
-                    "counts": {"partners": 150, "users": 10, "ratio": 15.0},
-                    "active_users": 10,
-                    "admin": {"id": 1, "name": "Administrator", "login": "admin", "is_admin": True},
-                    "summary": "150 partners, 10 total users, 8 active users",
-                },
-            }
-
-        # Handle datetime operations
-        if "from datetime import datetime" in code and "timedelta(days=30)" in code:
-            return {"success": True, "result": {"current": "2024-01-01T12:00:00", "future": "2024-01-31T12:00:00", "days_diff": 30}}
-
-        # Check other patterns
-        special_responses = {
-            "future_date": {"success": True, "result": {"current": "2024-01-01", "future": "2025-01-01", "formatted": "Monday"}},
-            # Remove the datetime pattern that's too broad
-            "calculations": {"success": True, "result": {"calculation": 155, "text": "Result is 155"}},
-            # Remove lambda pattern too
-            "count_draft": {"success": True, "result": {"total": 30, "by_state": {"draft": 10, "confirmed": 15, "done": 5}}},
-            "test data": {"success": True, "result": {"calculation": 30, "partner_id": 123, "test_partners_count": 1}},
-        }
-
-        for pattern, response in special_responses.items():
-            if pattern in code:
+        response_handlers = (
+            _get_invalid_model_response,
+            _get_arithmetic_response,
+            _get_partner_search_response,
+            _get_partner_limit_response,
+            _get_mapped_prices_response,
+            _get_sql_query_response,
+            _get_empty_result_response,
+            _get_mixed_statements_response,
+            _get_count_arithmetic_response,
+            _get_mixed_async_response,
+            _get_datetime_response,
+            _get_special_values_response,
+        )
+        for handler in response_handlers:
+            response = handler(code)
+            if response is not None:
                 return response
 
         # Handle model_info queries
