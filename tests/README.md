@@ -30,6 +30,7 @@ running.
 ## Commands
 
 ```bash
+uv run ruff check .          # Static-analysis gate, also run by the GitHub Actions test job
 uv run mcp-test              # Default no-live-stack gate for local and PR validation
 uv run mcp-test-unit         # Unit tests only
 uv run mcp-test-integration  # No-live integration tests
