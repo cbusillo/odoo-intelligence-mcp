@@ -7,20 +7,11 @@ if TYPE_CHECKING:
 async def check_permissions(
     env: CompatibleEnvironment, user: str, model: str, operation: str, record_id: int | None = None
 ) -> dict[str, Any]:
-    code = (
-        """
-user = """
-        + repr(user)
-        + """
-model = """
-        + repr(model)
-        + """
-operation = """
-        + repr(operation)
-        + """
-record_id = """
-        + repr(record_id)
-        + """
+    bindings = "\n".join((f"user = {user!r}", f"model = {model!r}", f"operation = {operation!r}", f"record_id = {record_id!r}"))
+    code = "\n".join(
+        (
+            bindings,
+            """
 empty_dict = dict()
 
 # Validate inputs
@@ -313,7 +304,10 @@ else:
                         if applicable_rules:
                             recommendation = f"User has {operation} access. Check record rules if specific records are inaccessible."
                         else:
-                            recommendation = f"User has model {operation} access but no applicable record rules. May be blocked by record-level security."
+                            recommendation = (
+                                f"User has model {operation} access but no applicable record rules. May be blocked by "
+                                f"record-level security."
+                            )
                     else:
                         recommendation = f"User has {operation} access with no record rules restrictions."
                 else:
@@ -325,9 +319,15 @@ else:
                                 missing_groups.append(str(group))
 
                     if missing_groups:
-                        recommendation = f"User lacks {operation} access. Consider adding user to groups: {', '.join(set(missing_groups))}"
+                        recommendation = (
+                            f"User lacks {operation} access. Consider adding user to groups: "
+                            f"{', '.join(set(missing_groups))}"
+                        )
                     else:
-                        recommendation = f"User lacks {operation} access. No model access rules grant {operation} permission for this user."
+                        recommendation = (
+                            f"User lacks {operation} access. No model access rules grant {operation} permission "
+                            f"for this user."
+                        )
 
                 analysis["access_summary"]["recommendation"] = recommendation
 
@@ -342,7 +342,8 @@ else:
                 "model": model,
                 "operation": operation,
             }
-"""
+""",
+        )
     )
 
     try:
