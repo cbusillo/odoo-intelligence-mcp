@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 import subprocess
@@ -7,7 +8,23 @@ from typing import Any
 from ...core.env import load_env_config
 
 
+def _parse_missing_modules(output: str) -> list[str]:
+    check_lines = output.strip().split("\n")
+    if check_lines:
+        try:
+            check_payload = json.loads(check_lines[-1])
+        except json.JSONDecodeError:
+            check_payload = {}
+    else:
+        check_payload = {}
+    return check_payload.get("missing", []) if isinstance(check_payload, dict) else []
+
+
 async def odoo_update_module(modules: str, force_install: bool = False) -> dict[str, Any]:
+    return await asyncio.to_thread(_odoo_update_module, modules, force_install)
+
+
+def _odoo_update_module(modules: str, force_install: bool = False) -> dict[str, Any]:
     try:
         config = load_env_config()
         container_name = config.script_runner_container
@@ -19,8 +36,8 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
         raw_modules = modules.split(",")
         safe_modules = []
 
-        for module in raw_modules:
-            module = module.strip()
+        for raw_module in raw_modules:
+            module = raw_module.strip()
             if not safe_pattern.match(module):
                 return {
                     "success": False,
@@ -42,7 +59,10 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
                     "success": False,
                     "error": f"Container '{container_name}' not found",
                     "modules": modules,
-                    "hint": "Use the 'odoo_restart' tool to restart services, or run 'docker compose up -d script-runner' to start the script-runner service",
+                    "hint": (
+                        "Use the 'odoo_restart' tool to restart services, "
+                        "or run 'docker compose up -d script-runner' to start the script-runner service"
+                    ),
                 }
             else:
                 return {
@@ -99,15 +119,7 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
                 "modules": modules,
             }
 
-        check_lines = check_result.stdout.strip().split("\n")
-        if check_lines:
-            try:
-                check_payload = json.loads(check_lines[-1])
-            except json.JSONDecodeError:
-                check_payload = {}
-        else:
-            check_payload = {}
-        missing = check_payload.get("missing", []) if isinstance(check_payload, dict) else []
+        missing = _parse_missing_modules(check_result.stdout)
         if missing:
             return {
                 "success": False,
@@ -116,10 +128,8 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
             }
 
         # Build the odoo-bin command
-        if force_install:
-            odoo_cmd = f"/odoo/odoo-bin -d {database} --no-http --stop-after-init -i {modules_str}"
-        else:
-            odoo_cmd = f"/odoo/odoo-bin -d {database} --no-http --stop-after-init -u {modules_str}"
+        module_option = "-i" if force_install else "-u"
+        odoo_cmd = f"/odoo/odoo-bin -d {database} --no-http --stop-after-init {module_option} {modules_str}"
 
         # Execute the command in the container
         exec_cmd = ["docker", "exec", container_name, "sh", "-c", odoo_cmd]
@@ -131,10 +141,7 @@ async def odoo_update_module(modules: str, force_install: bool = False) -> dict[
         stdout = exec_result.stdout
         stderr = exec_result.stderr
 
-        # Check for common error patterns
-        if "error" in stdout.lower() or "error" in stderr.lower():
-            success = False
-        if "module not found" in stdout.lower() or "module not found" in stderr.lower():
+        if any(pattern in output.lower() for output in (stdout, stderr) for pattern in ("error", "module not found")):
             success = False
 
         operation = "installed" if force_install else "updated"

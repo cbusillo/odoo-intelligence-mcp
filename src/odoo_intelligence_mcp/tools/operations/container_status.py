@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from ...core.env import load_env_config
@@ -5,7 +6,32 @@ from ...utils.docker_utils import DockerClientManager
 from ...utils.response_utils import ResponseBuilder
 
 
+def _get_verbose_container_info(inspect_payload: object, state_data: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(inspect_payload, dict):
+        config_data = inspect_payload.get("Config") if isinstance(inspect_payload.get("Config"), dict) else {}
+        container_id = inspect_payload.get("Id")
+        created_at = inspect_payload.get("Created")
+    else:
+        config_data = state_data.get("Config") if isinstance(state_data.get("Config"), dict) else {}
+        container_id = state_data.get("Id")
+        created_at = state_data.get("Created")
+
+    image_name = "unknown"
+    if isinstance(config_data, dict):
+        image_name = config_data.get("Image", "unknown")
+    return {
+        "state": state_data,
+        "id": container_id[:12] if isinstance(container_id, str) and container_id else "unknown",
+        "created": created_at if isinstance(created_at, str) else "unknown",
+        "image": image_name,
+    }
+
+
 async def odoo_status(verbose: bool = False) -> dict[str, Any]:
+    return await asyncio.to_thread(_odoo_status, verbose)
+
+
+def _odoo_status(verbose: bool = False) -> dict[str, Any]:
     try:
         docker_manager = DockerClientManager()
         config = load_env_config()
@@ -22,7 +48,7 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
         import subprocess
 
         try:
-            result = subprocess.run(["docker", "version"], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(["/usr/bin/env", "docker", "version"], capture_output=True, text=True, timeout=5)
             if result.returncode != 0:
                 return ResponseBuilder.error(
                     "Docker daemon is not available. Please ensure Docker is running.",
@@ -61,26 +87,7 @@ async def odoo_status(verbose: bool = False) -> dict[str, Any]:
                 container_info["resolved_container"] = resolved_name
 
             if verbose:
-                if isinstance(inspect_payload, dict):
-                    config_data = inspect_payload.get("Config") if isinstance(inspect_payload.get("Config"), dict) else {}
-                    container_id = inspect_payload.get("Id")
-                    created_at = inspect_payload.get("Created")
-                else:
-                    config_data = state_data.get("Config") if isinstance(state_data.get("Config"), dict) else {}
-                    container_id = state_data.get("Id")
-                    created_at = state_data.get("Created")
-
-                image_name = "unknown"
-                if isinstance(config_data, dict):
-                    image_name = config_data.get("Image", "unknown")
-                verbose_info = {
-                    "state": state_data,
-                    "id": container_id[:12] if isinstance(container_id, str) and container_id else "unknown",
-                    "created": created_at if isinstance(created_at, str) else "unknown",
-                    "image": image_name,
-                }
-
-                container_info.update(verbose_info)
+                container_info.update(_get_verbose_container_info(inspect_payload, state_data))
 
             status[container_name] = container_info
 

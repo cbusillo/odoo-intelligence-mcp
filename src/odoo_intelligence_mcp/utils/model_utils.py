@@ -248,7 +248,7 @@ def _error_payload_from_exception(exc: CodeExecutionError) -> dict[str, object]:
     return {"success": False, "error": message, "error_type": error_type}
 
 
-async def resolve_model_candidates(
+async def resolve_model_candidates(  # noqa: PLR0913 - Preserve the existing public call signature.
     env: CompatibleEnvironment,
     model_name: str,
     *,
@@ -289,7 +289,7 @@ async def resolve_model_candidates(
     return ModelResolutionPlan(attempts=attempts, suggestions=suggestions)
 
 
-async def resolve_model_with_runner(
+async def resolve_model_with_runner(  # noqa: PLR0913 - Preserve the existing public call signature.
     env: CompatibleEnvironment,
     model_name: str,
     runner: Callable[[str], Awaitable[object]],

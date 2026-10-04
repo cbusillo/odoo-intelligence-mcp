@@ -124,9 +124,6 @@ async def test_docker_container_status_check() -> None:
         config = load_env_config()
         expected_web_container = config.web_container
 
-        print(f"Result: {result}")
-        print(f"Expected container: {expected_web_container}")
-
         assert result["success"] is True
         assert result["data"]["overall_status"] == "healthy"
         assert "containers" in result["data"]
@@ -201,14 +198,13 @@ async def test_docker_connection_failure() -> None:
         assert "error" in result
 
 
-@pytest.mark.asyncio
 @pytest.mark.integration
 @pytest.mark.docker
-async def test_environment_with_actual_docker_check() -> None:
+def test_environment_with_actual_docker_check() -> None:
     # This test checks if Docker is actually available
     # It's marked as docker so it can be skipped in CI
     try:
-        result = subprocess.run(["docker", "ps"], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(["/usr/bin/env", "docker", "ps"], capture_output=True, text=True, timeout=5)
         docker_available = result.returncode == 0
     except subprocess.SubprocessError, FileNotFoundError:
         docker_available = False
@@ -221,7 +217,9 @@ async def test_environment_with_actual_docker_check() -> None:
     config = load_env_config()
     expected_prefix = config.container_prefix
     result = subprocess.run(
-        ["docker", "ps", "--filter", f"name={expected_prefix}", "--format", "{{.Names}}"], capture_output=True, text=True
+        ["/usr/bin/env", "docker", "ps", "--filter", f"name={expected_prefix}", "--format", "{{.Names}}"],
+        capture_output=True,
+        text=True,
     )
 
     result.stdout.strip().split("\n") if result.stdout else []

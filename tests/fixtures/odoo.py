@@ -11,7 +11,7 @@ from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironm
 def docker_available() -> bool:
     try:
         # noinspection LSPLocalInspectionTool
-        result = subprocess.run(["docker", "ps"], capture_output=True, timeout=5)
+        result = subprocess.run(["/usr/bin/env", "docker", "ps"], capture_output=True, timeout=5)
         return result.returncode == 0
     except subprocess.SubprocessError, FileNotFoundError:
         return False
