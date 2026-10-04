@@ -643,6 +643,203 @@ def _get_performance_response(code: str) -> dict[str, Any] | None:
     return None
 
 
+def _get_patterns_response(code: str) -> dict[str, Any] | None:
+    if '"computed_fields": []' in code and '"related_fields": []' in code and '"api_decorators": []' in code:
+        # Check for invalid pattern type
+        if "'invalid_pattern'" in code:
+            return {"error": "Unsupported pattern type: invalid_pattern"}
+
+        return {"computed_fields": [], "related_fields": [], "api_decorators": [], "custom_methods": [], "state_machines": []}
+    return None
+
+
+def _get_workflow_response(code: str) -> dict[str, Any] | None:
+    if "workflow_analysis = {" in code and "state_fields" in code and "state_transitions" in code:
+        # Check for invalid model
+        if "nonexistent.model" in code:
+            return {"error": "Model nonexistent.model not found"}
+
+        model_name = (
+            "sale.order"
+            if "sale.order" in code
+            else "purchase.order"
+            if "purchase.order" in code
+            else "account.move"
+            if "account.move" in code
+            else "mrp.production"
+            if "mrp.production" in code
+            else "stock.picking"
+            if "stock.picking" in code
+            else "project.task"
+            if "project.task" in code
+            else "product.template"
+            if "product.template" in code
+            else "res.partner"
+        )
+
+        return {
+            "model": model_name,
+            "state_fields": {},
+            "state_transitions": [],
+            "button_actions": [],
+            "automated_transitions": [],
+            "state_dependencies": {},
+            "summary": {
+                "has_workflow": model_name != "product.template",
+                "state_field_count": 1 if model_name != "product.template" else 0,
+                "transition_count": 3 if model_name in ["sale.order", "account.move"] else 0,
+                "button_count": 2 if model_name == "mrp.production" else 0,
+                "automated_count": 1 if model_name == "stock.picking" else 0,
+            },
+        }
+    return None
+
+
+def _get_field_dependencies_response(code: str) -> dict[str, Any] | None:
+    if "# Get field info using fields_get()" in code and "dependent_fields" in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        # Check for invalid field
+        if "nonexistent_field" in code:
+            return {"error": "Field nonexistent_field not found in res.partner"}
+
+        # Extract model_name and field_name from the code
+        model_name = None
+        field_name = None
+
+        # Look for model_name = 'xxx' pattern
+        import re
+
+        model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+        if model_match:
+            model_name = model_match.group(1)
+
+        field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
+        if field_match:
+            field_name = field_match.group(1)
+
+        if not model_name:
+            model_name = "res.partner"
+        if not field_name:
+            field_name = "name"
+
+        return {
+            "field": field_name,
+            "model": model_name,
+            "type": "many2one" if field_name in ["partner_id", "product_id"] else "char",
+            "direct_dependencies": [],
+            "indirect_dependencies": [],
+            "dependent_fields": [],
+            "dependency_chain": [],
+            "summary": {
+                "total_dependents": 0,
+                "total_dependencies": 0,
+                "is_computed": False,
+                "is_related": False,
+            },
+        }
+    return None
+
+
+def _get_field_values_response(code: str) -> dict[str, Any] | None:
+    if "from collections import Counter" in code and "model_obj.search(domain, limit=sample_size)" in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        # Check for invalid field
+        if "nonexistent_field" in code:
+            return {"error": "Field nonexistent_field not found in res.partner"}
+
+        # Extract model and field from code
+        import re
+
+        model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+        field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
+
+        model_name = model_match.group(1) if model_match else "product.template"
+        field_name = field_match.group(1) if field_match else "name"
+
+        # Return the correct structure that matches what the actual function returns
+        return {
+            "model": model_name,
+            "field": field_name,
+            "field_info": {
+                "type": "selection" if field_name == "state" else "char",
+                "string": field_name.replace("_", " ").title(),
+                "required": False,
+                "readonly": False,
+                "store": True,
+                "compute": None,
+                "relation": None,
+            },
+            "statistics": {
+                "total_records": 100,
+                "sample_size": 100,
+                "null_count": 5,
+                "empty_count": 3,
+                "unique_count": 10,
+                "null_percentage": 5.0,
+                "unique_percentage": 10.53,
+            },
+            "value_distribution": [("Value1", 20), ("Value2", 15), ("Value3", 10)],
+            "sample_values": ["Value1", "Value2", "Value3", None, "", "Value4"],
+            "analysis": {
+                "total_records": 100,
+                "analyzed_records": 100,
+                "unique_values": 10,
+                "null_count": 5,
+                "empty_count": 3,
+                "value_distribution": {},
+                "most_common": [],
+                "least_common": [],
+            },
+        }
+    return None
+
+
+def _get_field_properties_response(code: str) -> dict[str, Any] | None:
+    if "property_type = " in code and "model_names = list(env.registry.models.keys())" in code:
+        # Extract property_type from code
+        import re
+
+        property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
+        property_type = property_match.group(1) if property_match else "computed"
+
+        return {
+            "results": [
+                {
+                    "model": "sale.order",
+                    "description": "Sales Order",
+                    "fields": [
+                        {
+                            "field": f"test_{property_type}_field",
+                            "type": "char",
+                            "string": f"Test {property_type.title()} Field",
+                            "compute_method": "_compute_test" if property_type == "computed" else None,
+                            "related_path": "partner_id.name" if property_type == "related" else None,
+                            "stored": "True" if property_type == "computed" else None,
+                        }
+                    ],
+                },
+                {
+                    "model": "res.partner",
+                    "description": "Contact",
+                    "fields": [
+                        {
+                            "field": f"{property_type}_email",
+                            "type": "char",
+                            "string": f"{property_type.title()} Email",
+                        }
+                    ],
+                },
+            ]
+        }
+    return None
+
+
 @pytest.fixture
 def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
     env = MagicMock()
@@ -667,198 +864,16 @@ def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
             _get_relationships_response,
             _get_search_models_response,
             _get_performance_response,
+            _get_patterns_response,
+            _get_workflow_response,
+            _get_field_dependencies_response,
+            _get_field_values_response,
+            _get_field_properties_response,
         )
         for handler in response_handlers:
             response = handler(code)
             if response is not None:
                 return response
-
-        # Handle pattern analysis queries
-        if '"computed_fields": []' in code and '"related_fields": []' in code and '"api_decorators": []' in code:
-            # Check for invalid pattern type
-            if "'invalid_pattern'" in code:
-                return {"error": "Unsupported pattern type: invalid_pattern"}
-
-            return {"computed_fields": [], "related_fields": [], "api_decorators": [], "custom_methods": [], "state_machines": []}
-
-        # Handle workflow states queries
-        if "workflow_analysis = {" in code and "state_fields" in code and "state_transitions" in code:
-            # Check for invalid model
-            if "nonexistent.model" in code:
-                return {"error": "Model nonexistent.model not found"}
-
-            model_name = (
-                "sale.order"
-                if "sale.order" in code
-                else "purchase.order"
-                if "purchase.order" in code
-                else "account.move"
-                if "account.move" in code
-                else "mrp.production"
-                if "mrp.production" in code
-                else "stock.picking"
-                if "stock.picking" in code
-                else "project.task"
-                if "project.task" in code
-                else "product.template"
-                if "product.template" in code
-                else "res.partner"
-            )
-
-            return {
-                "model": model_name,
-                "state_fields": {},
-                "state_transitions": [],
-                "button_actions": [],
-                "automated_transitions": [],
-                "state_dependencies": {},
-                "summary": {
-                    "has_workflow": model_name != "product.template",
-                    "state_field_count": 1 if model_name != "product.template" else 0,
-                    "transition_count": 3 if model_name in ["sale.order", "account.move"] else 0,
-                    "button_count": 2 if model_name == "mrp.production" else 0,
-                    "automated_count": 1 if model_name == "stock.picking" else 0,
-                },
-            }
-
-        # Handle field dependencies queries
-        if "# Get field info using fields_get()" in code and "dependent_fields" in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            # Check for invalid field
-            if "nonexistent_field" in code:
-                return {"error": "Field nonexistent_field not found in res.partner"}
-
-            # Extract model_name and field_name from the code
-            model_name = None
-            field_name = None
-
-            # Look for model_name = 'xxx' pattern
-            import re
-
-            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
-            if model_match:
-                model_name = model_match.group(1)
-
-            field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
-            if field_match:
-                field_name = field_match.group(1)
-
-            if not model_name:
-                model_name = "res.partner"
-            if not field_name:
-                field_name = "name"
-
-            return {
-                "field": field_name,
-                "model": model_name,
-                "type": "many2one" if field_name in ["partner_id", "product_id"] else "char",
-                "direct_dependencies": [],
-                "indirect_dependencies": [],
-                "dependent_fields": [],
-                "dependency_chain": [],
-                "summary": {
-                    "total_dependents": 0,
-                    "total_dependencies": 0,
-                    "is_computed": False,
-                    "is_related": False,
-                },
-            }
-
-        # Handle field value analyzer queries
-        if "from collections import Counter" in code and "model_obj.search(domain, limit=sample_size)" in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            # Check for invalid field
-            if "nonexistent_field" in code:
-                return {"error": "Field nonexistent_field not found in res.partner"}
-
-            # Extract model and field from code
-            import re
-
-            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
-            field_match = re.search(r"field_name = ['\"]([^'\"]+)['\"]", code)
-
-            model_name = model_match.group(1) if model_match else "product.template"
-            field_name = field_match.group(1) if field_match else "name"
-
-            # Return the correct structure that matches what the actual function returns
-            return {
-                "model": model_name,
-                "field": field_name,
-                "field_info": {
-                    "type": "selection" if field_name == "state" else "char",
-                    "string": field_name.replace("_", " ").title(),
-                    "required": False,
-                    "readonly": False,
-                    "store": True,
-                    "compute": None,
-                    "relation": None,
-                },
-                "statistics": {
-                    "total_records": 100,
-                    "sample_size": 100,
-                    "null_count": 5,
-                    "empty_count": 3,
-                    "unique_count": 10,
-                    "null_percentage": 5.0,
-                    "unique_percentage": 10.53,
-                },
-                "value_distribution": [("Value1", 20), ("Value2", 15), ("Value3", 10)],
-                "sample_values": ["Value1", "Value2", "Value3", None, "", "Value4"],
-                "analysis": {
-                    "total_records": 100,
-                    "analyzed_records": 100,
-                    "unique_values": 10,
-                    "null_count": 5,
-                    "empty_count": 3,
-                    "value_distribution": {},
-                    "most_common": [],
-                    "least_common": [],
-                },
-            }
-
-        # Handle search_field_properties queries
-        if "property_type = " in code and "model_names = list(env.registry.models.keys())" in code:
-            # Extract property_type from code
-            import re
-
-            property_match = re.search(r"property_type = ['\"]([^'\"]+)['\"]", code)
-            property_type = property_match.group(1) if property_match else "computed"
-
-            return {
-                "results": [
-                    {
-                        "model": "sale.order",
-                        "description": "Sales Order",
-                        "fields": [
-                            {
-                                "field": f"test_{property_type}_field",
-                                "type": "char",
-                                "string": f"Test {property_type.title()} Field",
-                                "compute_method": "_compute_test" if property_type == "computed" else None,
-                                "related_path": "partner_id.name" if property_type == "related" else None,
-                                "stored": "True" if property_type == "computed" else None,
-                            }
-                        ],
-                    },
-                    {
-                        "model": "res.partner",
-                        "description": "Contact",
-                        "fields": [
-                            {
-                                "field": f"{property_type}_email",
-                                "type": "char",
-                                "string": f"{property_type.title()} Email",
-                            }
-                        ],
-                    },
-                ]
-            }
 
         # Handle resolve dynamic fields queries
         if '"computed_fields": {}' in code and '"related_fields": {}' in code and '"runtime_fields": []' in code:
