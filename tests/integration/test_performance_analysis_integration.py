@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from odoo_intelligence_mcp.tools.analysis.performance_analysis import analyze_performance
-from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 def extract_issues_from_result(result: dict) -> list:

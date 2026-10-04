@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from odoo_intelligence_mcp.tools.model.search_models import search_models
-from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestSearchModelsIntegration:

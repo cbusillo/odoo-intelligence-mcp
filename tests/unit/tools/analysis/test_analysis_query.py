@@ -1,10 +1,14 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from odoo_intelligence_mcp.core.utils import PaginationParams
 from odoo_intelligence_mcp.tools.analysis.pattern_analysis import analyze_patterns
 from odoo_intelligence_mcp.tools.analysis.performance_analysis import analyze_performance
 from odoo_intelligence_mcp.tools.analysis.workflow_states import analyze_workflow_states
-from tests.fixtures.types import MockOdooEnvironment
+
+if TYPE_CHECKING:
+    from tests.fixtures.types import MockOdooEnvironment
 
 
 @pytest.mark.asyncio

@@ -2,9 +2,7 @@ import asyncio
 import os
 import subprocess
 import time
-from collections.abc import Generator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,6 +12,10 @@ from odoo_intelligence_mcp.core.env import EnvConfig, HostOdooEnvironment, load_
 
 # Import fixtures to make them available to tests
 from .fixtures import mock_docker_run, real_odoo_env_if_available  # noqa: F401
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)

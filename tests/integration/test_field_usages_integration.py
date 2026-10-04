@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from odoo_intelligence_mcp.tools.field.field_usages import get_field_usages
-from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.type_defs.odoo_types import CompatibleEnvironment
 
 
 class TestFieldUsagesIntegration:

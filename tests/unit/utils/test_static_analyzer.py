@@ -21,7 +21,7 @@ from odoo import models, fields, api
 class SaleOrder(models.Model):
     _name = "sale.order"
     _description = "Sales Order"
-    
+
     name = fields.Char("Name", required=True)
     partner_id = fields.Many2one("res.partner", string="Customer")
     total = fields.Float(compute="_compute_total", store=True)
@@ -29,22 +29,22 @@ class SaleOrder(models.Model):
         ("draft", "Draft"),
         ("done", "Done")
     ], default="draft")
-    
+
     @api.depends("line_ids.subtotal")
     def _compute_total(self):
         for order in self:
             order.total = sum(order.line_ids.mapped("subtotal"))
-    
+
     @api.constrains("partner_id")
     def _check_partner(self):
         if not self.partner_id:
             raise ValidationError("Partner is required")
-    
+
     @api.onchange("partner_id")
     def _onchange_partner(self):
         if self.partner_id:
             self.payment_term_id = self.partner_id.property_payment_term_id
-    
+
     @api.model_create_multi
     def create(self, vals_list):
         return super().create(vals_list)

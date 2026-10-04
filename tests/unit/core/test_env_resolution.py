@@ -1,6 +1,9 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from odoo_intelligence_mcp.core import env as env_module
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_find_project_repo_root_should_find_sibling_odoo_ai(tmp_path: Path) -> None:

@@ -75,7 +75,7 @@ async def test_read_with_pattern_search() -> None:
     """Test pattern search with context."""
     test_content = """class TestModel(models.Model):
     _name = 'test.model'
-    
+
     def compute_total(self):
         total = 0
         for line in self.lines:

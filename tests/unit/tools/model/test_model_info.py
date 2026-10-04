@@ -1,9 +1,12 @@
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 import pytest
 
 from odoo_intelligence_mcp.tools.model.model_info import get_model_info
 from tests.fixtures.common import assert_model_info_response
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,11 @@
-from typing import Any
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from odoo_intelligence_mcp.tools.security.permission_checker import check_permissions
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 
 # noinspection PyUnusedLocal

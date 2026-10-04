@@ -1,11 +1,14 @@
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
 
-from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 from odoo_intelligence_mcp.tools.code.execute_code import execute_code
 from odoo_intelligence_mcp.tools.model.view_model_usage import get_view_model_usage
 from odoo_intelligence_mcp.tools.security.permission_checker import check_permissions
+
+if TYPE_CHECKING:
+    from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 
 
 class TestCoroutineIssues:
