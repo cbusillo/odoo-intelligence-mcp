@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def cli_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    (tmp_path / "ruff.toml").write_text('[lint]\nselect = ["E701", "F821"]\n')
+    (tmp_path / "ruff.toml").write_text('respect-gitignore = false\n[lint]\nselect = ["E701", "F821"]\n')
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
