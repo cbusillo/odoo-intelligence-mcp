@@ -979,169 +979,182 @@ def _get_method_implementations_response(code: str) -> dict[str, Any] | None:
     return None
 
 
+def _get_decorators_response(code: str) -> dict[str, Any] | None:
+    if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
+        # Extract decorator from code
+        import re
+
+        decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
+        decorator = decorator_match.group(1) if decorator_match else "depends"
+
+        if decorator == "invalid_decorator":
+            return {"decorator": decorator, "methods": [], "total_matches": 0}
+
+        return {
+            "decorator": decorator,
+            "methods": [
+                {
+                    "model": "sale.order",
+                    "methods": [
+                        {
+                            "method": f"_compute_{decorator}",
+                            f"{decorator}_on" if decorator == "depends" else decorator: ["field1", "field2"],
+                            "signature": "(self)",
+                        }
+                    ],
+                }
+            ],
+            "total_matches": 1,
+        }
+    return None
+
+
+def _get_view_usage_response(code: str) -> dict[str, Any] | None:
+    if '"exposed_fields": set()' in code and 'views = env["ir.ui.view"].search' in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        # Extract model_name from code
+        import re
+
+        model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
+        model_name = model_match.group(1) if model_match else "res.partner"
+
+        return {
+            "model": model_name,
+            "views": [
+                {
+                    "name": f"{model_name}.form",
+                    "type": "form",
+                    "xml_id": f"{model_name.split('.')[0]}.view_form",
+                    "module": model_name.split(".")[0],
+                    "fields": ["name", "partner_id"],
+                },
+                {
+                    "name": f"{model_name}.tree",
+                    "type": "tree",
+                    "xml_id": f"{model_name.split('.')[0]}.view_tree",
+                    "module": model_name.split(".")[0],
+                    "fields": ["name", "state"],
+                },
+            ],
+            "exposed_fields": ["name", "partner_id", "state"],
+            "view_types": {"form": 1, "tree": 1},
+            "field_usage_count": {"name": 2, "partner_id": 1, "state": 1},
+            "field_coverage": {
+                "total_fields": 10,
+                "exposed_fields": 3,
+                "coverage_percentage": 30.0,
+                "unexposed_fields": ["create_date", "write_date", "create_uid", "write_uid", "active", "company_id", "user_id"],
+            },
+            "buttons": [],
+            "actions": [],
+        }
+    return None
+
+
+def _get_inheritance_response(code: str) -> dict[str, Any] | None:
+    if "mro_entries = []" in code and "inherits_list = getattr(model_class" in code:
+        # Check for invalid model
+        if "invalid.model" in code:
+            return {"error": "Model invalid.model not found"}
+
+        model_name = (
+            "product.template"
+            if "product.template" in code
+            else "product.product"
+            if "product.product" in code
+            else "mail.thread"
+            if "mail.thread" in code
+            else "sale.order"
+            if "sale.order" in code
+            else "res.partner"
+            if "res.partner" in code
+            else "account.move"
+        )
+
+        return {
+            "model": model_name,
+            "mro": [
+                {
+                    "class": model_name.rsplit(".", maxsplit=1)[-1].title(),
+                    "model": model_name,
+                    "module": f"odoo.addons.{model_name.split('.', maxsplit=1)[0]}.models.{model_name.rsplit('.', maxsplit=1)[-1]}",
+                },
+                {"class": "Model", "model": "base", "module": "odoo.models"},
+            ],
+            "inherits": [],
+            "inherits_from": {},
+            "inherited_fields": {
+                "create_date": {"from_model": "base", "type": "datetime", "string": "Created on", "original_field": None}
+            },
+            "inheriting_models": [],
+            "overridden_methods": [],
+            "inherited_methods": {"create": "base", "write": "base", "unlink": "base"},
+            "summary": {
+                "total_inherited_fields": 1,
+                "total_models_inheriting": 0,
+                "total_overridden_methods": 0,
+                "inheritance_depth": 1,
+                "uses_delegation": False,
+                "uses_prototype": False,
+            },
+        }
+    return None
+
+
+def _get_blank_code_response(code: str) -> dict[str, Any] | None:
+    if code.strip() == "":
+        return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
+    return None
+
+
+def _get_mock_response_for_code(code: str) -> dict[str, Any]:
+    response_handlers = (
+        _get_invalid_model_response,
+        _get_arithmetic_response,
+        _get_partner_search_response,
+        _get_partner_limit_response,
+        _get_mapped_prices_response,
+        _get_sql_query_response,
+        _get_empty_result_response,
+        _get_mixed_statements_response,
+        _get_count_arithmetic_response,
+        _get_mixed_async_response,
+        _get_datetime_response,
+        _get_special_values_response,
+        _get_model_info_response,
+        _get_field_usages_response,
+        _get_relationships_response,
+        _get_search_models_response,
+        _get_performance_response,
+        _get_patterns_response,
+        _get_workflow_response,
+        _get_field_dependencies_response,
+        _get_field_values_response,
+        _get_field_properties_response,
+        _get_dynamic_fields_response,
+        _get_decorator_methods_response,
+        _get_fields_by_property_response,
+        _get_computed_properties_response,
+        _get_method_implementations_response,
+        _get_decorators_response,
+        _get_view_usage_response,
+        _get_inheritance_response,
+        _get_blank_code_response,
+    )
+    for handler in response_handlers:
+        response = handler(code)
+        if response is not None:
+            return response
+    return {"success": True}
+
+
 @pytest.fixture
 def mock_odoo_env(mock_res_partner_data: dict[str, Any]) -> MagicMock:
     env = MagicMock()
     env.__getitem__.return_value = MagicMock()
-
-    def _get_mock_response_for_code(code: str) -> dict[str, Any]:
-        response_handlers = (
-            _get_invalid_model_response,
-            _get_arithmetic_response,
-            _get_partner_search_response,
-            _get_partner_limit_response,
-            _get_mapped_prices_response,
-            _get_sql_query_response,
-            _get_empty_result_response,
-            _get_mixed_statements_response,
-            _get_count_arithmetic_response,
-            _get_mixed_async_response,
-            _get_datetime_response,
-            _get_special_values_response,
-            _get_model_info_response,
-            _get_field_usages_response,
-            _get_relationships_response,
-            _get_search_models_response,
-            _get_performance_response,
-            _get_patterns_response,
-            _get_workflow_response,
-            _get_field_dependencies_response,
-            _get_field_values_response,
-            _get_field_properties_response,
-            _get_dynamic_fields_response,
-            _get_decorator_methods_response,
-            _get_fields_by_property_response,
-            _get_computed_properties_response,
-            _get_method_implementations_response,
-        )
-        for handler in response_handlers:
-            response = handler(code)
-            if response is not None:
-                return response
-
-        # Handle search_decorators queries
-        if "model_names = list(env.registry.models.keys())" in code and "for name, method in inspect.getmembers" in code:
-            # Extract decorator from code
-            import re
-
-            decorator_match = re.search(r"decorator = ['\"]([^'\"]+)['\"]", code)
-            decorator = decorator_match.group(1) if decorator_match else "depends"
-
-            if decorator == "invalid_decorator":
-                return {"decorator": decorator, "methods": [], "total_matches": 0}
-
-            return {
-                "decorator": decorator,
-                "methods": [
-                    {
-                        "model": "sale.order",
-                        "methods": [
-                            {
-                                "method": f"_compute_{decorator}",
-                                f"{decorator}_on" if decorator == "depends" else decorator: ["field1", "field2"],
-                                "signature": "(self)",
-                            }
-                        ],
-                    }
-                ],
-                "total_matches": 1,
-            }
-
-        # Handle view_model_usage queries
-        if '"exposed_fields": set()' in code and 'views = env["ir.ui.view"].search' in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            # Extract model_name from code
-            import re
-
-            model_match = re.search(r"model_name = ['\"]([^'\"]+)['\"]", code)
-            model_name = model_match.group(1) if model_match else "res.partner"
-
-            return {
-                "model": model_name,
-                "views": [
-                    {
-                        "name": f"{model_name}.form",
-                        "type": "form",
-                        "xml_id": f"{model_name.split('.')[0]}.view_form",
-                        "module": model_name.split(".")[0],
-                        "fields": ["name", "partner_id"],
-                    },
-                    {
-                        "name": f"{model_name}.tree",
-                        "type": "tree",
-                        "xml_id": f"{model_name.split('.')[0]}.view_tree",
-                        "module": model_name.split(".")[0],
-                        "fields": ["name", "state"],
-                    },
-                ],
-                "exposed_fields": ["name", "partner_id", "state"],
-                "view_types": {"form": 1, "tree": 1},
-                "field_usage_count": {"name": 2, "partner_id": 1, "state": 1},
-                "field_coverage": {
-                    "total_fields": 10,
-                    "exposed_fields": 3,
-                    "coverage_percentage": 30.0,
-                    "unexposed_fields": ["create_date", "write_date", "create_uid", "write_uid", "active", "company_id", "user_id"],
-                },
-                "buttons": [],
-                "actions": [],
-            }
-
-        # Handle inheritance chain queries
-        if "mro_entries = []" in code and "inherits_list = getattr(model_class" in code:
-            # Check for invalid model
-            if "invalid.model" in code:
-                return {"error": "Model invalid.model not found"}
-
-            model_name = (
-                "product.template"
-                if "product.template" in code
-                else "product.product"
-                if "product.product" in code
-                else "mail.thread"
-                if "mail.thread" in code
-                else "sale.order"
-                if "sale.order" in code
-                else "res.partner"
-                if "res.partner" in code
-                else "account.move"
-            )
-
-            return {
-                "model": model_name,
-                "mro": [
-                    {
-                        "class": model_name.split(".")[-1].title(),
-                        "model": model_name,
-                        "module": f"odoo.addons.{model_name.split('.')[0]}.models.{model_name.split('.')[-1]}",
-                    },
-                    {"class": "Model", "model": "base", "module": "odoo.models"},
-                ],
-                "inherits": [],
-                "inherits_from": {},
-                "inherited_fields": {
-                    "create_date": {"from_model": "base", "type": "datetime", "string": "Created on", "original_field": None}
-                },
-                "inheriting_models": [],
-                "overridden_methods": [],
-                "inherited_methods": {"create": "base", "write": "base", "unlink": "base"},
-                "summary": {
-                    "total_inherited_fields": 1,
-                    "total_models_inheriting": 0,
-                    "total_overridden_methods": 0,
-                    "inheritance_depth": 1,
-                    "uses_delegation": False,
-                    "uses_prototype": False,
-                },
-            }
-
-        if code.strip() == "":
-            return {"success": True, "message": "Code executed successfully. Assign to 'result' variable to see output."}
-
-        return {"success": True}
 
     # Mock execute_code as an async method
     async def mock_execute_code(code: str) -> dict[str, object] | list[object] | str | int | float | bool | None:
