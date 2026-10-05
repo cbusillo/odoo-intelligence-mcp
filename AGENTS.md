@@ -17,7 +17,7 @@ Execution-guidance changes, including AGENTS.md, use `model-review` and the main
 
 Claim the issue before creating its linked task worktree; implement there instead of the primary checkout.
 The repository has no enabled Launchplane merge train in `.github/github.json`. Authorized changes land through a PR
-with a normal merge commit after green current-head CI and required review findings are accounted for.
+with a normal merge commit after green current-head CI and any review findings are accounted for.
 Merging is separate from deploying or changing a target Odoo runtime; apply overall direction and the task's scope to each action.
 
 Target the live Odoo workspace, such as an `odoo-devkit` checkout with `platform/stack.toml`. The `odoo-ai`

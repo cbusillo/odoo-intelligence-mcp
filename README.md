@@ -123,6 +123,7 @@ Notes
 
 - `field_query` usages, dependencies, and analyze_values need `model_name` and `field_name`; resolve_dynamic needs `model_name`
 - `field_query` search_type expects `field_type` (e.g., `char`, `many2one`, `selection`)
+- `field_query` search_properties expects `property` (e.g., `store`, `readonly`, `required`)
 - `analysis_query` patterns supports `pattern_type`: `computed_fields`, `related_fields`, `api_decorators`, `custom_methods`,
   `state_machines`, `all`
 
@@ -180,7 +181,7 @@ Large responses are validated and may include warnings or truncation to respect 
 
 Read [AGENTS.md](AGENTS.md#direction-and-execution) before repository work. Use the maintained executing loop and owning
 skills, claim issue-backed work before creating a linked task worktree, and use bot commits and pushes. This repository
-lands authorized changes through a PR with a normal merge commit after green current-head CI and required review findings
+lands authorized changes through a PR with a normal merge commit after green current-head CI and any review findings
 are accounted for; execution-guidance changes receive another model's review. Runtime actions have their own scope under
 overall direction.
 
