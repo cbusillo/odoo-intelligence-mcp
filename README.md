@@ -42,7 +42,8 @@ Restart Claude after configuration changes.
    - MCP uses `.platform/env/<context>.<instance>.env` when it exists.
    - Otherwise it tries `uv run platform info --context <ctx> --instance <instance> --json-output` in that workspace.
      This and a sibling `odoo-ai` lookup are leftovers from the archived `odoo-ai` workspace; `odoo-devkit` has no
-     `platform info` command. Removal is tracked in #15.
+     `platform info` command. Removal is tracked in
+     [the deferred cleanup](https://github.com/cbusillo/odoo-intelligence-mcp/issues/15).
 3) Current working directory of the MCP server process
 4) This MCP server directory (fallback)
 
@@ -204,7 +205,8 @@ uv run mcp-check   # format, then lint
 otherwise it returns Ruff's lint exit status. Both commands exit successfully when their checks succeed.
 
 Run JetBrains (PyCharm) inspections on changed files with the `jetbrains-inspection` skill; `.github/github.json` lists
-the scope order.
+the scope order. [AGENTS.md](AGENTS.md#standard-loop) explains how to report findings or inconclusive results;
+stale results, `capture_incomplete`, timeouts, and wrong-worktree routing do not prove a clean inspection.
 
 The GitHub Actions `test` job runs `uv run ruff check .` before the no-live-stack tests and the 75% coverage gate.
 

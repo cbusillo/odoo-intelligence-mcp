@@ -75,6 +75,11 @@ tracks removing them.
 7. Run JetBrains inspections on changed files with the `jetbrains-inspection` skill (scope order in `.github/github.json`).
 8. Verify coverage (`uv run mcp-test-cov` ≥ 75 %; CI runs `uv run mcp-test-cov-ci`).
 
+Follow the [inspection skill](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/jetbrains-inspection/SKILL.md)
+for recovery: actionable findings, stale results, `capture_incomplete`, timeouts, and wrong-worktree routing are not clean.
+Record the verdict, reason, and next action. For Markdown-only changes affecting no code paths, the skill permits an explicit
+not-run reason.
+
 ## MCP Tool Development
 
 When adding a tool:
@@ -122,7 +127,7 @@ prefers `.platform/env/<context>.<instance>.env` and falls back to
 - Host process: `odoo_intelligence_mcp.server` (async MCP server)
 - `core/env.py`: environment discovery and Docker exec orchestration
 - `core/utils.py`: tool argument parsing, pagination, and response-size validation
-- `utils/`: Docker, execution, model, and error helpers
+- `utils/`: Docker, execution, model, error, security, response, and static-analysis helpers
 - `tools/`: MCP tool implementations (grouped by domain)
 - `services/`: higher-level orchestration (analyzers, inspectors)
 - Runtime queries use fresh `docker exec` calls; static queries use filesystem indexes. Handle execution timeouts carefully.
