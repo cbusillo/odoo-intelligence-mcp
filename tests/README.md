@@ -25,7 +25,8 @@ tests/
 
 Tests without either marker never reach the host Docker daemon: `tests/conftest.py` answers `docker` subprocess calls as
 "no such container" and turns container start-up waits into no-ops, so results match CI whether or not a local stack is
-running.
+running. No-live tests also clear inherited `ODOO_` settings and select a per-test env-file fixture.
+Configuration tests can replace that fixture explicitly; live markers retain their supplied runtime settings.
 
 ## Commands
 

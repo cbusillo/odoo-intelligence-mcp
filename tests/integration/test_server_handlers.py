@@ -252,47 +252,87 @@ class TestServerHandlers:
         assert content["error_type"] == "ModelNotFoundError"
 
     @pytest.mark.asyncio
-    async def test_handle_module_structure(self) -> None:
-        # module_structure doesn't use the env, it reads from filesystem
-        # So we need to mock the get_addon_paths_from_container
-        with patch("odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container") as mock_get_paths:
-            mock_get_paths.return_value = ["/opt/project/addons", "/odoo/addons"]
-
-            # The tool will return an error if the module doesn't exist on filesystem
-            result = await handle_call_tool("module_structure", {"module_name": "sale"})
-
-        assert len(result) == 1
-        content = json.loads(result[0].text)
-        # Since we're not mocking the actual filesystem, it should return an error
-        assert "error" in content or "module" in content
-        # If it has an error, verify it's about the module not being found
-        if "error" in content:
-            assert "not found" in content["error"].lower() or "Module sale" in content["error"]
-        # If it has module info, verify the basic structure
-        if "module" in content:
-            assert content["module"] == "sale"
+    @pytest.mark.parametrize("module_exists", [True, False])
+    async def test_handle_module_structure(self, module_exists: bool) -> None:
+        module_name = "fixture_module"
+        module_path = f"/fixture/addons/{module_name}"
+        structure = {
+            "path": module_path,
+            "models": ["models/order.py"],
+            "views": ["views/order.xml"],
+            "manifest": {"name": "Fixture"},
+        }
+        docker_client = MagicMock()
+        docker_client.get_container.return_value = {"success": True}
+        if module_exists:
+            docker_client.exec_run.side_effect = [
+                {"success": True, "exit_code": 0, "stdout": module_path},
+                {"success": True, "exit_code": 0, "stdout": json.dumps(structure)},
+            ]
+        else:
+            docker_client.exec_run.return_value = {"success": False, "exit_code": 1, "stdout": ""}
+        environment = MagicMock()
+        environment.cr = None
+        with (
+            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", AsyncMock(return_value=environment)),
+            patch("odoo_intelligence_mcp.tools.addon.module_structure.DockerClientManager", return_value=docker_client),
+            patch(
+                "odoo_intelligence_mcp.tools.addon.module_structure.get_addon_paths_from_container",
+                AsyncMock(return_value=["/fixture/addons"]),
+            ),
+        ):
+            response = await handle_call_tool("module_structure", {"module_name": module_name})
+        content = json.loads(response[0].text)
+        if not module_exists:
+            assert module_name in content["error"]
+            assert "not found" in content["error"].lower()
+            return
+        assert "error" not in content
+        assert content["module"] == module_name
+        assert content["manifest"] == structure["manifest"]
+        assert [item["path"] for item in content["files"]["items"]] == structure["models"] + structure["views"]
+        assert content["files"]["pagination"]["total_count"] == len(structure["models"]) + len(structure["views"])
 
     @pytest.mark.asyncio
-    async def test_handle_addon_dependencies(self) -> None:
-        # addon_dependencies reads from filesystem, not env
-        # If it finds a real addon, test the actual structure
-        result = await handle_call_tool("addon_dependencies", {"addon_name": "sale_management"})
+    @pytest.mark.parametrize("addon_exists", [True, False])
+    async def test_handle_addon_dependencies(self, addon_exists: bool) -> None:
+        addon_name = "fixture_addon"
+        addon_path = f"/fixture/addons/{addon_name}"
+        manifest = {"name": "Fixture", "depends": ["base", "mail"]}
+        dependent_name = "fixture_consumer"
+        docker_client = MagicMock()
+        docker_client.get_container.return_value = {"success": True}
 
-        assert len(result) == 1
-        content = json.loads(result[0].text)
+        def execute_container_command(container_name: str, command: list[str]) -> dict[str, object]:
+            if command[0] == "ls":
+                return {"success": True, "exit_code": 0, "stdout": f"/fixture/addons/{dependent_name}/"}
+            if command == ["cat", f"{addon_path}/__manifest__.py"] and addon_exists:
+                return {"success": True, "exit_code": 0, "stdout": repr(manifest)}
+            if command == ["cat", f"/fixture/addons/{dependent_name}/__manifest__.py"]:
+                return {"success": True, "exit_code": 0, "stdout": repr({"depends": [addon_name]})}
+            return {"success": False, "exit_code": 1, "stdout": ""}
 
-        # The tool returns different structure depending on whether addon exists
-        if "error" in content:
-            # If addon not found, should have error
-            assert "not found" in content["error"].lower() or "sale_management" in content["error"]
-        else:
-            # If addon found, check actual structure
-            assert "addon" in content
-            assert content["addon"] == "sale_management"
-            # The actual response has "depends" not "depends_on"
-            assert "depends" in content or "error" in content
-            # It also has depends_on_this structure
-            assert "depends_on_this" in content or "error" in content
+        docker_client.exec_run.side_effect = execute_container_command
+        environment = MagicMock()
+        environment.cr = None
+        with (
+            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", AsyncMock(return_value=environment)),
+            patch("odoo_intelligence_mcp.tools.addon.addon_dependencies.DockerClientManager", return_value=docker_client),
+            patch(
+                "odoo_intelligence_mcp.tools.addon.addon_dependencies._get_addon_paths", AsyncMock(return_value=["/fixture/addons"])
+            ),
+        ):
+            response = await handle_call_tool("addon_dependencies", {"addon_name": addon_name})
+        content = json.loads(response[0].text)
+        if not addon_exists:
+            assert addon_name in content["error"]
+            assert "not found" in content["error"].lower()
+            return
+        assert "error" not in content
+        assert content["addon"] == addon_name
+        assert content["depends"] == manifest["depends"]
+        assert [item["name"] for item in content["depends_on_this"]["items"]] == [dependent_name]
+        assert content["statistics"]["direct_dependencies"] == len(manifest["depends"])
 
     @pytest.mark.asyncio
     async def test_handle_view_model_usage(self) -> None:

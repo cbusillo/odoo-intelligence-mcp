@@ -39,20 +39,17 @@ def env_config() -> EnvConfig:
     return load_env_config()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _ensure_container_prefix() -> Generator[None]:
-    explicit = any(
-        os.getenv(key) for key in ("ODOO_PROJECT_NAME", "ODOO_CONTAINER_NAME", "ODOO_SCRIPT_RUNNER_CONTAINER", "ODOO_WEB_CONTAINER")
-    )
-    if explicit:
-        yield
+@pytest.fixture(autouse=True)
+def _isolate_no_live_configuration(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    if request.node.get_closest_marker("requires_docker") or request.node.get_closest_marker("requires_odoo"):
         return
-    monkeypatch = pytest.MonkeyPatch()
+    for name in tuple(os.environ):
+        if name.upper().startswith("ODOO_"):
+            monkeypatch.delenv(name)
+    environment_file = tmp_path / "no-live.env"
+    environment_file.write_text("ODOO_PROJECT_NAME=odoo\n", encoding="utf-8")
+    monkeypatch.setenv("ODOO_ENV_FILE", str(environment_file))
     monkeypatch.setenv("ODOO_PROJECT_NAME", "odoo")
-    try:
-        yield
-    finally:
-        monkeypatch.undo()
 
 
 @pytest.fixture
