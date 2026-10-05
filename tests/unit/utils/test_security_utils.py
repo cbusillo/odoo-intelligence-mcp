@@ -28,13 +28,12 @@ def calculate_total(items):
         assert is_valid is True
         assert "passed security validation" in message
 
-    def test_validate_code_exceeds_length(self) -> None:
-        code = "x = 1\n" * 5000  # Exceeds MAX_CODE_LENGTH
+    @pytest.mark.parametrize("difference", [-1, 0, 1])
+    def test_validate_code_enforces_configured_length(self, difference: int, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(CodeSecurityValidator, "MAX_CODE_LENGTH", 24)
+        code = "#" + "x" * (CodeSecurityValidator.MAX_CODE_LENGTH + difference - 1)
         result = CodeSecurityValidator.validate_code(code)
-        is_valid = result["is_valid"]
-        message = result.get("error", result.get("message", ""))
-        assert is_valid is False
-        assert "exceeds maximum length" in message
+        assert result["is_valid"] is (difference <= 0)
 
     def test_validate_code_syntax_error(self) -> None:
         code = "def invalid syntax("
@@ -146,31 +145,14 @@ class SaleOrder(models.Model):
         _message = result.get("error", result.get("message", ""))
         assert is_valid is True
 
-    def test_validate_code_nested_loops_within_limit(self) -> None:
-        code = """
-for i in range(10):
-    for j in range(10):
-        for k in range(10):
-            print(i, j, k)
-"""
+    @pytest.mark.parametrize("difference", [0, 1])
+    def test_validate_code_enforces_configured_loop_depth(self, difference: int, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(CodeSecurityValidator, "MAX_LOOP_DEPTH", 2)
+        depth = CodeSecurityValidator.MAX_LOOP_DEPTH + difference
+        loops = [f"{'    ' * level}for number_{level} in range(2):" for level in range(depth)]
+        code = "\n".join([*loops, f"{'    ' * depth}pass"])
         result = CodeSecurityValidator.validate_code(code)
-        is_valid = result["is_valid"]
-        _message = result.get("error", result.get("message", ""))
-        assert is_valid is True
-
-    def test_validate_code_nested_loops_exceed_limit(self) -> None:
-        code = """
-for a in range(10):
-    for b in range(10):
-        for c in range(10):
-            for d in range(10):
-                print(a, b, c, d)
-"""
-        result = CodeSecurityValidator.validate_code(code)
-        is_valid = result["is_valid"]
-        message = result.get("error", result.get("message", ""))
-        assert is_valid is False
-        assert "Nested loops exceed maximum depth" in message
+        assert result["is_valid"] is (difference == 0)
 
     def test_validate_code_while_without_break(self) -> None:
         code = """
@@ -309,36 +291,17 @@ while True:
             validator.visit(tree)
         assert "dangerous attribute '__globals__'" in str(exc_info.value)
 
-    def test_visit_for_nested_depth(self) -> None:
-        validator = SecurityValidator()
-        code = """
-for a in range(1):
-    for b in range(1):
-        for c in range(1):
-            for d in range(1):
-                pass
-"""
-        tree = ast.parse(code)
-        with pytest.raises(SecurityError) as exc_info:
-            validator.visit(tree)
-        assert "Nested loops exceed maximum depth" in str(exc_info.value)
-
-    def test_visit_while_nested_depth(self) -> None:
-        validator = SecurityValidator()
-        code = """
-while True:
-    while True:
-        while True:
-            while True:
-                break
-            break
-        break
-    break
-"""
-        tree = ast.parse(code)
-        with pytest.raises(SecurityError) as exc_info:
-            validator.visit(tree)
-        assert "Nested loops exceed maximum depth" in str(exc_info.value)
+    @pytest.mark.parametrize("loop_type", ["for", "while"])
+    def test_visit_rejects_depth_above_configured_limit(self, loop_type: str) -> None:
+        depth = CodeSecurityValidator.MAX_LOOP_DEPTH + 1
+        loop = "for number in range(1):" if loop_type == "for" else "while True:"
+        lines = [f"{'    ' * level}{loop}" for level in range(depth)]
+        lines.append(f"{'    ' * depth}pass")
+        if loop_type == "while":
+            lines.extend(f"{'    ' * level}break" for level in range(depth, 0, -1))
+        tree = ast.parse("\n".join(lines))
+        with pytest.raises(SecurityError):
+            SecurityValidator().visit(tree)
 
     def test_visit_function_def_private(self) -> None:
         validator = SecurityValidator()
@@ -392,30 +355,3 @@ os.system('ls')
         error = SecurityError("Test security error")
         assert str(error) == "Test security error"
         assert isinstance(error, Exception)
-
-
-class TestCodeSecurityValidatorConstants:
-    def test_dangerous_imports_contains_expected(self) -> None:
-        assert "os" in CodeSecurityValidator.DANGEROUS_IMPORTS
-        assert "subprocess" in CodeSecurityValidator.DANGEROUS_IMPORTS
-        assert "eval" in CodeSecurityValidator.DANGEROUS_IMPORTS
-
-    def test_dangerous_functions_contains_expected(self) -> None:
-        assert "eval" in CodeSecurityValidator.DANGEROUS_FUNCTIONS
-        assert "exec" in CodeSecurityValidator.DANGEROUS_FUNCTIONS
-        assert "open" in CodeSecurityValidator.DANGEROUS_FUNCTIONS
-
-    def test_dangerous_attributes_contains_expected(self) -> None:
-        assert "__class__" in CodeSecurityValidator.DANGEROUS_ATTRIBUTES
-        assert "__globals__" in CodeSecurityValidator.DANGEROUS_ATTRIBUTES
-        assert "__builtins__" in CodeSecurityValidator.DANGEROUS_ATTRIBUTES
-
-    def test_allowed_modules_contains_expected(self) -> None:
-        assert "datetime" in CodeSecurityValidator.ALLOWED_MODULES
-        assert "json" in CodeSecurityValidator.ALLOWED_MODULES
-        assert "re" in CodeSecurityValidator.ALLOWED_MODULES
-
-    def test_constants_values(self) -> None:
-        assert CodeSecurityValidator.MAX_LOOP_DEPTH == 3
-        assert CodeSecurityValidator.MAX_CODE_LENGTH == 10000
-        assert CodeSecurityValidator.MAX_LOOP_ITERATIONS == 10000

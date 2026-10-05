@@ -240,33 +240,31 @@ class TestDataExfiltrationPrevention:
 
 class TestRateLimitingAndDoS:
     @pytest.mark.asyncio
-    async def test_limit_concurrent_executions(self) -> None:
+    async def test_independent_execution_calls_can_overlap(self) -> None:
         import asyncio
 
-        mock_env = AsyncMock()
-        call_count = 0
+        environment = AsyncMock()
+        expected_codes = [f"result = {number}" for number in range(3)]
+        started_codes: set[str] = set()
+        all_started = asyncio.Event()
+        finish_operations = asyncio.Event()
 
-        async def delayed_response(code: str) -> dict[str, str]:
-            nonlocal call_count
-            call_count += 1
-            await asyncio.sleep(0.01)  # Small delay to simulate processing
-            return {"result": "done", "code": code}
+        async def execute_response(code: str) -> dict[str, str]:
+            started_codes.add(code)
+            if started_codes == set(expected_codes):
+                all_started.set()
+            await finish_operations.wait()
+            return {"code": code}
 
-        mock_env.execute_code = delayed_response
-
-        # Create a reasonable number of concurrent tasks
-        tasks = [execute_code(mock_env, f"result = {i}") for i in range(10)]
-
-        start_time = asyncio.get_event_loop().time()
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        elapsed = asyncio.get_event_loop().time() - start_time
-
-        # All tasks should complete successfully
-        assert call_count == 10
-        # If truly concurrent, should take much less than 0.1s (10 * 0.01s sequential)
-        assert elapsed < 0.1
-        errors = [r for r in results if isinstance(r, Exception)]
-        assert len(errors) == 0
+        environment.execute_code = execute_response
+        requests = [asyncio.create_task(execute_code(environment, code)) for code in expected_codes]
+        try:
+            await asyncio.wait_for(all_started.wait(), timeout=5)
+            assert all(not request.done() for request in requests)
+        finally:
+            finish_operations.set()
+            results = await asyncio.gather(*requests)
+        assert results == [{"success": True, "result": {"code": code}} for code in expected_codes]
 
     @pytest.mark.asyncio
     async def test_prevent_infinite_loops(self) -> None:
