@@ -1,6 +1,6 @@
 """Simple tests for addon dependencies analysis."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -71,7 +71,12 @@ async def test_get_addon_dependencies_not_found() -> None:
     """Test addon not found case."""
     addon_name = "missing_addon"
 
-    with patch("pathlib.Path.exists", return_value=False):
+    docker_client = MagicMock()
+    docker_client.get_container.return_value = {"success": False}
+    with (
+        patch("odoo_intelligence_mcp.tools.addon.addon_dependencies.DockerClientManager", return_value=docker_client),
+        patch("odoo_intelligence_mcp.tools.addon.addon_dependencies._get_addon_paths", AsyncMock(return_value=["/fixture/addons"])),
+    ):
         result = await get_addon_dependencies(addon_name)
 
     assert "error" in result
