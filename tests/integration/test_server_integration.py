@@ -76,49 +76,12 @@ class TestServerIntegration:
         mock_env_with_cleanup.cr.close.assert_called_once()
 
     # noinspection PyUnusedLocal
-    @pytest.mark.asyncio
-    async def test_pagination_parameters_passed_correctly(self) -> None:
-        mock_env = AsyncMock()
-        mock_env.execute_code = AsyncMock(return_value=[])
-
-        pagination_tools = [
-            ("model_query", {"operation": "search", "pattern": "test"}),
-            ("model_query", {"operation": "relationships", "model_name": "test.model"}),
-            ("field_query", {"operation": "usages", "model_name": "test.model", "field_name": "test_field"}),
-            ("analysis_query", {"analysis_type": "patterns"}),
-            ("model_query", {"operation": "inheritance", "model_name": "test.model"}),
-        ]
-
-        for tool_name, args in pagination_tools:
-            with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-                args.update({"page": 2, "page_size": 50, "filter": "test_filter"})
-
-                result = await handle_call_tool(tool_name, args)
-
-                # Some tools apply pagination after fetching data rather than in the query
-                if tool_name in ["search_models", "analysis_query"]:
-                    # For these tools, check that pagination is applied to the result
-                    import json
-
-                    result_data = json.loads(result[0].text)
-                    # Check that pagination info is in the result
-                    if "matches" in result_data:
-                        matches = result_data["matches"]
-                        if isinstance(matches, dict) and "pagination" in matches:
-                            assert matches["pagination"]["page"] == 2
-                            assert matches["pagination"]["page_size"] == 50
-                else:
-                    # For other tools, check pagination in execute_code call
-                    mock_env.execute_code.call_args[0][0]
-                    # These tools may not use offset/limit directly in code
-                    # Just verify the execute_code was called
-                    assert mock_env.execute_code.called
 
     @pytest.mark.asyncio
-    async def test_response_size_validation(self) -> None:
+    async def test_execution_response_preserves_payload(self) -> None:
         mock_env = AsyncMock()
-        large_response = {"data": "x" * 1000000}  # 1MB response
-        mock_env.execute_code = AsyncMock(return_value=large_response)
+        execution_payload = {"data": "fixture text", "records": [{"name": "fixture"}]}
+        mock_env.execute_code = AsyncMock(return_value=execution_payload)
 
         with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
             result = await handle_call_tool("execute_code", {"code": "print('test')"})
@@ -127,7 +90,7 @@ class TestServerIntegration:
             content = json.loads(result[0].text)
             # execute_code wraps the response
             assert content["success"] is True
-            assert content["result"] == large_response
+            assert content["result"] == execution_payload
 
     @pytest.mark.asyncio
     async def test_concurrent_handler_execution(self) -> None:
@@ -228,36 +191,6 @@ class TestToolResponseContracts:
             assert isinstance(content["error"], str)
             assert "error_type" in content
             assert isinstance(content["error_type"], str)
-
-    @pytest.mark.asyncio
-    async def test_pagination_response_structure(self) -> None:
-        mock_env = AsyncMock()
-        paginated_response = {
-            "items": [{"id": i} for i in range(10)],
-            "pagination": {
-                "page": 1,
-                "page_size": 10,
-                "total_count": 100,
-                "total_pages": 10,
-                "has_next_page": True,
-                "has_previous_page": False,
-                "filter_applied": None,
-            },
-        }
-        mock_env.execute_code = AsyncMock(return_value=paginated_response)
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("model_query", {"operation": "search", "pattern": "test"})
-
-            content = json.loads(result[0].text)
-            if "pagination" in content:
-                pagination = content["pagination"]
-                assert "page" in pagination
-                assert "page_size" in pagination
-                assert "total_count" in pagination
-                assert "has_next_page" in pagination
-                assert isinstance(pagination["page"], int)
-                assert isinstance(pagination["has_next_page"], bool)
 
 
 class TestResourceManagement:

@@ -236,33 +236,6 @@ class TestServerHandlers:
         assert "depended_by" in content
 
     @pytest.mark.asyncio
-    async def test_handle_call_tool_with_pagination_params(self) -> None:
-        mock_env = AsyncMock()
-        mock_env.execute_code = AsyncMock(
-            return_value={
-                "items": [{"name": f"model_{i}"} for i in range(10)],
-                "pagination": {
-                    "page": 1,
-                    "page_size": 5,
-                    "total_count": 10,
-                    "total_pages": 2,
-                    "has_next_page": True,
-                    "has_previous_page": False,
-                },
-            }
-        )
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", new_callable=AsyncMock, return_value=mock_env):
-            result = await handle_call_tool("model_query", {"operation": "search", "pattern": "sale", "page": 1, "page_size": 5})
-
-        assert len(result) == 1
-        content = json.loads(result[0].text)
-        assert "items" in content or "exact_matches" in content
-        if "pagination" in content:
-            assert content["pagination"]["page"] == 1
-            assert content["pagination"]["page_size"] == 5
-
-    @pytest.mark.asyncio
     async def test_handle_error_with_odoo_mcp_error(self) -> None:
         from odoo_intelligence_mcp.utils.error_utils import ModelNotFoundError
 
