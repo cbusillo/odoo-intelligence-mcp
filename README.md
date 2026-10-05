@@ -2,6 +2,10 @@
 
 Comprehensive Model Context Protocol (MCP) server providing deep code analysis and development tools for Odoo projects.
 
+Repository work follows the Director's overall [DIRECTION.md](https://github.com/cbusillo/direction/blob/HEAD/DIRECTION.md).
+There is no repository-specific DIRECTION.md. [AGENTS.md](AGENTS.md) is the sole agent-instruction filename and describes
+execution and landing; [workflow metadata](.github/github.json) owns command routing.
+
 ## Features
 
 - 15 tools exposing 30+ capabilities
@@ -13,13 +17,13 @@ Comprehensive Model Context Protocol (MCP) server providing deep code analysis a
 ## Installation
 
 - Prereqs: Python 3.14+ and `uv`
-- From the project directory: `uv sync`
+- From the project directory: `uv sync --locked --group dev`
 
 ## Configuration
 
 ### Claude Code Integration
 
-Add the MCP server to Claude Code/Claude Desktop:
+Add the MCP server to Claude Code:
 
 ```bash
 # Use --project to ensure uv resolves this repo's environment
@@ -39,7 +43,7 @@ Restart Claude after configuration changes.
    - Otherwise it tries `uv run platform info --context <ctx> --instance <instance> --json-output` in that workspace.
      This and a sibling `odoo-ai` lookup are leftovers from the archived `odoo-ai` workspace; `odoo-devkit` has no
      `platform info` command. Removal is tracked in #15.
-3) Current working directory (where Claude was launched)
+3) Current working directory of the MCP server process
 4) This MCP server directory (fallback)
 
 Override discovery by setting `ODOO_ENV_FILE` to the target project's env file path or `ODOO_PROJECT_DIR` for platform resolution. Process env vars override file values by default; set `ODOO_ENV_PRIORITY=env_file` to let the env file win.
@@ -73,7 +77,8 @@ Enable enhanced error payloads: `ODOO_MCP_ENHANCED_ERRORS=true`.
 
 ### Using with Different Projects
 
-Launch Claude from your Odoo project directory so `.env` is discovered. Or set env vars:
+Start the MCP server from your Odoo project directory so `.env` is discovered, or set `ODOO_ENV_FILE` explicitly.
+Alternatively, set env vars:
 
 ```bash
 export ODOO_PROJECT_NAME="odoo-dev"
@@ -89,11 +94,11 @@ export ODOO_ADDONS_PATH="/custom/addons,/odoo/addons"
 - `find_method(method_name, mode=auto|fs|registry)` → locations[]
 - `search_decorators(decorator: depends|constrains|onchange|model_create_multi, mode=auto|fs|registry)` → methods[]
 - `model_query(operation: info|search|relationships|inheritance|view_usage, model_name?, pattern?, page?, page_size?, mode=auto)`
-- `field_query(operation: usages|dependencies|analyze_values|resolve_dynamic|search_properties|search_type, model_name, field_name?, field_type?, property?, sample_size=1000, page?, page_size?, mode=auto)`
+- `field_query(operation: usages|dependencies|analyze_values|resolve_dynamic|search_properties|search_type, model_name?, field_name?, field_type?, property?, sample_size=1000, page?, page_size?, mode=auto)`
 - `analysis_query(analysis_type: performance|patterns|workflow|inheritance, model_name?, pattern_type?, page?, page_size?, mode=auto)`
 - `addon_dependencies(addon_name)` → deps[]
 - `module_structure(module_name)` → files[], manifest, meta
-- `execute_code(code)` → stdout, stderr, exit_code
+- `execute_code(code)` → success with result/output or structured error; assign to `result` to return a value
 - `permission_checker(user, model, operation, record_id?)` → allowed: true|false, rationale (user accepts id or login/email)
 - `odoo_update_module(modules, force_install=false)` → result
 - `odoo_status(verbose=false)` → containers[], services[]
@@ -105,6 +110,7 @@ Parameters
 - Filters: `filter` (client‑side contains), `roots`
 
 Notes
+- `field_query` usages, dependencies, and analyze_values need `model_name` and `field_name`; resolve_dynamic needs `model_name`
 - `field_query` search_type expects `field_type` (e.g., `char`, `many2one`, `selection`)
 - `analysis_query` patterns supports `pattern_type`: `computed_fields`, `related_fields`, `api_decorators`, `custom_methods`, `state_machines`, `all`
 
@@ -155,6 +161,12 @@ Response shape (typical):
 Large responses are validated and may include warnings or truncation to respect ~25K token limits.
 
 ## Development
+
+Read [AGENTS.md](AGENTS.md#direction-and-execution) before repository work. Use the maintained executing loop and owning
+skills, claim issue-backed work before creating a linked task worktree, and use bot commits and pushes. This repository
+lands authorized changes through a PR with a normal merge commit after green current-head CI and required review findings
+are accounted for; execution-guidance changes receive another model's review. Runtime actions have their own scope under
+overall direction.
 
 ### Testing Requirements
 

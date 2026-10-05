@@ -2,9 +2,28 @@
 
 Development guidelines for agents (Codex or Claude Code) working on the Odoo Intelligence MCP server.
 
+## Direction and Execution
+
+Read the Director's overall [DIRECTION.md](https://github.com/cbusillo/direction/blob/HEAD/DIRECTION.md) first.
+This repository has no separate DIRECTION.md; overall direction applies. AGENTS.md is the only agent-instruction filename.
+
+Use the maintained [executing loop](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/executing-loop.md)
+and [task scope and authorization](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/execution-scope.md).
+Load each step's owning skill before acting: `github-plan` for issue selection and claims, `github` for bot commits,
+pushes and PRs, `python-uv-workflow` for Python commands, `jetbrains-inspection` for IDE checks, `babysit-pr` for CI/review
+follow-through, and `work-closeout` for issue reconciliation and worktree retirement.
+Execution-guidance changes, including AGENTS.md, use `model-review` and the maintained
+[review reference](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/model-review.md).
+
+Claim the issue before creating its linked task worktree; implement there instead of the primary checkout.
+The repository has no enabled Launchplane merge train in `.github/github.json`. Authorized changes land through a PR
+with a normal merge commit after green current-head CI and required review findings are accounted for.
+Merging is separate from deploying or changing a target Odoo runtime; apply overall direction and the task's scope to each action.
+
 Target the live Odoo workspace, such as an `odoo-devkit` checkout with `platform/stack.toml`. The `odoo-ai`
 repository is archived; do not use it as a target unless the user explicitly asks for archival investigation.
-Discovery code still has `odoo-ai` leftovers; #15 tracks removing them.
+Discovery code still has `odoo-ai` leftovers; [the deferred cleanup](https://github.com/cbusillo/odoo-intelligence-mcp/issues/15)
+tracks removing them.
 
 ## Project Snapshot
 
@@ -69,6 +88,8 @@ When adding a tool:
 **Canonical pattern**
 
 ```python
+from typing import Any
+
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment
 
 
@@ -76,7 +97,7 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
     try:
         data = await env.execute_code(f"result = env['{model}'].fields_get()")
         return {"success": True, "model": model, "fields": data}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"success": False, "error": str(exc), "error_type": type(exc).__name__}
 ```
 
@@ -86,7 +107,8 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
 - `ODOO_DB_NAME`: active database (default `odoo`)
 - `ODOO_ADDONS_PATH`: comma-separated paths (`/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` by default)
 
-The server loads environment variables or the nearest `.env`; process variables win unless `ODOO_ENV_PRIORITY=env_file`. Use
+The server resolves an env file in the order documented in [README.md](README.md#environment);
+process variables win unless `ODOO_ENV_PRIORITY=env_file`. Use
 `ODOO_ENV_FILE` to point at a target project's env file when running elsewhere.
 Optional overrides: `ODOO_CONTAINER_NAME`, `ODOO_SCRIPT_RUNNER_CONTAINER`,
 `ODOO_WEB_CONTAINER`, `ODOO_PROJECT_DIR`, `ODOO_COMPOSE_FILES`,
@@ -98,12 +120,12 @@ prefers `.platform/env/<context>.<instance>.env` and falls back to
 ## Architecture Overview
 
 - Host process: `odoo_intelligence_mcp.server` (async MCP server)
-- Key modules
-  - `core/env.py`: Docker exec orchestration
-  - `utils/`: pagination, responses, Docker helpers
-  - `tools/`: MCP tool implementations (grouped by domain)
-  - `services/`: higher-level orchestration (analyzers, inspectors)
-- Each request spins up a fresh `docker exec` for isolation—handle timeouts carefully.
+- `core/env.py`: environment discovery and Docker exec orchestration
+- `core/utils.py`: tool argument parsing, pagination, and response-size validation
+- `utils/`: Docker, execution, model, and error helpers
+- `tools/`: MCP tool implementations (grouped by domain)
+- `services/`: higher-level orchestration (analyzers, inspectors)
+- Runtime queries use fresh `docker exec` calls; static queries use filesystem indexes. Handle execution timeouts carefully.
 
 ## Docker Integration
 
