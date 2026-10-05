@@ -5,7 +5,8 @@
     "index": "README.md",
     "agentGuide": "AGENTS.md",
     "tests": "tests/README.md",
-    "projectMetadata": "pyproject.toml"
+    "projectMetadata": "pyproject.toml",
+    "githubWorkflow": "AGENTS.md"
   },
   "qualityGate": {
     "setup": {
@@ -34,7 +35,6 @@
       "minimumPercent": 75
     },
     "inspection": {
-      "tool": "jetbrains",
       "ide": "PyCharm",
       "scopePreference": [
         "changed_files",
@@ -60,17 +60,24 @@
     "Dependency Graph",
     "Dependabot Updates"
   ],
-  "requiredStatusChecks": ["test"],
-  "codeScanningMergeProtection": {
-    "ruleset": "Require code scanning results",
-    "tool": "CodeQL",
-    "alertsThreshold": "errors",
-    "securityAlertsThreshold": "high_or_higher",
-    "dependabotDefaultSetupException": true
+  "prWorkflow": {
+    "mergeMethod": "merge",
+    "mergePolicy": "See AGENTS.md: authorized normal merge after green CI and accounted-for review findings; no merge train.",
+    "requiredStatusChecks": ["test"],
+    "requiredStatusChecksStrict": true,
+    "codeScanningMergeProtection": {
+      "ruleset": "Require code scanning results",
+      "tool": "CodeQL",
+      "alertsThreshold": "errors",
+      "securityAlertsThreshold": "high_or_higher",
+      "codeQualitySeverity": "errors"
+    }
   },
-  "qaLabels": [],
-  "deployLabels": [],
-  "healthUrls": [],
+  "githubSettings": {
+    "expected": {
+      "deleteBranchOnMerge": true
+    }
+  },
   "relatedRepos": [
     "odoo-devkit",
     "odoo-shared-addons",
