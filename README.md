@@ -35,10 +35,12 @@ Restart Claude after configuration changes.
 ### Environment
 
 `.env` resolution order:
+
 1) `ODOO_ENV_FILE` (explicit)
 2) Platform env resolution from a workspace that has `platform/stack.toml`, such as an `odoo-devkit` checkout. MCP looks
    for it in `ODOO_PROJECT_DIR` (or the current directory) and its parents. It runs only when `ODOO_STACK_NAME`
-   (`<context>-<instance>`; aliases `ODOO_STACK`, `ODOO_ENV_NAME`) or an `ODOO_PROJECT_NAME` of the form `odoo-<context>-<instance>` is set.
+   (`<context>-<instance>`; aliases `ODOO_STACK`, `ODOO_ENV_NAME`) or an `ODOO_PROJECT_NAME` of the form
+   `odoo-<context>-<instance>` is set.
    - MCP uses `.platform/env/<context>.<instance>.env` when it exists.
    - Otherwise it tries `uv run platform info --context <ctx> --instance <instance> --json-output` in that workspace.
      This and a sibling `odoo-ai` lookup are leftovers from the archived `odoo-ai` workspace; `odoo-devkit` has no
@@ -47,9 +49,11 @@ Restart Claude after configuration changes.
 3) Current working directory of the MCP server process
 4) This MCP server directory (fallback)
 
-Override discovery by setting `ODOO_ENV_FILE` to the target project's env file path or `ODOO_PROJECT_DIR` for platform resolution. Process env vars override file values by default; set `ODOO_ENV_PRIORITY=env_file` to let the env file win.
+Override discovery by setting `ODOO_ENV_FILE` to the target project's env file path or `ODOO_PROJECT_DIR` for platform resolution.
+Process env vars override file values by default; set `ODOO_ENV_PRIORITY=env_file` to let the env file win.
 
 Optional container overrides:
+
 - `ODOO_CONTAINER_NAME` (primary exec container)
 - `ODOO_SCRIPT_RUNNER_CONTAINER`
 - `ODOO_WEB_CONTAINER`
@@ -59,17 +63,20 @@ If the script-runner container is missing, MCP will try `{prefix}-web-1`, `{pref
 Compose files can be supplied via `ODOO_COMPOSE_FILES` or inherited from `DEPLOY_COMPOSE_FILES`/`COMPOSE_FILE` in the target env.
 
 Defaults (override via environment or `.env`):
+
 - Database: `odoo` (`ODOO_DB_NAME`)
 - Addons Path: `/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` (`ODOO_ADDONS_PATH`)
 - Container Prefix: required (`ODOO_PROJECT_NAME`) unless container overrides are set
 
 Derived containers from prefix:
+
 - Script Runner: `{prefix}-script-runner-1`
 - Web: `{prefix}-web-1`
 
 ### Modes and Fallbacks
 
 Many operations accept `mode`:
+
 - `auto` (default)
 - `fs` (static scan over `ODOO_ADDONS_PATH`)
 - `registry` (runtime via Odoo registry)
@@ -95,7 +102,8 @@ export ODOO_ADDONS_PATH="/custom/addons,/odoo/addons"
 - `find_method(method_name, mode=auto|fs|registry)` → locations[]
 - `search_decorators(decorator: depends|constrains|onchange|model_create_multi, mode=auto|fs|registry)` → methods[]
 - `model_query(operation: info|search|relationships|inheritance|view_usage, model_name?, pattern?, page?, page_size?, mode=auto)`
-- `field_query(operation: usages|dependencies|analyze_values|resolve_dynamic|search_properties|search_type, model_name?, field_name?, field_type?, property?, sample_size=1000, page?, page_size?, mode=auto)`
+- `field_query(operation: usages|dependencies|analyze_values|resolve_dynamic|search_properties|search_type,
+    model_name?, field_name?, field_type?, property?, sample_size=1000, page?, page_size?, mode=auto)`
 - `analysis_query(analysis_type: performance|patterns|workflow|inheritance, model_name?, pattern_type?, page?, page_size?, mode=auto)`
 - `addon_dependencies(addon_name)` → deps[]
 - `module_structure(module_name)` → files[], manifest, meta
@@ -106,16 +114,20 @@ export ODOO_ADDONS_PATH="/custom/addons,/odoo/addons"
 - `odoo_restart(services?)` → result
 
 Parameters
+
 - `mode` (where supported): `auto` (default), `fs`, `registry`
 - Pagination: `page`, `page_size` (max 1000) or `offset`, `limit`
 - Filters: `filter` (client‑side contains), `roots`
 
 Notes
+
 - `field_query` usages, dependencies, and analyze_values need `model_name` and `field_name`; resolve_dynamic needs `model_name`
 - `field_query` search_type expects `field_type` (e.g., `char`, `many2one`, `selection`)
-- `analysis_query` patterns supports `pattern_type`: `computed_fields`, `related_fields`, `api_decorators`, `custom_methods`, `state_machines`, `all`
+- `analysis_query` patterns supports `pattern_type`: `computed_fields`, `related_fields`, `api_decorators`, `custom_methods`,
+  `state_machines`, `all`
 
 Examples
+
 - Search Python for a pattern:
   `search_code { "pattern": "def _compute", "file_type": "py", "roots": ["/opt/project/addons"] }`
 - Model info:
@@ -130,7 +142,9 @@ Examples
 ## Responses & Schema
 
 Conventions
-- Paginated results: `{ "items": [...], "pagination": { page, page_size, total_count, total_pages, has_next_page, has_previous_page, filter_applied } }`
+
+- Paginated results: `{ "items": [...], "pagination": { page, page_size, total_count, total_pages,
+    has_next_page, has_previous_page, filter_applied } }`
 - Single‑object results: plain objects with relevant fields and optional `success`/`error` keys
 
 ## Pagination
@@ -138,6 +152,7 @@ Conventions
 All list-style operations support pagination and filtering.
 
 Parameters:
+
 - Page-based (recommended): `page`, `page_size` (max 1000)
 - Offset-based: `limit`, `offset`
 - Filter: `filter` (applies client-side text filtering)

@@ -90,7 +90,7 @@ When adding a tool:
 4. Smoke-test with an MCP client before restart.
 5. Validate payload size with `core/utils.py` (`validate_response_size`) or the pagination helpers.
 
-**Canonical pattern**
+### Canonical Pattern
 
 ```python
 from typing import Any
@@ -110,7 +110,8 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
 
 - `ODOO_PROJECT_NAME`: Docker compose prefix (required unless container overrides are set)
 - `ODOO_DB_NAME`: active database (default `odoo`)
-- `ODOO_ADDONS_PATH`: comma-separated paths (`/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` by default)
+- `ODOO_ADDONS_PATH`: comma-separated paths
+  (`/odoo/addons,/odoo/odoo/addons,/opt/project/addons,/opt/extra_addons,/opt/enterprise` by default)
 
 The server resolves an env file in the order documented in [README.md](README.md#environment);
 process variables win unless `ODOO_ENV_PRIORITY=env_file`. Use
@@ -130,7 +131,8 @@ prefers `.platform/env/<context>.<instance>.env` and falls back to
 - `utils/`: Docker, execution, model, error, security, response, and static-analysis helpers
 - `tools/`: MCP tool implementations (grouped by domain)
 - `services/`: higher-level orchestration (analyzers, inspectors)
-- Runtime queries use fresh `docker exec` calls; static queries use filesystem indexes. Handle execution timeouts carefully.
+- Registry queries execute Odoo code in containers; static queries build filesystem indexes in containers using `docker exec`.
+  Handle execution timeouts carefully.
 
 ## Docker Integration
 
@@ -155,7 +157,8 @@ async def smoke() -> None:
 asyncio.run(smoke())
 ```
 
-Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginate anything large. Inline `# noqa` suppressions require justification.
+Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginate anything large.
+Inline `# noqa` suppressions require justification.
 
 ## Pre-Commit Checklist
 
