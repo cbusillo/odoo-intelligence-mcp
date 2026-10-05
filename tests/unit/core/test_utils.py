@@ -1,8 +1,10 @@
+import json
 from typing import Any
 
 import pytest
 
 from odoo_intelligence_mcp.core.utils import (
+    DEFAULT_PAGE_SIZE,
     PaginatedResponse,
     PaginationParams,
     check_response_size,
@@ -140,7 +142,7 @@ class TestPaginatedResponse:
         assert response.items == items
         assert response.total_count == 10
         assert response.page == 1
-        assert response.page_size == 100
+        assert response.page_size == DEFAULT_PAGE_SIZE
         assert response.filter_applied is None
 
     def test_init_with_all_params(self) -> None:
@@ -214,7 +216,7 @@ class TestPaginationParams:
         arguments: dict[str, Any] = {}
         params = PaginationParams.from_arguments(arguments)
         assert params.page == 1
-        assert params.page_size == 100
+        assert params.page_size == DEFAULT_PAGE_SIZE
         assert params.filter_text is None
 
     def test_from_arguments_with_page_size(self) -> None:
@@ -239,13 +241,16 @@ class TestPaginationParams:
         assert params.page == 3
         assert params.page_size == 50
 
-    def test_from_arguments_offset_zero(self) -> None:
-        # Note: offset=0 is treated as falsy so doesn't work correctly
-        arguments = {"limit": 20, "offset": 0}
+    @pytest.mark.parametrize("offset", [0, "0"])
+    def test_from_arguments_offset_zero_honors_limit(self, offset: int | str) -> None:
+        items = list(range(9))
+        arguments = {"limit": 3, "offset": offset}
         params = PaginationParams.from_arguments(arguments)
-        # Due to bug in from_arguments, offset=0 is ignored
-        assert params.page == 1
-        assert params.page_size == 100  # Falls back to default
+        result = paginate_list(items, params)
+
+        assert result.items == items[: arguments["limit"]]
+        assert result.page_size == arguments["limit"]
+        assert result.has_next_page is True
 
     def test_get_offset(self) -> None:
         params = PaginationParams(page_size=10)
@@ -336,65 +341,53 @@ def test_validate_response_size_small() -> None:
     assert result == response
 
 
-def test_validate_response_size_large_string() -> None:
-    # Create a large string (>100KB, which is >25K tokens)
-    large_string = "x" * 200000
-    response = {"data": large_string}
+def test_validate_response_size_warns_at_configured_threshold(monkeypatch: pytest.MonkeyPatch) -> None:
+    from odoo_intelligence_mcp.core import utils
 
-    # The new implementation doesn't raise error but adds warning/truncation info
-    result = validate_response_size(response)
-    assert "meta" in result
-    assert "size_warning" in result["meta"]
-    assert result["meta"]["size_warning"]["estimated_tokens"] > 25000
+    monkeypatch.setattr(utils, "RESPONSE_SIZE_WARNING_TOKENS", 12)
+    text = "x" * 80
+    response = {"data": text}
+    result = validate_response_size(response, max_tokens=100)
+    assert result["meta"]["size_warning"]["estimated_tokens"] > utils.RESPONSE_SIZE_WARNING_TOKENS
+    assert result["data"] == text
+    assert "truncated" not in result
 
 
-def test_validate_response_size_large_list() -> None:
-    # Create a large list
-    large_list = ["item"] * 50000
-    response = {"items": large_list}  # Use "items" key for truncation logic
+@pytest.mark.parametrize("container_key", [None, "implementations", "computed_fields"])
+def test_validate_response_size_truncates_list(container_key: str | None) -> None:
+    items = [{"name": f"item-{number}"} for number in range(8)]
+    container = {"items": items}
+    response = {container_key: container} if container_key else container
+    result = validate_response_size(response, max_tokens=8)
+    remaining_items = result[container_key]["items"] if container_key else result["items"]
 
-    # The new implementation truncates the list instead of raising error
-    result = validate_response_size(response)
-    assert "truncated" in result
     assert result["truncated"] is True
-    assert len(result["items"]) < len(large_list)
+    assert 0 < len(remaining_items) < len(items)
+    assert remaining_items == items[: len(remaining_items)]
+    assert result["truncation_info"]["original_items"] == len(items)
+    assert result["truncation_info"]["kept_items"] == len(remaining_items)
 
 
-def test_validate_response_size_with_custom_limit() -> None:
-    # Test with custom max_tokens
-    medium_string = "x" * 1000
-    response = {"data": medium_string}
+def test_validate_response_size_truncates_fields_at_configured_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+    from odoo_intelligence_mcp.core import utils
 
-    # Should pass with default limit
-    result = validate_response_size(response)
-    assert result == response
+    monkeypatch.setattr(utils, "TRUNCATED_STRING_LENGTH", 6)
+    monkeypatch.setattr(utils, "TRUNCATED_LIST_LENGTH", 2)
+    text = "fixture-text"
+    values = list(range(5))
+    response = {"data": text, "values": values}
+    result = validate_response_size(response, max_tokens=1)
 
-    # With very small limit, should truncate the response
-    result = validate_response_size(response, max_tokens=10)
-    assert "truncated" in result
     assert result["truncated"] is True
-    assert "truncation_info" in result
+    assert result["data"].startswith(text[: utils.TRUNCATED_STRING_LENGTH])
+    assert text not in result["data"]
+    assert result["values"] == values[: utils.TRUNCATED_LIST_LENGTH]
+    assert set(result["truncated_fields"]) == {"data", "values"}
 
 
-def test_check_response_size_small() -> None:
-    # Small response should return True
-    response = {"data": "small"}
-    assert check_response_size(response) is True
-
-
-def test_check_response_size_large() -> None:
-    # Large response should return False
-    large_string = "x" * 200000
-    response = {"data": large_string}
-    assert check_response_size(response) is False
-
-
-def test_check_response_size_with_custom_limit() -> None:
-    medium_string = "x" * 1000
-    response = {"data": medium_string}
-
-    # Should pass with default limit
-    assert check_response_size(response) is True
-
-    # Should fail with very small limit
-    assert check_response_size(response, max_tokens=10) is False
+@pytest.mark.parametrize("difference", [-1, 0, 1])
+def test_check_response_size_obeys_requested_limit(difference: int) -> None:
+    response = {"data": "fixture-text"}
+    estimated_tokens = len(json.dumps(response)) // 4
+    limit = estimated_tokens + difference
+    assert check_response_size(response, max_tokens=limit) is (difference >= 0)

@@ -155,7 +155,7 @@ All list-style operations support pagination and filtering.
 Parameters:
 
 - Page-based (recommended): `page`, `page_size` (max 1000)
-- Offset-based: `limit`, `offset`
+- Offset-based: `limit`, `offset`; `offset=0` selects the first page with the requested `limit`
 - Filter: `filter` (applies client-side text filtering)
 
 Response shape (typical):

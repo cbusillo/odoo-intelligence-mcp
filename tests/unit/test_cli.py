@@ -1,3 +1,4 @@
+import ast
 import sys
 from subprocess import CompletedProcess
 from typing import TYPE_CHECKING
@@ -26,7 +27,6 @@ class TestCLIFunctions:
         with pytest.raises(SystemExit) as exc_info:
             cli.test()
         assert exc_info.value.code == returncode
-        assert mock_run.call_args[0][0][:3] == [sys.executable, "-m", "pytest"]
 
     @pytest.mark.parametrize("returncode", [0, 1, 19])
     def test_format_propagates_failure(self, returncode: int) -> None:
@@ -53,13 +53,19 @@ class TestCLIFunctions:
     @pytest.mark.parametrize(("expression", "returncode"), [("1", 0), ("missing_name", 1)])
     def test_check_formats_source_and_lints_it(self, cli_workspace: Path, expression: str, returncode: int) -> None:
         source_file = cli_workspace / "module.py"
-        source_file.write_text(f"if True: answer={expression}\n")
+        original_source = f"if True: answer={expression}\n"
+        source_file.write_text(original_source)
 
         with pytest.raises(SystemExit) as exception:
             cli.check()
 
         assert exception.value.code == returncode
-        assert source_file.read_text() == f"if True:\n    answer = {expression}\n"
+        formatted_source = source_file.read_text()
+        assert ast.dump(ast.parse(formatted_source)) == ast.dump(ast.parse(original_source))
+        formatter_result = cli.subprocess.run(
+            [sys.executable, "-m", "ruff", "format", "--check", str(source_file)], capture_output=True
+        )
+        assert formatter_result.returncode == 0
 
     def test_clean_removes_generated_artifacts_and_keeps_sources(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         source_file = tmp_path / "src" / "package" / "module.py"

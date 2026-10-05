@@ -118,9 +118,9 @@ class PaginationParams:
 
         return cls(
             page=int(page) if isinstance(page, (int, str)) and page else 1,
-            page_size=int(page_size) if isinstance(page_size, (int, str)) and page_size else 100,
+            page_size=int(page_size) if isinstance(page_size, (int, str)) and page_size else DEFAULT_PAGE_SIZE,
             limit=int(limit) if limit and isinstance(limit, (int, str)) else None,
-            offset=int(offset) if offset and isinstance(offset, (int, str)) else None,
+            offset=int(offset) if offset is not None and isinstance(offset, (int, str)) else None,
             filter_text=str(filter_text) if filter_text else None,
         )
 
