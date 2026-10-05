@@ -1,403 +1,170 @@
+import asyncio
 import json
-from typing import Any
-from unittest.mock import AsyncMock, patch
+from copy import deepcopy
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from jsonschema import Draft202012Validator
 from mcp.types import TextContent
 
-from odoo_intelligence_mcp.server import handle_call_tool, handle_list_tools
-
-
-class TestToolContracts:
-    @pytest.fixture
-    def mock_env(self) -> AsyncMock:
-        env = AsyncMock()
-        env.execute_code = AsyncMock()
-        env.cr = AsyncMock()
-        env.cr.close = AsyncMock()
-        return env
-
-    @pytest.mark.asyncio
-    async def test_all_tools_return_text_content(self, mock_env: AsyncMock) -> None:
-        tool_arguments = {
-            "odoo_status": {},
-            "odoo_restart": {},
-            "odoo_update_module": {"modules": "test"},
-            "execute_code": {"code": "result = 1"},
-            "odoo_shell": {"code": "print('test')"},
-            "model_query": {"operation": "info", "model_name": "res.partner"},
-            "model_relationships": {"model_name": "res.partner"},
-            "field_query": {"model_name": "res.partner", "field_name": "name"},
-            "permission_checker": {"user": "admin", "model": "res.partner", "operation": "read"},
-            "read_odoo_file": {"file_path": "odoo/addons/base/models/res_partner.py"},
-            "find_files": {"pattern": "*.py"},
-            "search_code": {"pattern": "def create"},
-            "module_structure": {"module_name": "base"},
-            "find_method": {"method_name": "create"},
-            "search_decorators": {"decorator": "depends"},
-            "view_model_usage": {"model_name": "res.partner"},
-            "analysis_query": {"analysis_type": "workflow", "model_name": "sale.order"},
-            "field_dependencies": {"model_name": "res.partner", "field_name": "name"},
-            "search_field_properties": {"property": "computed"},
-            "search_field_type": {"field_type": "many2one"},
-            "addon_dependencies": {"addon_name": "sale"},
-            "resolve_dynamic_fields": {"model_name": "res.partner"},
-            "inheritance_chain": {"model_name": "res.partner"},
-        }
-        tools = await handle_list_tools()
-
-        mock_env.execute_code.return_value = {"success": True, "result": "test"}
-
-        with (
-            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env),
-            patch("subprocess.run") as mock_run,
-        ):
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = "test output"
-
-            for tool in tools:
-                arguments = tool_arguments.get(tool.name)
-                if arguments is None:
-                    continue
-                result = await handle_call_tool(tool.name, arguments)
-
-                assert len(result) == 1, f"Tool {tool.name} did not return exactly one TextContent"
-                assert isinstance(result[0], TextContent), f"Tool {tool.name} did not return TextContent"
-
-                try:
-                    json.loads(result[0].text)
-                except json.JSONDecodeError:
-                    pytest.fail(f"Tool {tool.name} returned non-JSON response")
-
-    @pytest.mark.asyncio
-    async def test_tools_handle_errors_gracefully(self, mock_env: AsyncMock) -> None:
-        mock_env.execute_code.side_effect = Exception("Test error")
-
-        error_testable_tools = [
-            ("model_query", {"operation": "info", "model_name": "res.partner"}),
-            ("model_query", {"operation": "search", "pattern": "test"}),
-            ("model_query", {"operation": "relationships", "model_name": "res.partner"}),
-            ("field_query", {"operation": "usages", "model_name": "res.partner", "field_name": "name"}),
-            ("execute_code", {"code": "1/0"}),
-            ("field_query", {"operation": "analyze_values", "model_name": "res.partner", "field_name": "name"}),
-            ("permission_checker", {"user": "admin", "model": "res.partner", "operation": "read"}),
-            ("field_query", {"operation": "dependencies", "model_name": "res.partner", "field_name": "name"}),
-            ("field_query", {"operation": "search_properties", "property": "computed"}),
-            ("field_query", {"operation": "search_type", "field_type": "many2one"}),
-        ]
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            for tool_name, args in error_testable_tools:
-                result = await handle_call_tool(tool_name, args)
-
-                assert len(result) == 1
-                content = json.loads(result[0].text)
-                assert "error" in content, f"Tool {tool_name} did not return error field"
-                assert isinstance(content["error"], str)
-                assert "error_type" in content, f"Tool {tool_name} did not return error_type field"
-
-    @pytest.mark.asyncio
-    async def test_tools_with_pagination_contract(self, mock_env: AsyncMock) -> None:
-        paginated_tools = [
-            ("search_models", {"pattern": "test", "page": 1, "page_size": 10}),
-            ("model_relationships", {"model_name": "res.partner", "page": 1, "page_size": 10}),
-            ("field_usages", {"model_name": "res.partner", "field_name": "name", "page": 1, "page_size": 10}),
-            ("analysis_query", {"analysis_type": "performance", "model_name": "res.partner", "page": 1, "page_size": 10}),
-            ("inheritance_chain", {"model_name": "res.partner", "page": 1, "page_size": 10}),
-            ("addon_dependencies", {"addon_name": "sale", "page": 1, "page_size": 10}),
-            ("search_field_properties", {"property": "computed", "page": 1, "page_size": 10}),
-            ("search_field_type", {"field_type": "many2one", "page": 1, "page_size": 10}),
-            ("resolve_dynamic_fields", {"model_name": "res.partner", "page": 1, "page_size": 10}),
-        ]
-
-        mock_env.execute_code.return_value = {
-            "items": [{"test": "data"}],
-            "pagination": {
-                "page": 1,
-                "page_size": 10,
-                "total_count": 1,
-                "total_pages": 1,
-                "has_next_page": False,
-                "has_previous_page": False,
-            },
-        }
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            for tool_name, args in paginated_tools:
-                result = await handle_call_tool(tool_name, args)
-
-                content = json.loads(result[0].text)
-
-                if "pagination" in content:
-                    pagination = content["pagination"]
-                    assert "page" in pagination
-                    assert "page_size" in pagination
-                    assert "total_count" in pagination
-                    assert "has_next_page" in pagination
-                    assert isinstance(pagination["page"], int)
-                    assert isinstance(pagination["page_size"], int)
-
-    @pytest.mark.asyncio
-    async def test_required_vs_optional_parameters(self, mock_env: AsyncMock) -> None:
-        tools_with_requirements = [
-            ("model_info", {"model_name": "res.partner"}, True),
-            ("model_query", {}, False),
-            ("search_models", {"pattern": "test"}, True),
-            ("model_query", {"operation": "search"}, False),
-            ("field_usages", {"model_name": "res.partner", "field_name": "name"}, True),
-            ("field_usages", {"model_name": "res.partner"}, False),
-            ("field_usages", {"field_name": "name"}, False),
-            ("execute_code", {"code": "result = 1"}, True),
-            ("execute_code", {}, False),
-            ("odoo_shell", {"code": "print('test')"}, True),
-            ("odoo_update_module", {"modules": "base"}, True),
-            ("odoo_install_module", {"modules": "base"}, True),
-            ("field_value_analyzer", {"model": "res.partner", "field": "name"}, True),
-            ("field_query", {"operation": "analyze_values", "model_name": "res.partner"}, False),
-            ("permission_checker", {"user": "admin", "model": "res.partner", "operation": "read"}, True),
-            ("permission_checker", {"user": "admin", "model": "res.partner"}, False),
-        ]
-
-        mock_env.execute_code.return_value = {"success": True}
-
-        with (
-            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env),
-            patch("subprocess.run") as mock_run,
-        ):
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = "success"
-
-            for tool_name, args, should_succeed in tools_with_requirements:
-                result = await handle_call_tool(tool_name, args)
-                content = json.loads(result[0].text)
-
-                if should_succeed:
-                    assert "error" not in content or "missing" not in content.get("error", "").lower()
-                else:
-                    assert "error" in content
-
-    @pytest.mark.asyncio
-    async def test_tool_response_size_limits(self, mock_env: AsyncMock) -> None:
-        large_response = {"data": "x" * 10000000}  # 10MB
-        mock_env.execute_code.return_value = large_response
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("execute_code", {"code": "result = large_data"})
-
-            assert len(result) == 1
-            content = json.loads(result[0].text)
-
-            if "error" not in content:
-                assert len(json.dumps(content)) < 11000000  # Should be roughly same size or paginated
-
-    @pytest.mark.asyncio
-    async def test_tool_idempotency(self, mock_env: AsyncMock) -> None:
-        idempotent_tools = [
-            ("model_query", {"operation": "info", "model_name": "res.partner"}),
-            ("model_query", {"operation": "search", "pattern": "test"}),
-            ("field_dependencies", {"model_name": "res.partner", "field_name": "name"}),
-            ("search_field_properties", {"property": "computed"}),
-        ]
-
-        mock_env.execute_code.return_value = {"success": True, "data": "test"}
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            for tool_name, args in idempotent_tools:
-                result1 = await handle_call_tool(tool_name, args)
-                result2 = await handle_call_tool(tool_name, args)
-
-                content1 = json.loads(result1[0].text)
-                content2 = json.loads(result2[0].text)
-
-                assert content1 == content2, f"Tool {tool_name} is not idempotent"
-
-    @pytest.mark.asyncio
-    async def test_tool_input_sanitization(self, mock_env: AsyncMock) -> None:
-        dangerous_inputs = [
-            ("execute_code", {"code": "'; DROP TABLE users; --"}),
-            ("execute_code", {"code": "import os; os.system('rm -rf /')"}),
-            ("search_models", {"pattern": "../../../etc/passwd"}),
-            ("read_odoo_file", {"file_path": "/etc/passwd"}),
-            ("odoo_update_module", {"modules": "base; rm -rf /"}),
-        ]
-
-        mock_env.execute_code.return_value = {"error": "Invalid input"}
-
-        with (
-            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env),
-            patch("subprocess.run") as mock_run,
-        ):
-            mock_run.return_value.returncode = 1
-            mock_run.return_value.stdout = ""
-            mock_run.return_value.stderr = "No such container: not found"
-
-            for tool_name, args in dangerous_inputs:
-                result = await handle_call_tool(tool_name, args)
-                content = json.loads(result[0].text)
-
-                if "error" in content:
-                    error_msg = content["error"].lower()
-                    assert any(
-                        word in error_msg
-                        for word in ["security", "invalid", "not allowed", "not found", "required", "missing", "unknown"]
-                    ), f"Tool {tool_name} error message doesn't contain expected keywords: {content['error']}"
-
-    @pytest.mark.asyncio
-    async def test_tool_schema_validation(self) -> None:
-        tools = await handle_list_tools()
-
-        for tool in tools:
-            assert tool.name, "Tool must have a name"
-            assert tool.description, "Tool must have a description"
-            schema = tool.model_dump()["input_schema"]
-            assert schema, "Tool must have an input schema"
-            assert "type" in schema
-            assert schema["type"] == "object"
-
-            if "required" in schema:
-                assert isinstance(schema["required"], list)
-                for required_field in schema["required"]:
-                    assert required_field in schema.get("properties", {})
-
-            if "properties" in schema:
-                for prop_name, prop_schema in schema["properties"].items():
-                    assert "type" in prop_schema or "$ref" in prop_schema
-                    # Descriptions are optional; if present, they must be non-empty strings
-                    if "description" in prop_schema:
-                        assert isinstance(prop_schema["description"], str)
-                        assert prop_schema["description"].strip() != "", (
-                            f"Tool {tool.name} property {prop_name} has an invalid description"
-                        )
-
-    @pytest.mark.asyncio
-    async def test_tool_consistency_across_errors(self, mock_env: AsyncMock) -> None:
-        error_types = [
-            ValueError("Value error"),
-            TypeError("Type error"),
-            KeyError("Key error"),
-            AttributeError("Attribute error"),
-            RuntimeError("Runtime error"),
-        ]
-
-        tools_to_test = ["model_query", "execute_code"]
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            for tool_name in tools_to_test:
-                error_formats = []
-
-                for error in error_types:
-                    mock_env.execute_code.side_effect = error
-
-                    args = (
-                        {"model_name": "test"}
-                        if tool_name == "model_query"
-                        else {"operation": "info", "model_name": "test"}
-                        if tool_name == "model_query"
-                        else {"code": "test"}
-                    )
-
-                    result = await handle_call_tool(tool_name, args)
-                    content = json.loads(result[0].text)
-
-                    assert "error" in content
-                    assert "error_type" in content
-
-                    error_format = set(content.keys())
-                    error_formats.append(error_format)
-
-                assert all(fmt == error_formats[0] for fmt in error_formats), f"Tool {tool_name} returns inconsistent error formats"
-
-
-class TestToolPerformanceContracts:
-    @pytest.mark.asyncio
-    async def test_tool_timeout_handling(self) -> None:
-        import asyncio
-
-        mock_env = AsyncMock()
-
-        # noinspection PyUnusedLocal
-        async def slow_execution(*args: Any, **kwargs: Any) -> dict[str, Any]:
-            await asyncio.sleep(10)
-            return {"success": True}
-
-        mock_env.execute_code = slow_execution
-
-        with (
-            patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env),
-            pytest.raises(asyncio.TimeoutError),
-        ):
-            await asyncio.wait_for(handle_call_tool("execute_code", {"code": "slow_operation()"}), timeout=0.1)
-
-    @pytest.mark.asyncio
-    async def test_concurrent_tool_execution(self) -> None:
-        import asyncio
-
-        mock_env = AsyncMock()
-        mock_env.execute_code = AsyncMock(return_value={"success": True})
-        mock_env.cr = AsyncMock()
-        mock_env.cr.close = AsyncMock()
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            tasks = [handle_call_tool("model_query", {"operation": "info", "model_name": f"model_{i}"}) for i in range(10)]
-
-            results = await asyncio.gather(*tasks)
-
-            assert len(results) == 10
-            assert all(len(r) == 1 for r in results)
-
-            for result in results:
-                content = json.loads(result[0].text)
-                assert "error" not in content or content.get("success") is False
-
-    @pytest.mark.asyncio
-    async def test_tool_memory_efficiency(self) -> None:
-        mock_env = AsyncMock()
-
-        large_items = [
-            {
-                "name": f"test.model.{i}",
-                "description": f"Test Model {i}",
-                "table": f"test_model_{i}",
-                "transient": False,
-                "abstract": False,
-                "data": f"item_{i}" * 100,
-            }
-            for i in range(10000)
-        ]
-        mock_env.execute_code.return_value = {
-            "result": {
-                "exact_matches": [],
-                "partial_matches": large_items,
-                "description_matches": [],
-                "total_models": 10000,
-                "pattern": "test",
-            }
-        }
-
-        with patch("odoo_intelligence_mcp.server.odoo_env_manager.get_environment", return_value=mock_env):
-            result = await handle_call_tool("search_models", {"pattern": "test", "page_size": 100})
-
-            content = json.loads(result[0].text)
-
-            if "matches" in content and "items" in content["matches"]:
-                assert len(content["matches"]["items"]) <= 100
-            if "matches" in content and "pagination" in content["matches"]:
-                assert content["matches"]["pagination"]["page_size"] <= 100
-
-
-@pytest.mark.asyncio
-async def test_shared_runtime_tool_calls_do_not_overlap(monkeypatch: pytest.MonkeyPatch) -> None:
-    import asyncio
-
-    from odoo_intelligence_mcp import server
-
+from odoo_intelligence_mcp import server
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
+
+
+@pytest.fixture
+def tool_environment(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    environment = MagicMock()
+    environment.execute_code = AsyncMock()
+    environment.cr = MagicMock()
+    monkeypatch.setattr(server.odoo_env_manager, "get_environment", AsyncMock(return_value=environment))
+    return environment
+
+
+async def test_advertised_tools_dispatch_and_return_json(tool_environment: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    tools = await server.handle_list_tools()
+    assert tools
+    for tool in tools:
+        Draft202012Validator.check_schema(tool.model_dump()["input_schema"])
+        assert callable(server.TOOL_HANDLERS[tool.name])
+        payload = {"tool": tool.name, "records": [{"name": "fixture"}]}
+        handler = AsyncMock(return_value=payload)
+        monkeypatch.setitem(server.TOOL_HANDLERS, tool.name, handler)
+        arguments = {"fixture_input": tool.name}
+
+        response = await server.handle_call_tool(tool.name, arguments)
+
+        assert len(response) == 1
+        assert isinstance(response[0], TextContent)
+        assert json.loads(response[0].text) == payload
+        handler.assert_awaited_once_with(tool_environment, arguments)
+
+
+async def test_known_handler_receives_empty_arguments(tool_environment: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = {"success": True}
+    handler = AsyncMock(return_value=payload)
+    monkeypatch.setitem(server.TOOL_HANDLERS, "argument_probe", handler)
+
+    response = await server.handle_call_tool("argument_probe", None)
+
+    assert json.loads(response[0].text) == payload
+    handler.assert_awaited_once_with(tool_environment, {})
+
+
+@pytest.mark.parametrize("failure_location", ["environment", "handler"])
+async def test_dispatch_failures_preserve_error(failure_location: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    failure = ValueError("fixture failure")
+    environment = MagicMock()
+    environment.cr = None
+    handler = AsyncMock(return_value={"success": True})
+    environment_loader = AsyncMock(return_value=environment)
+    if failure_location == "environment":
+        environment_loader.side_effect = failure
+    else:
+        handler.side_effect = failure
+    monkeypatch.setattr(server.odoo_env_manager, "get_environment", environment_loader)
+    monkeypatch.setitem(server.TOOL_HANDLERS, "failure_probe", handler)
+
+    response = await server.handle_call_tool("failure_probe", {})
+    content = json.loads(response[0].text)
+
+    assert content["error"] == str(failure)
+    assert content["error_type"] == type(failure).__name__
+    if failure_location == "environment":
+        handler.assert_not_awaited()
+    else:
+        handler.assert_awaited_once_with(environment, {})
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "arguments"),
+    [
+        ("model_query", {"operation": "info", "model_name": "res.partner", "mode": "registry"}),
+        ("model_query", {"operation": "search", "pattern": "fixture", "mode": "registry"}),
+        ("model_query", {"operation": "relationships", "model_name": "res.partner", "mode": "registry"}),
+        ("field_query", {"operation": "usages", "model_name": "res.partner", "field_name": "name", "mode": "registry"}),
+        ("execute_code", {"code": "result = True"}),
+        ("field_query", {"operation": "analyze_values", "model_name": "res.partner", "field_name": "name"}),
+        ("permission_checker", {"user": "fixture", "model": "res.partner", "operation": "read"}),
+        ("field_query", {"operation": "dependencies", "model_name": "res.partner", "field_name": "name", "mode": "registry"}),
+        ("field_query", {"operation": "search_properties", "property": "computed", "mode": "registry"}),
+        ("field_query", {"operation": "search_type", "field_type": "many2one", "mode": "registry"}),
+    ],
+)
+async def test_registry_tools_preserve_execution_failure(
+    tool_name: str, arguments: dict[str, object], tool_environment: MagicMock
+) -> None:
+    failure = ValueError("fixture execution failure")
+    tool_environment.execute_code.side_effect = failure
+
+    response = await server.handle_call_tool(tool_name, arguments)
+    content = json.loads(response[0].text)
+
+    assert str(failure) in content["error"]
+    assert content["error_type"] == type(failure).__name__
+    assert tool_environment.execute_code.await_count > 0
+
+
+@pytest.mark.parametrize(
+    ("arguments", "expected_names", "total_count"),
+    [
+        ({"page": 1, "page_size": 2}, ["fixture.alpha", "fixture.beta"], 4),
+        ({"page": 2, "page_size": 2}, ["fixture.gamma", "fixture.zeta"], 4),
+        ({"page": 1, "page_size": 1, "filter": "beta"}, ["fixture.beta"], 1),
+        ({"limit": 2, "offset": 0}, ["fixture.alpha", "fixture.beta"], 4),
+    ],
+)
+async def test_search_handler_selects_records(
+    arguments: dict[str, object], expected_names: list[str], total_count: int, tool_environment: MagicMock
+) -> None:
+    records = [{"name": f"fixture.{name}", "description": name} for name in ["zeta", "gamma", "beta", "alpha"]]
+    tool_environment.execute_code.return_value = {
+        "exact_matches": [],
+        "partial_matches": deepcopy(records),
+        "description_matches": [],
+        "pattern": "fixture",
+        "total_models": len(records),
+    }
+
+    response = await server.handle_call_tool(
+        "model_query", {"operation": "search", "pattern": "fixture", "mode": "registry", **arguments}
+    )
+    content = json.loads(response[0].text)
+
+    assert "error" not in content
+    assert [record["name"] for record in content["matches"]["items"]] == expected_names
+    assert content["matches"]["pagination"]["total_count"] == total_count
+    assert content["matches"]["pagination"]["page_size"] == arguments.get("page_size", arguments.get("limit"))
+    assert content["matches"]["pagination"]["page"] == arguments.get("page", 1)
+    assert tool_environment.execute_code.await_count > 0
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "arguments"),
+    [
+        ("model_query", {"operation": "info"}),
+        ("model_query", {"operation": "search"}),
+        ("field_query", {"operation": "usages", "model_name": "res.partner"}),
+        ("execute_code", {}),
+        ("permission_checker", {"user": "fixture", "model": "res.partner"}),
+    ],
+)
+async def test_required_arguments_fail_before_execution(
+    tool_name: str, arguments: dict[str, object], tool_environment: MagicMock
+) -> None:
+    response = await server.handle_call_tool(tool_name, arguments)
+    content = json.loads(response[0].text)
+
+    assert content["error"]
+    tool_environment.execute_code.assert_not_awaited()
+
+
+async def test_shared_runtime_tool_calls_do_not_overlap(tool_environment: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
     first_started = asyncio.Event()
     first_finished = asyncio.Event()
     second_started = asyncio.Event()
-    mock_env = AsyncMock()
-    mock_env.cr = None
 
-    async def execute_tool(env: object, arguments: dict[str, object]) -> dict[str, object]:
+    async def execute_tool(environment: object, arguments: dict[str, object]) -> dict[str, object]:
         if arguments["first"]:
             first_started.set()
             await first_finished.wait()
@@ -406,17 +173,94 @@ async def test_shared_runtime_tool_calls_do_not_overlap(monkeypatch: pytest.Monk
         return {"success": True}
 
     monkeypatch.setitem(server.TOOL_HANDLERS, "serialization_probe", execute_tool)
-    monkeypatch.setattr(server.odoo_env_manager, "get_environment", AsyncMock(return_value=mock_env))
-    first_request = asyncio.create_task(handle_call_tool("serialization_probe", {"first": True}))
+    first_request = asyncio.create_task(server.handle_call_tool("serialization_probe", {"first": True}))
     second_request = None
     try:
-        await first_started.wait()
-        second_request = asyncio.create_task(handle_call_tool("serialization_probe", {"first": False}))
+        await asyncio.wait_for(first_started.wait(), timeout=5)
+        second_request = asyncio.create_task(server.handle_call_tool("serialization_probe", {"first": False}))
         await asyncio.sleep(0)
         assert not second_started.is_set()
     finally:
         first_finished.set()
-        await first_request
-        if second_request is not None:
-            await second_request
+        responses = await asyncio.gather(first_request, *([second_request] if second_request else []))
     assert second_started.is_set()
+    assert all(json.loads(response[0].text) == {"success": True} for response in responses)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        (
+            "model.search_models_fs",
+            "build_ast_index",
+            "model_query",
+            {"operation": "search", "pattern": "fixture"},
+            "matches",
+            "name",
+            "fixture.order",
+        ),
+        (
+            "field.search_field_properties_fs",
+            "get_models_index",
+            "field_query",
+            {"operation": "search_properties", "property": "computed"},
+            "results",
+            "field_name",
+            "total",
+        ),
+        (
+            "field.search_field_type_fs",
+            "get_models_index",
+            "field_query",
+            {"operation": "search_type", "field_type": "float"},
+            "results",
+            "model",
+            "fixture.order",
+        ),
+        (
+            "analysis.pattern_analysis_fs",
+            "build_ast_index",
+            "analysis_query",
+            {"analysis_type": "patterns", "pattern_type": "computed_fields"},
+            "computed_fields",
+            "field",
+            "total",
+        ),
+    ],
+)
+async def test_filesystem_handlers_return_selected_data(
+    case: tuple[str, str, str, dict[str, object], str, str, str],
+    tool_environment: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module_path, loader_name, tool_name, arguments, collection_key, item_key, expected_value = case
+    from importlib import import_module
+
+    from tests.fixtures.fs_index import create_fs_ast_index
+
+    models = {
+        "fixture.order": {
+            "description": "Fixture order",
+            "module": "fixture",
+            "file": "/fixture/order.py",
+            "fields": {"total": {"type": "float", "compute": "compute_total", "store": True}},
+            "methods": ["compute_total"],
+            "inherits": [],
+            "delegates": {},
+            "decorators": {},
+        }
+    }
+    index = create_fs_ast_index(models, include_defaults=False)
+    loader_result = index if loader_name == "build_ast_index" else index["models"]
+    module = import_module(f"odoo_intelligence_mcp.tools.{module_path}")
+    monkeypatch.setattr(module, loader_name, AsyncMock(return_value=loader_result))
+
+    response = await server.handle_call_tool(tool_name, {**arguments, "mode": "fs", "page_size": 1})
+    content = json.loads(response[0].text)
+
+    assert "error" not in content
+    assert content["mode_used"] == "fs"
+    assert content["data_quality"] == "approximate"
+    assert content[collection_key]["pagination"]["total_count"] == len(models)
+    assert [item[item_key] for item in content[collection_key]["items"]] == [expected_value]
+    tool_environment.execute_code.assert_not_awaited()
