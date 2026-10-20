@@ -36,7 +36,8 @@ tracks removing them.
 
 ## Code Standards
 
-- Avoid docstrings/comments; code must be self-documenting (pyproject comments allowed)
+- Write Python and Odoo JavaScript in the shared
+  [Python and Odoo style](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/python-odoo-style.md).
 - Use descriptive, unabbreviated identifiers; avoid short or ambiguous locals (especially 1–3 character abbreviations like
   `idx`, `cfg`, `tmp`, `obj`, `val`, `res`, `ctx`). Allow only explicit tokens (`id`, `db`, `api`, `orm`, `env`,
   `io`, `url`, `ui`, `ux`, `ip`, `http`, `json`, `xml`, `sql`) and math-only contexts.
