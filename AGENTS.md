@@ -28,6 +28,8 @@ tracks removing them.
 ## Project Snapshot
 
 - **Stack**: Python 3.14+, MCP SDK 2.0+, asyncio
+- This host-side service targets the Python range in `pyproject.toml`, rather
+  than the shared style reference's Odoo image target.
 
 ## Workflow Metadata
 
@@ -36,18 +38,13 @@ tracks removing them.
 
 ## Code Standards
 
-- Avoid docstrings/comments; code must be self-documenting (pyproject comments allowed)
+- Write Python and Odoo JavaScript in the shared
+  [Python and Odoo style](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/python-odoo-style.md).
 - Use descriptive, unabbreviated identifiers; avoid short or ambiguous locals (especially 1–3 character abbreviations like
   `idx`, `cfg`, `tmp`, `obj`, `val`, `res`, `ctx`). Allow only explicit tokens (`id`, `db`, `api`, `orm`, `env`,
   `io`, `url`, `ui`, `ux`, `ip`, `http`, `json`, `xml`, `sql`) and math-only contexts.
-- Functions as verbs; objects as nouns. Keep one responsibility per function.
-- Type all function signatures and public data shapes. Prefer implicit local typing
-  when the type is obvious; avoid redundant local annotations. Leverage
-  `type_defs.odoo_types`.
-- Line length 133 characters max
-- Use f-strings for formatting/logging
+- Use `type_defs.odoo_types` for the MCP server's public data shapes.
 - Do not run Python directly; use `uv run` for scripts/tests.
-- Prefer early returns (ignore TRY300) and shallow nesting
 - Maintain ≥75 % coverage before shipping
 
 ## Test Rules
@@ -93,9 +90,12 @@ When adding a tool:
 ### Canonical Pattern
 
 ```python
+import logging
 from typing import Any
 
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+
+_logger = logging.getLogger(__name__)
 
 
 async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, Any]:
@@ -103,6 +103,7 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
         data = await env.execute_code(f"result = env['{model}'].fields_get()")
         return {"success": True, "model": model, "fields": data}
     except Exception as exc:
+        _logger.exception("Failed to retrieve fields for model %s", model)
         return {"success": False, "error": str(exc), "error_type": type(exc).__name__}
 ```
 
@@ -158,7 +159,6 @@ asyncio.run(smoke())
 ```
 
 Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginate anything large.
-Inline `# noqa` suppressions require justification.
 
 ## Pre-Commit Checklist
 
