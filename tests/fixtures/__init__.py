@@ -14,9 +14,7 @@ from .docker import (
 # Odoo fixtures - these are pytest fixtures, need special handling
 from .odoo import (
     MockDockerRun,
-    docker_available,
     mock_docker_run,
-    mock_res_partner_data,
     real_odoo_env_if_available,
 )
 
@@ -61,10 +59,8 @@ __all__ = [
     # Docker helpers
     "create_docker_manager_with_get_container",
     "create_successful_container_mock",
-    "docker_available",
     "get_expected_container_names",
     "get_test_config",
     "mock_docker_run",
-    "mock_res_partner_data",
     "real_odoo_env_if_available",
 ]
