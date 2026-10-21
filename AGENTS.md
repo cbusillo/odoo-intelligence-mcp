@@ -28,6 +28,8 @@ tracks removing them.
 ## Project Snapshot
 
 - **Stack**: Python 3.14+, MCP SDK 2.0+, asyncio
+- This host-side service targets the Python range in `pyproject.toml`, rather
+  than the shared style reference's Odoo image target.
 
 ## Workflow Metadata
 
@@ -88,9 +90,12 @@ When adding a tool:
 ### Canonical Pattern
 
 ```python
+import logging
 from typing import Any
 
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment
+
+_logger = logging.getLogger(__name__)
 
 
 async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, Any]:
@@ -98,6 +103,7 @@ async def get_model_fields(env: HostOdooEnvironment, model: str) -> dict[str, An
         data = await env.execute_code(f"result = env['{model}'].fields_get()")
         return {"success": True, "model": model, "fields": data}
     except Exception as exc:
+        _logger.exception("Failed to retrieve fields for model %s", model)
         return {"success": False, "error": str(exc), "error_type": type(exc).__name__}
 ```
 
