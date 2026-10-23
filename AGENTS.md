@@ -61,7 +61,11 @@ tracks removing them.
 Select complete modules through the changed code and its callers. Security
 validation uses `tests/unit/utils/test_security_utils.py`, permission checks use
 `tests/unit/tools/security/test_permission_checker.py`, and execution boundaries
-use `tests/integration/test_security_boundaries.py`. Environment/autostart changes
+use `tests/integration/test_security_boundaries.py` plus the affected
+`tests/unit/tools/operations/test_odoo_restart.py`, `test_odoo_update_module.py`,
+`tests/unit/tools/code/test_execute_code.py`, `test_read_odoo_file.py`,
+`tests/unit/tools/common/test_fs_utils.py`, and
+`tests/unit/utils/test_execution_utils.py` modules. Environment/autostart changes
 also use the affected `tests/unit/core/test_env_resolution.py`,
 `test_env_registry.py`, `test_docker_registry.py`, and
 `tests/unit/utils/test_docker_utils.py` modules plus

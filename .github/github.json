@@ -30,7 +30,6 @@
     },
     "coverage": {
       "default": "uv run mcp-test-cov",
-      "ci": "uv run mcp-test-cov-ci",
       "liveStack": "uv run mcp-test-live-cov",
       "minimumPercent": 75
     },
