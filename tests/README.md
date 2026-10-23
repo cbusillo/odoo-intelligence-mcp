@@ -32,7 +32,7 @@ Configuration tests can replace that fixture explicitly; live markers retain the
 
 ```bash
 uv run ruff check .          # Static-analysis gate, also run by the GitHub Actions test job
-uv run mcp-test              # Default no-live-stack gate for local and PR validation
+uv run pytest -m "not requires_docker and not requires_odoo" tests/unit/tools/model/test_model_info.py  # Focused local example
 uv run mcp-test-unit         # Unit tests only
 uv run mcp-test-integration  # No-live integration tests
 uv run mcp-test-ci           # Quick quiet unit run; CI does not run it separately
@@ -42,12 +42,15 @@ uv run mcp-test-live         # Live Docker/Odoo tests; needs the target workspac
 uv run mcp-test-live-cov     # Live-stack coverage report; informational, no threshold
 ```
 
-Coverage measures only the `odoo_intelligence_mcp` package. To select tests by hand:
+The canonical focused-local and complete-CI commands are `qualityGate.test.local` and `qualityGate.test.ci` in
+[workflow metadata](../.github/github.json). Replace the local `{test_paths}` placeholder with affected modules; run complete
+safety modules under [AGENTS.md](../AGENTS.md#safety-test-selection). The full suite and coverage threshold run in CI before ready.
+Coverage measures only the `odoo_intelligence_mcp` package. Focused examples:
 
 ```bash
 uv run pytest tests/unit/tools/model/test_model_info.py -v
-uv run pytest -m "not requires_docker and not requires_odoo"
-uv run pytest --lf
+uv run pytest -m "not requires_docker and not requires_odoo" tests/unit/core/test_env_resolution.py
+uv run pytest -m "not requires_docker and not requires_odoo" --lf tests/unit/core/test_env_resolution.py
 ```
 
 ## Fixtures

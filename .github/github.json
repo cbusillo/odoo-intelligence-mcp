@@ -20,13 +20,13 @@
       "check": "uv run ruff format --check ."
     },
     "test": {
-      "default": "uv run mcp-test",
       "unit": "uv run mcp-test-unit",
       "integration": "uv run mcp-test-integration",
       "ci": "uv run mcp-test-cov-ci",
       "quickUnit": "uv run mcp-test-ci",
       "liveStack": "uv run mcp-test-live",
-      "staticAnalysis": "uv run ruff check ."
+      "staticAnalysis": "uv run ruff check .",
+      "local": "uv run pytest -m 'not requires_docker and not requires_odoo' {test_paths}"
     },
     "coverage": {
       "default": "uv run mcp-test-cov",
@@ -61,9 +61,10 @@
     "Dependabot Updates"
   ],
   "prWorkflow": {
-    "mergeMethod": "merge",
-    "mergePolicy": "See AGENTS.md: authorized normal merge after green CI and accounted-for review findings; no merge train.",
-    "requiredStatusChecks": ["test"],
+    "mergePolicy": "Hand reviewed, current-head green PRs to the merge train with gh-pr.py ready; active policy owns enrollment and routing.",
+    "requiredStatusChecks": [
+      "test"
+    ],
     "requiredStatusChecksStrict": true,
     "codeScanningMergeProtection": {
       "ruleset": "Require code scanning results",
@@ -71,7 +72,8 @@
       "alertsThreshold": "errors",
       "securityAlertsThreshold": "high_or_higher",
       "codeQualitySeverity": "errors"
-    }
+    },
+    "mergePath": "launchplane-merge-train"
   },
   "githubSettings": {
     "expected": {

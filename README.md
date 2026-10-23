@@ -181,33 +181,19 @@ Large responses are validated and may include warnings or truncation to respect 
 
 Read [AGENTS.md](AGENTS.md#direction-and-execution) before repository work. Use the maintained executing loop and owning
 skills, claim issue-backed work before creating a linked task worktree, and use bot commits and pushes. This repository
-lands authorized changes through a PR with a normal merge commit after green current-head CI and any review findings
-are accounted for; execution-guidance changes receive another model's review. Runtime actions have their own scope under
+hands authorised changes to Launchplane's merge train with `gh-pr.py ready` after green current-head CI and a weighed
+review; active policy owns enrollment and routing. Runtime actions have their own scope under
 overall direction.
 
 ### Testing Requirements
 
-```bash
-# Default no-live-stack gate for local/PR validation.
-# Excludes tests that require a live Docker daemon or Odoo container.
-uv run mcp-test
+Use `qualityGate.test.local` in [workflow metadata](.github/github.json), replacing `{test_paths}` with affected files or
+directories. It excludes tests requiring a live Docker daemon or Odoo container. Run complete affected safety modules as
+mapped in [AGENTS.md](AGENTS.md#safety-test-selection), plus lint and inspection. CI runs `qualityGate.test.ci`, the complete
+no-live-stack suite and package coverage gate, before ready. The full suite runs only in CI.
 
-# Alternatives
-uv run mcp-test-ci          # CI unit gate
-uv run mcp-test-unit        # Unit tests only
-uv run mcp-test-integration # Mocked/non-live integration tests
-uv run mcp-test-live        # Live Docker/Odoo integration tests
-uv run mcp-test-cov         # No-live-stack coverage report for odoo_intelligence_mcp
-uv run mcp-test-cov-ci      # CI coverage gate with XML output
-uv run mcp-test-live-cov    # Live Docker/Odoo coverage report for odoo_intelligence_mcp
-
-# Threshold: mcp-test-cov and mcp-test-cov-ci enforce the documented 75% minimum.
-```
-
-`mcp-test-cov` measures only the `odoo_intelligence_mcp` package and emits terminal, HTML, and XML reports. `mcp-test-cov-ci`
-uses the same scope and threshold but omits the local HTML report. `mcp-test-live-cov` is informational because
-a live-only subset cannot represent whole-package coverage. `mcp-test-live` and `mcp-test-live-cov` require the target Docker/Odoo
-workspace to be available.
+[The tests guide](tests/README.md) documents the live lanes and fixture isolation. Live-only coverage is informational;
+it cannot represent whole-package coverage. No adoption of this split unblocks live qualification or changes target runtimes.
 
 ### Code Quality
 
