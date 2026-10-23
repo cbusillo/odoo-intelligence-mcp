@@ -16,8 +16,8 @@ Execution-guidance changes, including AGENTS.md, use `model-review` and the main
 [review reference](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/model-review.md).
 
 For issue-backed work, claim the issue before creating its linked task worktree; implement there instead of the primary checkout.
-The repository has no enabled Launchplane merge train in `.github/github.json`. Authorized changes land through a PR
-with a normal merge commit after green current-head CI and any review findings are accounted for.
+Hand authorised changes to Launchplane's merge train with `gh-pr.py ready` after green current-head CI and a weighed review.
+Active policy owns enrollment and routing; metadata is only a hint.
 Merging is separate from deploying or changing a target Odoo runtime; apply overall direction and the task's scope to each action.
 
 Target the current Odoo workspace, such as an `odoo-devkit` checkout with `platform/stack.toml`. The `odoo-ai`
@@ -56,6 +56,23 @@ tracks removing them.
 - Verification and loading code must not depend on working-tree or host state, and must not branch on whether pytest is
   running. No-live-stack tests never reach the host Docker daemon or sleep for real (`tests/conftest.py` enforces this).
 
+## Safety Test Selection
+
+Select complete modules through the changed code and its callers. Security
+validation uses `tests/unit/utils/test_security_utils.py`, permission checks use
+`tests/unit/tools/security/test_permission_checker.py`, and execution boundaries
+use `tests/integration/test_security_boundaries.py` plus the affected
+`tests/unit/tools/operations/test_odoo_restart.py`, `test_odoo_update_module.py`,
+`tests/unit/tools/code/test_execute_code.py`, `test_read_odoo_file.py`,
+`tests/unit/tools/common/test_fs_utils.py`, and
+`tests/unit/utils/test_execution_utils.py` modules. Environment/autostart changes
+also use the affected `tests/unit/core/test_env_resolution.py`,
+`test_env_registry.py`, `test_docker_registry.py`, and
+`tests/unit/utils/test_docker_utils.py` modules plus
+`tests/integration/test_docker_failure_modes.py`. Keep the no-live marker filter;
+record missing evidence when affected safety coverage requires a held live lane.
+Live qualification and target-discovery cleanup remain held under #13 and #15.
+
 ## Workflow Expectations
 
 1. Exercise the relevant MCP tool against the Docker stack before restarting the server.
@@ -67,10 +84,10 @@ tracks removing them.
 2. Follow patterns in `src/odoo_intelligence_mcp/server.py` when modifying handlers.
 3. Paginate responses likely to exceed ~25 K tokens (`core/utils.py`: `add_pagination_to_schema`, `PaginationParams`).
 4. Always close cursors/contexts via `try/finally`.
-5. Run `uv run mcp-test`—all no-live-stack tests must pass.
+5. Run `qualityGate.test.local`, replacing `{test_paths}` with affected test files or directories. The no-live markers stay selected.
 6. Format with `uv run mcp-format`.
 7. Run JetBrains inspections on changed files with the `jetbrains-inspection` skill (scope order in `.github/github.json`).
-8. Verify coverage (`uv run mcp-test-cov` ≥ 75 %; CI runs `uv run mcp-test-cov-ci`).
+8. CI runs `qualityGate.test.ci`, the complete no-live-stack suite with the coverage gate. Check current-head CI before ready; do not rerun the full suite locally.
 
 Follow the [inspection skill](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/jetbrains-inspection/SKILL.md)
 for recovery: actionable findings, stale results, `capture_incomplete`, timeouts, and wrong-worktree routing are not clean.
@@ -164,7 +181,7 @@ Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginat
 
 - [ ] `uv run mcp-format`
 - [ ] JetBrains inspections on changed files via `jetbrains-inspection` (no new actionable findings)
-- [ ] `uv run mcp-test`
-- [ ] `uv run mcp-test-cov` ≥ 75 %
+- [ ] Focused `qualityGate.test.local` tests and the complete affected safety modules
+- [ ] Green current-head `qualityGate.test.ci` with required coverage before ready
 
 Tip: keep tool responses short and structured; default to conservative paging to help downstream agent consumers.

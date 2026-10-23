@@ -38,7 +38,9 @@ jobs:
       # One lane: the coverage gate runs the unit and no-live integration
       # tests, so a separate unit-only job would repeat them.
       - name: Run tests with coverage gate
-        run: uv run mcp-test-cov-ci
+        run: |
+          test_command="$(jq -er '.qualityGate.test.ci | strings | select(length > 0)' .github/github.json)"
+          bash -euo pipefail -c "$test_command"
 
       - name: Upload coverage report
         if: always()
