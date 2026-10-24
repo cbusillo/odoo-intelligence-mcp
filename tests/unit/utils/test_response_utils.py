@@ -17,10 +17,6 @@ class TestResponseBuilder:
         result = ResponseBuilder.success(key="value", number=42)
         assert result == {"success": True, "data": {"key": "value", "number": 42}}
 
-    def test_success_with_none_data_and_kwargs(self) -> None:
-        result = ResponseBuilder.success(key="value", number=42)
-        assert result == {"success": True, "data": {"key": "value", "number": 42}}
-
     def test_error_basic(self) -> None:
         result = ResponseBuilder.error("Something went wrong")
         assert result == {"success": False, "error": "Something went wrong"}
@@ -83,10 +79,6 @@ class TestResponseBuilder:
     def test_error_with_empty_message(self) -> None:
         result = ResponseBuilder.error("")
         assert result == {"success": False, "error": ""}
-
-    def test_error_with_none_type(self) -> None:
-        result = ResponseBuilder.error("Error occurred")
-        assert result == {"success": False, "error": "Error occurred"}
 
     def test_type_consistency(self) -> None:
         success_result: dict[str, Any] = ResponseBuilder.success({"test": True})
