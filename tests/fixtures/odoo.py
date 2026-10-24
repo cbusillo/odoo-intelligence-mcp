@@ -8,44 +8,6 @@ import pytest_asyncio
 from odoo_intelligence_mcp.core.env import HostOdooEnvironment, HostOdooEnvironmentManager
 
 
-def docker_available() -> bool:
-    try:
-        # noinspection LSPLocalInspectionTool
-        result = subprocess.run(["/usr/bin/env", "docker", "ps"], capture_output=True, timeout=5)
-        return result.returncode == 0
-    except subprocess.SubprocessError, FileNotFoundError:
-        return False
-
-
-@pytest.fixture
-def mock_res_partner_data() -> dict[str, Any]:
-    return {
-        "model": "res.partner",
-        "name": "res.partner",
-        "table": "res_partner",
-        "description": "Contact",
-        "rec_name": "name",
-        "order": "id",
-        "fields": {
-            "name": {"type": "char", "string": "Name", "required": True, "readonly": False, "store": True},
-            "email": {"type": "char", "string": "Email", "required": False, "readonly": False, "store": True},
-            "phone": {"type": "char", "string": "Phone", "required": False, "readonly": False, "store": True},
-            "is_company": {"type": "boolean", "string": "Is a Company", "required": False, "readonly": False, "store": True},
-            "parent_id": {"type": "many2one", "string": "Related Company", "relation": "res.partner", "store": True},
-            "child_ids": {
-                "type": "one2many",
-                "string": "Contact",
-                "relation": "res.partner",
-                "inverse_name": "parent_id",
-                "store": False,
-            },
-        },
-        "field_count": 6,
-        "methods": ["create", "write", "read", "unlink", "search", "name_get", "name_search"],
-        "method_count": 7,
-    }
-
-
 @pytest_asyncio.fixture
 async def real_odoo_env_if_available() -> HostOdooEnvironment | None:
     # Use the existing environment manager which loads config from env.py
