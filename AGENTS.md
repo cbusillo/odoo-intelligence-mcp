@@ -5,8 +5,8 @@ Development guidelines for agents (Codex or Claude Code) working on the Odoo Int
 ## What Odoo Intelligence MCP does
 
 Odoo Intelligence MCP gives coding agents tools to query and analyze Odoo models, fields, code, and development environments.
-It connects to a target Docker-backed Odoo workspace; live qualification and legacy discovery cleanup remain held, as documented.
-Evidence: [README.md](README.md) and the safety-selection guidance below.
+It can also execute code, restart Odoo, update modules, and start containers in the target Docker-backed workspace.
+Evidence: [README.md](README.md) and this guide; live qualification and legacy discovery cleanup remain held.
 
 ## Direction and Execution
 
