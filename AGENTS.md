@@ -51,16 +51,12 @@ tracks removing them.
   `io`, `url`, `ui`, `ux`, `ip`, `http`, `json`, `xml`, `sql`) and math-only contexts.
 - Use `type_defs.odoo_types` for the MCP server's public data shapes.
 - Do not run Python directly; use `uv run` for scripts/tests.
-- Maintain ≥75 % coverage before shipping
 
 ## Test Rules
 
-- A test must fail when the product is broken and pass when someone makes an intended change.
-- Do not assert literals defined elsewhere (versions, timeouts, command lines, glob lists, hashes); compare against the
-  single source of truth or assert behavior instead. The package version lives only in `pyproject.toml`.
-- Do not assert workflow or config text; enforce the rule where it executes.
-- Verification and loading code must not depend on working-tree or host state, and must not branch on whether pytest is
-  running. No-live-stack tests never reach the host Docker daemon or sleep for real (`tests/conftest.py` enforces this).
+Follow the shared [Tests rule](https://github.com/cbusillo/codex-skills/blob/HEAD/instructions/global.md#tests).
+The package version lives only in `pyproject.toml`. Verification and loading code must not branch on whether pytest is
+running. No-live-stack tests never reach the host Docker daemon or sleep for real (`tests/conftest.py` enforces this).
 
 ## Safety Test Selection
 
