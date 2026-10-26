@@ -210,6 +210,6 @@ Run JetBrains (PyCharm) inspections on changed files with the `jetbrains-inspect
 the scope order. [AGENTS.md](AGENTS.md#standard-loop) explains how to report findings or inconclusive results;
 stale results, `capture_incomplete`, timeouts, and wrong-worktree routing do not prove a clean inspection.
 
-The GitHub Actions `test` job runs `uv run ruff check .` before the no-live-stack tests and the 75% coverage gate.
+The GitHub Actions `test` job runs `uv run ruff check .` before the no-live-stack tests and the coverage gate.
 
 See AGENTS.md for workflow, formatting, and testing conventions.
