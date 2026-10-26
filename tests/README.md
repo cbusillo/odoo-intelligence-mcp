@@ -35,7 +35,7 @@ uv run ruff check .          # Static-analysis gate, also run by the GitHub Acti
 uv run mcp-test-unit         # Unit tests only
 uv run mcp-test-integration  # No-live integration tests
 uv run mcp-test-ci           # Quick quiet unit run; CI does not run it separately
-uv run mcp-test-cov          # No-live coverage: terminal, HTML, and XML reports
+uv run mcp-test-cov          # No-live coverage gate: terminal, HTML, and XML reports
 uv run mcp-test-live         # Live Docker/Odoo tests; needs the target workspace running
 uv run mcp-test-live-cov     # Live-stack coverage report; informational, no threshold
 ```
