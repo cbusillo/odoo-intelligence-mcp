@@ -85,7 +85,7 @@ Live qualification and target-discovery cleanup remain held under #13 and #15.
 5. Run `qualityGate.test.local`, replacing `{test_paths}` with affected test files or directories. The no-live markers stay selected.
 6. Format with `uv run mcp-format`.
 7. Run JetBrains inspections on changed files with the `jetbrains-inspection` skill (scope order in `.github/github.json`).
-8. CI runs `qualityGate.test.ci`, the complete no-live-stack suite with the coverage gate. Check current-head CI before ready; do not rerun the full suite locally.
+8. CI runs `qualityGate.test.ci`, the complete no-live-stack suite with the coverage gate.
 
 Follow the [inspection skill](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/jetbrains-inspection/SKILL.md)
 for recovery: actionable findings, stale results, `capture_incomplete`, timeouts, and wrong-worktree routing are not clean.

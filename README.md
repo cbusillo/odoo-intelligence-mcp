@@ -186,8 +186,8 @@ Runtime actions have their own scope under overall direction.
 
 Use `qualityGate.test.local` in [workflow metadata](.github/github.json), replacing `{test_paths}` with affected files or
 directories. It excludes tests requiring a live Docker daemon or Odoo container. Run complete affected safety modules as
-mapped in [AGENTS.md](AGENTS.md#safety-test-selection), plus lint and inspection. CI runs `qualityGate.test.ci`, the complete
-no-live-stack suite and package coverage gate, before ready. The full suite runs only in CI.
+mapped in [AGENTS.md](AGENTS.md#safety-test-selection). CI runs `qualityGate.test.ci`, the complete
+no-live-stack suite and package coverage gate.
 
 [The tests guide](tests/README.md) documents the live lanes and fixture isolation. Live-only coverage is informational;
 it cannot represent whole-package coverage. No adoption of this split unblocks live qualification or changes target runtimes.

@@ -42,7 +42,7 @@ uv run mcp-test-live-cov     # Live-stack coverage report; informational, no thr
 
 The canonical focused-local and complete-CI commands are `qualityGate.test.local` and `qualityGate.test.ci` in
 [workflow metadata](../.github/github.json). Replace the local `{test_paths}` placeholder with affected modules; run complete
-safety modules under [AGENTS.md](../AGENTS.md#safety-test-selection). The full suite and coverage threshold run in CI before ready.
+safety modules under [AGENTS.md](../AGENTS.md#safety-test-selection).
 Coverage measures only the `odoo_intelligence_mcp` package. For example, substitute
 `tests/unit/tools/model/test_model_info.py` for `{test_paths}` in the local command.
 Keep the no-live marker filter when selecting tests or rerunning failures.
