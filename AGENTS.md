@@ -46,7 +46,6 @@ tracks removing them.
   `idx`, `cfg`, `tmp`, `obj`, `val`, `res`, `ctx`). Allow only explicit tokens (`id`, `db`, `api`, `orm`, `env`,
   `io`, `url`, `ui`, `ux`, `ip`, `http`, `json`, `xml`, `sql`) and math-only contexts.
 - Use `type_defs.odoo_types` for the MCP server's public data shapes.
-- Do not run Python directly; use `uv run` for scripts/tests.
 
 ## Test Rules
 
