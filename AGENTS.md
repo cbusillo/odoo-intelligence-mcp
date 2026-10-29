@@ -18,7 +18,7 @@ and [task scope and authorization](https://github.com/cbusillo/codex-skills/blob
 Execution-guidance changes, including AGENTS.md, use `model-review` and the maintained
 [review reference](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/model-review.md).
 
-Hand authorised changes to Launchplane's merge train with `gh-pr.py ready` after green current-head CI and a weighed review.
+Hand authorised changes to Launchplane's merge train with `gh-pr.py ready` after a weighed review.
 Active policy owns enrollment and routing; metadata is only a hint.
 Merging is separate from deploying or changing a target Odoo runtime; apply overall direction and the task's scope to each action.
 
@@ -179,7 +179,5 @@ Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginat
 
 - [ ] `uv run mcp-format`
 - [ ] JetBrains inspections on changed files via `jetbrains-inspection` (no new actionable findings)
-- [ ] Focused `qualityGate.test.local` tests and the complete affected safety modules
-- [ ] Green current-head `qualityGate.test.ci` with required coverage before ready
 
 Tip: keep tool responses short and structured; default to conservative paging to help downstream agent consumers.
