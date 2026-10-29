@@ -15,13 +15,9 @@ This repository has no separate DIRECTION.md; overall direction applies. AGENTS.
 
 Use the maintained [executing loop](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/executing-loop.md)
 and [task scope and authorization](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/execution-scope.md).
-Load each step's owning skill before acting: `github-plan` for issue selection and claims, `github` for bot commits,
-pushes and PRs, `python-uv-workflow` for Python commands, `jetbrains-inspection` for IDE checks, `babysit-pr` for CI/review
-follow-through, and `work-closeout` for issue reconciliation and worktree retirement.
 Execution-guidance changes, including AGENTS.md, use `model-review` and the maintained
 [review reference](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/model-review.md).
 
-For issue-backed work, claim the issue before creating its linked task worktree; implement there instead of the primary checkout.
 Hand authorised changes to Launchplane's merge train with `gh-pr.py ready` after green current-head CI and a weighed review.
 Active policy owns enrollment and routing; metadata is only a hint.
 Merging is separate from deploying or changing a target Odoo runtime; apply overall direction and the task's scope to each action.

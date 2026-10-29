@@ -179,11 +179,8 @@ Large responses are validated and may include warnings or truncation to respect 
 
 ## Development
 
-Read [AGENTS.md](AGENTS.md#direction-and-execution) before repository work. Use the maintained executing loop and owning
-skills, claim issue-backed work before creating a linked task worktree, and use bot commits and pushes. This repository
-hands authorised changes to Launchplane's merge train with `gh-pr.py ready` after green current-head CI and a weighed
-review; active policy owns enrollment and routing. Runtime actions have their own scope under
-overall direction.
+Read [AGENTS.md](AGENTS.md#direction-and-execution) before repository work.
+Runtime actions have their own scope under overall direction.
 
 ### Testing Requirements
 
