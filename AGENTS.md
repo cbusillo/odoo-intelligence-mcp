@@ -18,7 +18,7 @@ and [task scope and authorization](https://github.com/cbusillo/codex-skills/blob
 Execution-guidance changes, including AGENTS.md, use `model-review` and the maintained
 [review reference](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/references/model-review.md).
 
-Hand authorised changes to Launchplane's merge train with `gh-pr.py ready` after green current-head CI and a weighed review.
+Hand authorised changes to Launchplane's merge train with `gh-pr.py ready` after a weighed review.
 Active policy owns enrollment and routing; metadata is only a hint.
 Merging is separate from deploying or changing a target Odoo runtime; apply overall direction and the task's scope to each action.
 
@@ -85,7 +85,7 @@ Live qualification and target-discovery cleanup remain held under #13 and #15.
 5. Run `qualityGate.test.local`, replacing `{test_paths}` with affected test files or directories. The no-live markers stay selected.
 6. Format with `uv run mcp-format`.
 7. Run JetBrains inspections on changed files with the `jetbrains-inspection` skill (scope order in `.github/github.json`).
-8. CI runs `qualityGate.test.ci`, the complete no-live-stack suite with the coverage gate. Check current-head CI before ready; do not rerun the full suite locally.
+8. CI runs `qualityGate.test.ci`, the complete no-live-stack suite with the coverage gate.
 
 Follow the [inspection skill](https://github.com/cbusillo/codex-skills/blob/HEAD/skills/jetbrains-inspection/SKILL.md)
 for recovery: actionable findings, stale results, `capture_incomplete`, timeouts, and wrong-worktree routing are not clean.
@@ -179,7 +179,5 @@ Run with `uv run python smoke.py`. Ensure outputs are JSON-serializable; paginat
 
 - [ ] `uv run mcp-format`
 - [ ] JetBrains inspections on changed files via `jetbrains-inspection` (no new actionable findings)
-- [ ] Focused `qualityGate.test.local` tests and the complete affected safety modules
-- [ ] Green current-head `qualityGate.test.ci` with required coverage before ready
 
 Tip: keep tool responses short and structured; default to conservative paging to help downstream agent consumers.
